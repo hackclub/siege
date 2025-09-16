@@ -1,24 +1,21 @@
-# README
+ship a project every week, get prizes. make it to the end, get a framework.
 
-This README would normally document whatever steps are necessary to get the
-application up and running.
+# Let the siege begin...
 
-Things you may want to cover:
+Welcome to SIEGE!!
 
-* Ruby version
+This is a ruby on rails app that includes the Siege site, as well as the Heidi in a dragon costume slack bot.
 
-* System dependencies
+## Testing
 
-* Configuration
+To run, use `sudo bin/dev`, which will start a docker env with the development postgres db, as well as the site
 
-* Database creation
+Contact @Olive on slack if you need development credentials
 
-* Database initialization
+## Contributing
 
-* How to run the test suite
+Contributing is always appreciated! Please make sure to note exactly what you've added & add screenshots if possible. I'll try to look through commits every so often, but if I miss one you can always reach out to me @Olive on slack.
 
-* Services (job queues, cache servers, search engines, etc.)
 
-* Deployment instructions
 
-* ...
+Heidi and Orhpeus are counting on you! See you in the battle...
