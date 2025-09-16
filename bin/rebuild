@@ -1,0 +1,20 @@
+#!/usr/bin/env sh
+
+# Rebuild development environment with Docker Compose
+echo "Rebuilding development environment with Docker Compose..."
+
+# Check if Docker is running and determine command to use
+DOCKER_CMD="docker"
+if ! docker info > /dev/null 2>&1; then
+  if sudo docker info > /dev/null 2>&1; then
+    DOCKER_CMD="sudo docker"
+  fi
+fi
+
+# Build and run with --build flag
+echo "Rebuilding Docker images..."
+if [[ "$DOCKER_CMD" == "sudo docker" ]]; then
+  exec sudo docker compose -f docker-compose.dev.yml up --build "$@"
+else
+  exec docker compose -f docker-compose.dev.yml up --build "$@"
+fi

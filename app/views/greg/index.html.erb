@@ -1,0 +1,523 @@
+<% content_for :title, "Greg - Fraud Dashboard" %>
+
+<% content_for :head do %>
+  <style>
+    :root {
+      --greg-bg-primary: rgba(255, 255, 255, 0.95);
+      --greg-bg-secondary: rgba(255, 255, 255, 0.8);
+      --greg-border-color: rgba(64, 43, 32, 0.15);
+      --greg-border-secondary: rgba(64, 43, 32, 0.1);
+      --greg-text-primary: #402b20;
+      --greg-text-secondary: #6b5b4a;
+      --greg-text-muted: #9ca3af;
+      --greg-input-bg: white;
+      --greg-input-border: rgba(64, 43, 32, 0.3);
+    }
+    
+    [data-greg-theme="dark"] {
+      --greg-bg-primary: rgba(30, 30, 30, 0.95);
+      --greg-bg-secondary: rgba(45, 45, 45, 0.9);
+      --greg-border-color: rgba(156, 163, 175, 0.3);
+      --greg-border-secondary: rgba(156, 163, 175, 0.2);
+      --greg-text-primary: #f3f4f6;
+      --greg-text-secondary: #d1d5db;
+      --greg-text-muted: #9ca3af;
+      --greg-input-bg: #374151;
+      --greg-input-border: rgba(156, 163, 175, 0.4);
+    }
+    
+    .greg-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 2rem;
+      transition: color 0.3s ease;
+    }
+    .page-header {
+      background: var(--greg-bg-primary);
+      border: 2px solid var(--greg-border-color);
+      border-radius: 16px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      transition: all 0.3s ease;
+    }
+    .header-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 2rem;
+    }
+    .header-text {
+      flex: 1;
+    }
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .page-title {
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: var(--greg-text-primary);
+      margin: 0 0 0.5rem 0;
+      transition: color 0.3s ease;
+    }
+    .page-subtitle {
+      font-size: 1.1rem;
+      color: var(--greg-text-secondary);
+      margin: 0;
+      transition: color 0.3s ease;
+    }
+    .dark-mode-toggle {
+      background: var(--greg-bg-secondary);
+      border: 2px solid var(--greg-border-color);
+      border-radius: 50%;
+      width: 3rem;
+      height: 3rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-size: 1.2rem;
+    }
+    .dark-mode-toggle:hover {
+      transform: scale(1.1);
+      border-color: #6366f1;
+    }
+    [data-greg-theme="dark"] .dark-mode-toggle .toggle-icon {
+      filter: brightness(0) invert(1);
+    }
+    .filters-section {
+      background: var(--greg-bg-primary);
+      border: 2px solid var(--greg-border-color);
+      border-radius: 16px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      transition: all 0.3s ease;
+    }
+    .filters-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .filter-label {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--greg-text-primary);
+      transition: color 0.3s ease;
+    }
+    .filter-input {
+      padding: 0.75rem;
+      border: 1px solid var(--greg-input-border);
+      border-radius: 8px;
+      font-size: 0.9rem;
+      background: var(--greg-input-bg);
+      color: var(--greg-text-primary);
+      transition: all 0.3s ease;
+    }
+    .filter-select {
+      padding: 0.75rem;
+      border: 1px solid var(--greg-input-border);
+      border-radius: 8px;
+      font-size: 0.9rem;
+      background: var(--greg-input-bg);
+      color: var(--greg-text-primary);
+      transition: all 0.3s ease;
+    }
+    .filter-actions {
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+    }
+    .greg-btn {
+      padding: 0.75rem 1.5rem;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+      text-align: center;
+      transition: all 0.2s;
+    }
+    .greg-btn-primary {
+      background: #6366f1;
+      color: white;
+    }
+    .greg-btn-primary:hover {
+      background: #4f46e5;
+      color: white;
+    }
+    .greg-btn-secondary {
+      background: #6b5b4a;
+      color: white;
+    }
+    .greg-btn-secondary:hover {
+      background: #402b20;
+      color: white;
+    }
+    .projects-section {
+      background: var(--greg-bg-primary);
+      border: 2px solid var(--greg-border-color);
+      border-radius: 16px;
+      padding: 2rem;
+      transition: all 0.3s ease;
+    }
+    .projects-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+    .section-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--greg-text-primary);
+      margin: 0;
+      transition: color 0.3s ease;
+    }
+    .project-count {
+      font-size: 0.9rem;
+      color: var(--greg-text-secondary);
+      background: var(--greg-border-secondary);
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      transition: all 0.3s ease;
+    }
+    .greg-projects-grid {
+      display: grid;
+      gap: 1rem;
+    }
+    .greg-project-card {
+      background: var(--greg-bg-secondary);
+      border: 1px solid var(--greg-border-secondary);
+      border-radius: 12px;
+      padding: 1.5rem;
+      transition: all 0.3s;
+      cursor: pointer;
+    }
+    .greg-project-card:hover {
+      border-color: var(--greg-border-color);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      transform: translateY(-2px);
+    }
+    [data-greg-theme="dark"] .greg-project-card:hover {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+    .greg-project-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 0.75rem;
+    }
+    .greg-project-title {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--greg-text-primary);
+      margin: 0;
+      transition: color 0.3s ease;
+    }
+    .project-badges {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+    .badge {
+      padding: 0.25rem 0.75rem;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+    .badge-week {
+      background: rgba(64, 43, 32, 0.1);
+      color: #402b20;
+    }
+    .badge-status {
+      color: white;
+    }
+    .badge-submitted { background: #7c3aed; }
+    .badge-pending_voting { background: #1e40af; }
+    .badge-finished { background: #059669; }
+    .badge-fraud {
+      color: white;
+    }
+    .badge-unchecked { background: #fbbf24; color: #92400e; }
+    .badge-sus { background: #f59e0b; }
+    .badge-fraud { background: #dc2626; }
+    .badge-good { background: #059669; }
+    .greg-project-author {
+      font-size: 0.9rem;
+      color: var(--greg-text-secondary);
+      margin-bottom: 0.5rem;
+      transition: color 0.3s ease;
+    }
+    .greg-project-description {
+      color: var(--greg-text-secondary);
+      font-size: 0.9rem;
+      line-height: 1.5;
+      margin-bottom: 0.75rem;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      transition: color 0.3s ease;
+    }
+    .greg-project-links {
+      display: flex;
+      gap: 0.75rem;
+      font-size: 0.8rem;
+    }
+    .greg-project-link {
+      color: #6366f1;
+      text-decoration: none;
+      padding: 0.25rem 0.5rem;
+      border: 1px solid #6366f1;
+      border-radius: 4px;
+      transition: all 0.2s;
+    }
+    .greg-project-link:hover {
+      background: #6366f1;
+      color: white;
+    }
+    .pagination {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 1rem;
+      margin-top: 2rem;
+    }
+    .pagination-link {
+      padding: 0.5rem 1rem;
+      border: 1px solid rgba(64, 43, 32, 0.3);
+      border-radius: 8px;
+      text-decoration: none;
+      color: #402b20;
+      transition: all 0.2s;
+    }
+    .pagination-link:hover {
+      background: rgba(64, 43, 32, 0.1);
+      color: #402b20;
+    }
+    .pagination-link.current {
+      background: #6366f1;
+      color: white;
+      border-color: #6366f1;
+    }
+    .greg-empty-state {
+      text-align: center;
+      padding: 4rem 2rem;
+      color: #6b5b4a;
+    }
+    .greg-empty-state h3 {
+      font-size: 1.5rem;
+      color: #402b20;
+      margin-bottom: 1rem;
+    }
+  </style>
+<% end %>
+
+<div class="greg-container">
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-text">
+        <h1 class="page-title">Greg Fraud Dashboard</h1>
+        <p class="page-subtitle">Review and manage project fraud status</p>
+      </div>
+      <div class="header-controls">
+        <button id="dark-mode-toggle" class="dark-mode-toggle" title="Toggle dark mode">
+          <span class="toggle-icon">🌙</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filters Section -->
+  <div class="filters-section">
+    <%= form_with url: greg_path, method: :get, local: true do |form| %>
+      <div class="filters-grid">
+        <div class="filter-group">
+          <label class="filter-label">Project Name</label>
+          <%= form.text_field :name, 
+              value: params[:name], 
+              placeholder: "Search by project name", 
+              class: "filter-input" %>
+        </div>
+        
+        <div class="filter-group">
+          <label class="filter-label">Author</label>
+          <%= form.text_field :author, 
+              value: params[:author], 
+              placeholder: "Search by author name", 
+              class: "filter-input" %>
+        </div>
+        
+        <div class="filter-group">
+          <label class="filter-label">Week</label>
+          <%= form.select :week, 
+              options_for_select([['All Weeks', '']] + @available_weeks.map { |w| ["Week #{w}", w] }, params[:week]),
+              {}, 
+              { class: "filter-select" } %>
+        </div>
+        
+        <div class="filter-group">
+          <label class="filter-label">Fraud Status</label>
+          <%= form.select :fraud_status, 
+              options_for_select([
+                ['Unchecked (Default)', 'unchecked'],
+                ['Suspicious', 'sus'],
+                ['Confirmed Fraud', 'fraud'],
+                ['Good/Verified', 'good'],
+                ['All Statuses', 'all']
+              ], params[:fraud_status] || 'unchecked'),
+              {}, 
+              { class: "filter-select" } %>
+        </div>
+        
+        <div class="filter-group">
+          <label class="filter-label">Fraud Reasoning</label>
+          <%= form.text_field :reasoning, 
+              value: params[:reasoning], 
+              placeholder: "Search in reasoning text", 
+              class: "filter-input" %>
+        </div>
+      </div>
+      
+      <div class="filter-actions">
+        <%= form.submit "Apply Filters", class: "greg-btn greg-btn-primary" %>
+        <%= link_to "Clear Filters", greg_path, class: "greg-btn greg-btn-secondary" %>
+      </div>
+    <% end %>
+  </div>
+
+  <!-- Projects Section -->
+  <div class="projects-section">
+    <div class="projects-header">
+      <h2 class="section-title">Fraud Review Queue</h2>
+      <div class="project-count">
+        <%= @total_count %> project<%= @total_count == 1 ? '' : 's' %> found
+      </div>
+    </div>
+
+    <% if @projects.any? %>
+      <div class="greg-projects-grid">
+        <% @projects.each do |project| %>
+          <div class="greg-project-card" onclick="window.location.href='<%= greg_project_path(project) %>'">
+            <div class="greg-project-header">
+              <h3 class="greg-project-title"><%= project.name %></h3>
+              <div class="project-badges">
+                <span class="badge badge-week">Week <%= week_number_for_date(project.created_at) %></span>
+                <span class="badge badge-status badge-<%= project.status %>"><%= project.status.humanize %></span>
+                <span class="badge badge-fraud badge-<%= project.fraud_status %>"><%= project.fraud_status.humanize %></span>
+              </div>
+            </div>
+            
+            <div class="greg-project-author">
+              by <%= project.user.name %> (ID: <%= project.user.id %>)
+            </div>
+            
+            <% if project.description.present? %>
+              <div class="greg-project-description">
+                <%= project.description %>
+              </div>
+            <% end %>
+            
+            <% if project.fraud_reasoning.present? %>
+              <div style="background: rgba(220, 38, 38, 0.1); padding: 0.75rem; border-radius: 6px; margin-bottom: 0.75rem;">
+                <div style="font-size: 0.8rem; color: #991b1b; font-weight: 600; margin-bottom: 0.25rem;">Fraud Reasoning:</div>
+                <div style="font-size: 0.8rem; color: #7f1d1d;"><%= project.fraud_reasoning %></div>
+              </div>
+            <% end %>
+            
+            <div class="greg-project-links">
+              <% if project.repo_url.present? %>
+                <%= link_to "Repository", project.repo_url, target: "_blank", class: "greg-project-link", onclick: "event.stopPropagation()" %>
+              <% end %>
+              
+              <% if project.demo_url.present? %>
+                <%= link_to "Demo", project.demo_url, target: "_blank", class: "greg-project-link", onclick: "event.stopPropagation()" %>
+              <% end %>
+              
+              <% if project.user.slack_id.present? %>
+                <%= link_to "Joe Profile", "https://dash.fraud.land/profile/#{project.user.slack_id}", target: "_blank", class: "greg-project-link", onclick: "event.stopPropagation()" %>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+
+      <!-- Pagination -->
+      <% if @total_pages > 1 %>
+        <div class="pagination">
+          <% if @current_page > 1 %>
+            <%= link_to "← Previous", greg_path(params.permit(:name, :author, :week, :fraud_status, :reasoning).merge(page: @current_page - 1)), class: "pagination-link" %>
+          <% end %>
+          
+          <% (1..@total_pages).each do |page| %>
+            <% if page == @current_page %>
+              <span class="pagination-link current"><%= page %></span>
+            <% elsif (page - @current_page).abs <= 2 || page == 1 || page == @total_pages %>
+              <%= link_to page, greg_path(params.permit(:name, :author, :week, :fraud_status, :reasoning).merge(page: page)), class: "pagination-link" %>
+            <% elsif (page - @current_page).abs == 3 %>
+              <span class="pagination-link">...</span>
+            <% end %>
+          <% end %>
+          
+          <% if @current_page < @total_pages %>
+            <%= link_to "Next →", greg_path(params.permit(:name, :author, :week, :fraud_status, :reasoning).merge(page: @current_page + 1)), class: "pagination-link" %>
+          <% end %>
+        </div>
+      <% end %>
+    <% else %>
+      <div class="greg-empty-state">
+        <h3>No projects found</h3>
+        <p>No projects match your current filters. Try adjusting your search criteria.</p>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<script>
+// Dark mode functionality
+(function() {
+  const toggle = document.getElementById('dark-mode-toggle');
+  const container = document.querySelector('.greg-container');
+  const toggleIcon = document.querySelector('.toggle-icon');
+  
+  // Check for saved dark mode preference
+  const savedTheme = localStorage.getItem('greg-dark-mode');
+  if (savedTheme === 'dark') {
+    enableDarkMode();
+  }
+  
+  // Toggle button click handler
+  toggle.addEventListener('click', function() {
+    const isDark = container.getAttribute('data-greg-theme') === 'dark';
+    
+    if (isDark) {
+      disableDarkMode();
+    } else {
+      enableDarkMode();
+    }
+  });
+  
+  function enableDarkMode() {
+    container.setAttribute('data-greg-theme', 'dark');
+    toggleIcon.textContent = '☀️';
+    localStorage.setItem('greg-dark-mode', 'dark');
+  }
+  
+  function disableDarkMode() {
+    container.removeAttribute('data-greg-theme');
+    toggleIcon.textContent = '🌙';
+    localStorage.removeItem('greg-dark-mode');
+  }
+})();
+</script>

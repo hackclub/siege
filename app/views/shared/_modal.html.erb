@@ -1,0 +1,403 @@
+<style>
+  #modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .modal-container {
+    background-image: url('<%= asset_path("scroll.webp") %>');
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    background-position: center;
+    border-radius: 12px;
+    width: 800px;
+    height: 600px;
+    max-width: 90vw;
+    max-height: 90vh;
+    margin: 0 16px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+
+  
+  .modal-header {
+		width: 100%;
+		text-align: center;
+
+		h3 {
+			font-size: 2rem;
+			margin: 0 0 1rem 0;
+		}
+  }
+  
+  .modal-content {
+    padding: 13% 15%;
+		width: 70%;
+		height: 74%;
+    position: relative;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+  }
+  
+
+  
+  #modal-message {
+    margin: 0;
+    font-size: 1.2rem;
+    line-height: 1.6;
+  }
+  
+  #modal-actions {
+    display: flex;
+    gap: 6px;
+    justify-content: flex-end;
+    position: relative;
+		margin-top: auto;
+		align-self: flex-end;
+  }
+  
+  .modal-button {
+    padding: 0.5rem 1rem;
+    font-size: 1.5rem;
+  }
+
+	
+  
+  
+	.modal-input {
+		width: 100%;
+		padding: 1rem 1.5rem;
+		font-size: 1rem;
+		outline: none;
+		box-sizing: border-box;
+		transition: all 0.2s;
+	}
+   
+   .checklist-container {
+   }
+   
+   .checklist-item {
+     display: flex;
+     align-items: center;
+     padding: 2px;
+     border-radius: 6px;
+   }
+   
+   .checklist-checkbox {
+     font-size: 1.2rem;
+     margin-right: 12px;
+     font-weight: bold;
+   }
+   .checklist-text {
+     font-size: 1.2rem;
+   }
+   
+   .checklist-text.checked {
+     text-decoration: line-through;
+   }
+	 
+</style>
+
+<div id="modal">
+  <div class="modal-container">
+    
+    <div class="modal-content">
+			<div class="modal-header">
+				<h3 id="modal-title"></h3>
+			</div>
+      <p id="modal-message"></p>
+			<div id="modal-actions">
+      <!-- Buttons will be dynamically added here -->
+    	</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Simple modal functions that work with Rails
+  function showModal(title, message, buttons) {
+    const modal = document.getElementById('modal');
+    const modalTitle = document.getElementById('modal-title');
+    const modalMessage = document.getElementById('modal-message');
+    const modalActions = document.getElementById('modal-actions');
+    
+    if (!modal || !modalTitle || !modalMessage || !modalActions) {
+      console.error('Modal elements not found');
+      return;
+    }
+    
+    modalTitle.textContent = title || 'Notice';
+    modalMessage.textContent = message || '';
+    modalActions.innerHTML = '';
+    
+    // Add buttons
+    if (buttons && buttons.length > 0) {
+      buttons.forEach(button => {
+        const btn = document.createElement('button');
+        btn.textContent = button.text;
+        btn.className = 'submit-button modal-button';
+        
+        if (button.danger) {
+           btn.classList.add('submit-button--danger');
+         } else if (button.primary) {
+           btn.classList.add('submit-button--primary');
+         } else {
+           btn.classList.add('submit-button--secondary');
+         }
+        
+        btn.addEventListener('click', () => {
+          if (button.action) {
+            button.action();
+          }
+          hideModal();
+        });
+        
+        modalActions.appendChild(btn);
+      });
+    }
+    
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    }
+  
+  function hideModal() {
+    const modal = document.getElementById('modal');
+    if (modal) {
+      modal.style.display = 'none';
+      document.body.style.overflow = '';
+    }
+  }
+  
+  function showModalAlert(message, title) {
+    showModal(title || 'Notice', message, [
+      { text: 'OK', action: () => {} }
+    ]);
+  }
+  
+     function showModalConfirm(message, title, onConfirm, onCancel, danger) {
+     showModal(title || 'Confirm', message, [
+       { text: 'Cancel', action: onCancel || (() => {}) },
+       { text: 'Confirm', primary: true, danger: danger, action: onConfirm || (() => {}) }
+     ]);
+   }
+  
+  function showModalPrompt(message, title, onConfirm, onCancel, placeholder) {
+    const modal = document.getElementById('modal');
+    const modalTitle = document.getElementById('modal-title');
+    const modalMessage = document.getElementById('modal-message');
+    const modalActions = document.getElementById('modal-actions');
+    
+    if (!modal || !modalTitle || !modalMessage || !modalActions) {
+      console.error('Modal elements not found');
+      return;
+    }
+    
+    // Create input field
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.placeholder = placeholder || '';
+    input.className = 'modal-input';
+    
+    modalTitle.textContent = title || 'Input Required';
+    modalMessage.innerHTML = '';
+    modalMessage.appendChild(input);
+    modalActions.innerHTML = '';
+    
+    // Add buttons
+    const confirmBtn = document.createElement('button');
+    confirmBtn.textContent = 'OK';
+    confirmBtn.className = 'submit-button modal-button modal-button-primary';
+    confirmBtn.addEventListener('click', () => {
+      if (onConfirm) {
+        onConfirm(input.value);
+      }
+      hideModal();
+    });
+    
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.className = 'submit-button modal-button modal-button-secondary';
+    cancelBtn.addEventListener('click', () => {
+      if (onCancel) {
+        onCancel();
+      }
+      hideModal();
+    });
+    
+    modalActions.appendChild(cancelBtn);
+    modalActions.appendChild(confirmBtn);
+    
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    
+    // Focus input
+    setTimeout(() => input.focus(), 100);
+  }
+  
+     function showModalChecklist(title, checklistItems, onConfirm, onCancel) {
+     const modal = document.getElementById('modal');
+     const modalTitle = document.getElementById('modal-title');
+     const modalMessage = document.getElementById('modal-message');
+     const modalActions = document.getElementById('modal-actions');
+     
+     if (!modal || !modalTitle || !modalMessage || !modalActions) {
+       console.error('Modal elements not found');
+       return;
+     }
+     
+     modalTitle.textContent = title || 'Checklist';
+     modalMessage.innerHTML = '';
+     modalActions.innerHTML = '';
+     
+     // Reduce padding for project submission checklist specifically
+      const modalContent = document.querySelector('.modal-content');
+      if (modalContent && title && title.includes('Project Submission')) {
+        modalContent.style.padding = '8% 15%';
+      } else if (modalContent) {
+        modalContent.style.padding = '13% 15%';
+      }
+      
+      // Create checklist container
+     const checklistContainer = document.createElement('div');
+     checklistContainer.className = 'checklist-container';
+     
+     // Display checklist items
+     checklistItems.forEach(item => {
+       const itemDiv = document.createElement('div');
+       itemDiv.className = 'checklist-item';
+       
+     if (item.interactive) {
+       // Interactive checkbox for update flag
+       const checkbox = document.createElement('span');
+       checkbox.textContent = '☐';
+        checkbox.className = 'checklist-checkbox unchecked update-checkbox-display';
+        checkbox.style.cssText = 'cursor: pointer; user-select: none;';
+        
+       const text = document.createElement('span');
+       text.innerHTML = item.text.replace(/\n/g, '<br>');
+       text.className = 'checklist-text';
+       text.style.cssText = 'cursor: pointer; user-select: none;';
+       
+       itemDiv.appendChild(checkbox);
+       itemDiv.appendChild(text);
+       checklistContainer.appendChild(itemDiv);
+       
+       // Add conditional message
+       const messageDiv = document.createElement('div');
+       messageDiv.style.cssText = 'display: none; margin-top: 0; margin-left: 30px; font-size: 1rem; color: #6b5b4a; font-style: italic;';
+       messageDiv.textContent = 'Make sure your specific changes are in the description';
+       checklistContainer.appendChild(messageDiv);
+       
+       // Toggle functionality
+       let isChecked = false;
+       const toggleCheckbox = () => {
+       isChecked = !isChecked;
+       checkbox.textContent = isChecked ? '☑' : '☐';
+       checkbox.className = 'checklist-checkbox ' + (isChecked ? 'checked' : 'unchecked') + ' update-checkbox-display';
+       messageDiv.style.display = isChecked ? 'block' : 'none';
+       
+       // Store state for form submission
+         window.projectUpdateFlag = isChecked;
+           };
+           
+           checkbox.addEventListener('click', toggleCheckbox);
+           text.addEventListener('click', toggleCheckbox);
+        } else {
+          // Static checkbox display
+          const checkbox = document.createElement('span');
+          checkbox.textContent = item.checked ? '☑' : '☐';
+          checkbox.className = 'checklist-checkbox ' + (item.checked ? 'checked' : 'unchecked');
+          
+          const text = document.createElement('span');
+          text.innerHTML = item.text.replace(/\n/g, '<br>');
+          text.className = 'checklist-text ' + (item.checked ? 'checked' : 'unchecked');
+          
+          itemDiv.appendChild(checkbox);
+          itemDiv.appendChild(text);
+          checklistContainer.appendChild(itemDiv);
+        }
+      });
+     
+     modalMessage.appendChild(checklistContainer);
+     
+           // Add additional guidance message for project submission
+      if (title && title.toLowerCase().includes('project submission')) {
+        const guidanceDiv = document.createElement('div');
+        guidanceDiv.style.cssText = 'margin-top: 0.5rem; font-size: 0.9rem; line-height: 1.4;';
+        guidanceDiv.innerHTML = 'Before you submit, check that:<br> - This project isn\'t shipped to another program<br> - Your project is usable, not just a tech-demo.<br> - You added a readme that explains your project!<br> - Your project is experienceable by any person on any device. This means that if you make something platform-specific, you should add a video or descriptive pictures as part of the readme.';
+        modalMessage.appendChild(guidanceDiv);
+      }
+     
+     // Add buttons
+     if (onConfirm) {
+       const confirmBtn = document.createElement('button');
+       confirmBtn.textContent = 'Confirm';
+       confirmBtn.className = 'submit-button modal-button modal-button-primary';
+       confirmBtn.addEventListener('click', () => {
+         onConfirm();
+         hideModal();
+       });
+       modalActions.appendChild(confirmBtn);
+     }
+     
+     if (onCancel) {
+       const cancelBtn = document.createElement('button');
+       cancelBtn.textContent = 'Cancel';
+       cancelBtn.className = 'submit-button modal-button modal-button-secondary';
+       cancelBtn.addEventListener('click', () => {
+         onCancel();
+         hideModal();
+       });
+       modalActions.appendChild(cancelBtn);
+     }
+     
+     modal.style.display = 'flex';
+     document.body.style.overflow = 'hidden';
+   }
+  
+  // Set up event listeners for modal immediately
+  function setupModalEventListeners() {
+    const modal = document.getElementById('modal');
+    const closeBtn = document.getElementById('modal-close');
+    
+    if (modal) {
+      // Close modal when clicking outside
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          hideModal();
+        }
+      });
+      
+      // Close modal with Escape key
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modal.style.display !== 'none') {
+          hideModal();
+        }
+      });
+    }
+    
+    if (closeBtn) {
+      closeBtn.addEventListener('click', () => {
+        hideModal();
+      });
+    }
+  }
+  
+  // Try to set up listeners immediately, and also on DOMContentLoaded as backup
+  setupModalEventListeners();
+  
+  document.addEventListener('DOMContentLoaded', function() {
+    setupModalEventListeners();
+  });
+</script>

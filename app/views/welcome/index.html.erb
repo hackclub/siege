@@ -1,0 +1,211 @@
+<% content_for :head do %>
+  <style>
+    .welcome-container {
+      width: 100%;
+      max-width: 800px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+      padding: 2rem 1rem;
+    }
+
+    .welcome-header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    .siege-logo {
+      width: 200px;
+      height: auto;
+      margin: 0 auto 2rem;
+      display: block;
+    }
+
+    .welcome-title {
+      font-family: "Jaini", "IM Fell English", serif;
+      font-weight: 700;
+      font-size: 4rem;
+      margin: 0 0 1rem 0;
+      color: #3b2a1a;
+      text-align: center;
+    }
+
+    .section-title {
+      font-family: "Jaini", "IM Fell English", serif;
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: #3b2a1a;
+      margin: 0 0 1.5rem 0;
+    }
+
+    .section-text {
+      font-size: 1.125rem;
+      line-height: 1.7;
+      color: #3b2a1a;
+      margin: 0 0 1.5rem 0;
+    }
+
+    .week-info {
+      margin: 1.5rem 0;
+    }
+
+    .week-info h3 {
+      font-family: "Jaini", "IM Fell English", serif;
+      margin: 0 0 1rem 0;
+      font-size: 1.5rem;
+      color: #3b2a1a;
+    }
+
+    .week-highlight {
+      margin: 1rem 0;
+    }
+
+    .week-highlight p {
+      margin: 0.5rem 0;
+      font-size: 1rem;
+      line-height: 1.5;
+    }
+
+    .button-container {
+      text-align: center;
+      margin-top: 2rem;
+    }
+  </style>
+<% end %>
+
+<div class="welcome-container">
+  <div class="welcome-header">
+    <%= image_tag "logo.webp", alt: "Siege Logo", class: "siege-logo" %>
+    <h1 class="welcome-title">Welcome to Siege</h1>
+  </div>
+  
+  <div class="welcome-content">
+    <h2 class="section-title">How does Siege work?</h2>
+    <p class="section-text">
+      Siege is a 13 week program where you'll be challenged to ship a project every week to stay in the siege. Each week we have exclusive prizes, new merch, and if you get to the end you'll get a framework!
+    </p>
+    
+    <div class="week-info">
+      <h3>We're currently in <%= @week_type %> week <%= @current_week %></h3>
+      
+      <% if @is_prep_week %>
+        <div class="week-highlight">
+          <p><strong>The 3 prep weeks are optional weeks before the real siege starts.</strong></p>
+          <p>During the prep weeks, you'll earn 2-4x the coins so you can build up your stash before you get going!</p>
+					<p>Ship at least 5 hours each week to get an exclusive sticker!</p>
+					<p>Ship at least 15 hours over at least 2 projects during the prep weeks to get an adorable Heidi purse.</p>
+        </div>
+      <% elsif @can_get_framework %>
+        <div class="week-highlight">
+          <p><strong>Siege is starting now!</strong></p>
+          <p>Get 10 hours in by Sunday to stay in!</p>
+        </div>
+      <% elsif @siege_started %>
+        <div class="week-highlight">
+          <p><strong>Siege has already started.</strong></p>
+          <p>You can still join in and get the weekly rewards, but you won't be able to get the framework at the end.</p>
+        </div>
+      <% end %>
+    </div>
+
+		<div class="week-info">
+			<h3>Have any other questions?</h3>
+			<p>Check out the <a href="https://hackclub.slack.com/docs/T0266FRGM/F099PKQR3UK" target="_blank">FAQ</a> or ask a question in <a href="https://hackclub.slack.com/archives/C0266FRGJ0R" target="_blank">#siege-help</a> channel for more information.</p>
+		</div>
+    
+    <div class="button-container">
+      <button onclick="showTermsModal()" class="submit-button">Get Started</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function showTermsModal() {
+  const modal = document.getElementById('modal');
+  const modalTitle = document.getElementById('modal-title');
+  const modalMessage = document.getElementById('modal-message');
+  const modalActions = document.getElementById('modal-actions');
+  
+  if (!modal || !modalTitle || !modalMessage || !modalActions) {
+    console.error('Modal elements not found');
+    return;
+  }
+  
+  modalTitle.textContent = 'Before you go into battle...';
+  modalMessage.innerHTML = '';
+  modalActions.innerHTML = '';
+  
+  // Create form
+  const form = document.createElement('form');
+  form.action = '<%= welcome_complete_path %>';
+  form.method = 'POST';
+  
+  // Add CSRF token
+  const csrfInput = document.createElement('input');
+  csrfInput.type = 'hidden';
+  csrfInput.name = 'authenticity_token';
+  csrfInput.value = document.querySelector('meta[name="csrf-token"]').content;
+  form.appendChild(csrfInput);
+  
+  // Create warning text
+  const warningText = document.createElement('p');
+  warningText.textContent = "Don't cheat the time tracking system. No bots, no fake key presses, no UI manipulation. If you do, you'll be banned from Hackatime and other participating YSWS / events / programs";
+  warningText.style.cssText = 'font-size: 1.1rem; line-height: 1.6; margin-bottom: 1.5rem;';
+  form.appendChild(warningText);
+  
+  // Create checkbox container
+  const checkboxContainer = document.createElement('div');
+  checkboxContainer.style.cssText = 'display: flex; align-items: center; margin: 1.5rem 0; cursor: pointer;';
+  
+  const hiddenCheckbox = document.createElement('input');
+  hiddenCheckbox.type = 'checkbox';
+  hiddenCheckbox.name = 'terms_accepted';
+  hiddenCheckbox.id = 'terms_accepted';
+  hiddenCheckbox.required = true;
+  hiddenCheckbox.style.cssText = 'display: none;';
+  
+  const checkbox = document.createElement('span');
+  checkbox.textContent = '☐';
+  checkbox.style.cssText = 'font-size: 1.2rem; margin-right: 12px; font-weight: bold; user-select: none;';
+  checkbox.className = 'terms-checkbox unchecked';
+  
+  const checkboxText = document.createElement('span');
+  checkboxText.textContent = 'I understand, now let me in!';
+  checkboxText.style.cssText = 'font-size: 1.1rem; user-select: none;';
+  
+  checkboxContainer.appendChild(hiddenCheckbox);
+  checkboxContainer.appendChild(checkbox);
+  checkboxContainer.appendChild(checkboxText);
+  form.appendChild(checkboxContainer);
+  
+  // Create continue button
+  const continueBtn = document.createElement('button');
+  continueBtn.type = 'submit';
+  continueBtn.textContent = 'Continue';
+  continueBtn.className = 'submit-button modal-button';
+  continueBtn.disabled = true;
+  continueBtn.style.cssText = 'opacity: 0.5; cursor: not-allowed; margin-top: 1rem;';
+  
+  // Checkbox toggle functionality
+  checkboxContainer.addEventListener('click', () => {
+    hiddenCheckbox.checked = !hiddenCheckbox.checked;
+    checkbox.textContent = hiddenCheckbox.checked ? '☑' : '☐';
+    checkbox.className = 'terms-checkbox ' + (hiddenCheckbox.checked ? 'checked' : 'unchecked');
+    
+    if (hiddenCheckbox.checked) {
+      continueBtn.disabled = false;
+      continueBtn.style.cssText = 'opacity: 1; cursor: pointer; margin-top: 1rem;';
+    } else {
+      continueBtn.disabled = true;
+      continueBtn.style.cssText = 'opacity: 0.5; cursor: not-allowed; margin-top: 1rem;';
+    }
+  });
+  
+  form.appendChild(continueBtn);
+  modalMessage.appendChild(form);
+  
+  modal.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+</script>

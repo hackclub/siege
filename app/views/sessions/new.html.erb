@@ -1,0 +1,529 @@
+<style>
+  /* Top Right Sign-in Button Styles */
+  .top-right-button {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+  }
+
+  .sign-in-button {
+    display: inline-block;
+    padding: 0.875rem 1.5rem;
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #ffffff;
+    background-color: #2f2f2f;
+    border: none;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background-color 0.3s ease;
+  }
+
+  .sign-in-button:hover {
+    background-color: #1f1f1f;
+  }
+
+  /* SiegeWeb Original Styles */
+  * {
+    user-select: none;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: "Jaini", serif;
+    overflow-x: hidden;
+    min-height: 100vh;
+    width: 100%;
+  }
+
+  /* Override main app container padding for this page */
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: none !important;
+    width: 100% !important;
+		gap: 0 !important;
+  }
+
+	.top-section {
+		position: relative;
+		width: 100%;
+		height: 80vh;
+		display: flex;
+		justify-content: center;
+	}
+
+  .parchment-background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+		height: 100vh;
+    background-image: url('<%= asset_url('castles.webp') %>');
+    background-size: cover;
+    background-position: top;
+    background-repeat: no-repeat;
+    z-index: 1;
+  }
+
+  #title {
+    width: 30%;
+		height: 60%;
+    object-fit: contain;
+		z-index: 3;
+  }
+
+  canvas {
+    position: relative;
+    display: block;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    z-index: 2;
+    box-sizing: border-box;
+  }
+
+  #meeple {
+    position: absolute;
+    width: 80px;
+    height: 80px;
+    background-size: contain;
+    background-repeat: no-repeat;
+    transition: left 0.1s ease, top 0.1s ease;
+  }
+
+
+
+  .bottom-section {
+    position: relative;
+    background: url('https://hc-cdn.hel1.your-objectstorage.com/s/v3/c8e9d8db7fd3cb3657bc7686a499f79ca2edcd23_image.png');
+    min-height: 50vh;
+    width: 100%;
+    text-align: center;
+    color: white;
+  }
+  .bottom-section p {
+    position: absolute;
+    bottom: 40%;
+    width: 100%;
+    padding: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 1.5em;
+    font-family: "IM Fell English", serif;
+  }
+  .bottom-section button {
+    position: absolute;
+    bottom: 30%;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #8D8D8D;
+    font-family: "IM Fell English", serif;
+    font-size: 1.5em;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+  .bottom-section button:hover {
+    background-color: #A9A9A9;
+  }
+
+  .slack-signin-button {
+    position: absolute;
+    bottom: 30%;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #4A154B;
+    font-family: "IM Fell English", serif;
+    font-size: 1.5em;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    text-decoration: none;
+    display: inline-block;
+  }
+
+  .slack-signin-button:hover {
+    background-color: #611f69;
+  }
+
+  .logos-container {
+    position: absolute;
+    bottom: 10%;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 60px;
+    z-index: 5;
+  }
+
+  /* Footer logo sections */
+  .landing-footer {
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 2rem;
+    text-align: center;
+    z-index: 1000;
+		background-color: #696969;
+  }
+
+  .landing-footer-section {
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    font-size: 1.5rem;
+    font-weight: 500;
+    font-family: "IM Fell English", serif;
+		color: #ffffff;
+  }
+
+  .landing-footer-section.yubico-footer {
+    font-size: 1rem;
+  }
+
+  .landing-footer-section:last-child {
+    margin-bottom: 0;
+  }
+
+  .landing-footer-logo {
+    height: 15px;
+    width: auto;
+    transition: opacity 0.3s ease;
+  }
+
+  .landing-footer-logo.hackclub {
+    height: 40px;
+  }
+
+  .landing-footer-logo:hover {
+    opacity: 0.8;
+  }
+
+  .landing-footer-link {
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .landing-footer-link:hover {
+    text-decoration: none;
+    color: inherit;
+  }
+
+  /* Top left logo */
+  .top-left-logo {
+    position: absolute;
+    top: 0px;
+    left: 50px;
+    z-index: 1000;
+  }
+
+  .top-left-logo img {
+    height: 100px;
+    width: auto;
+  }
+
+  .top-left-logo:hover img {
+    transform: rotate(10deg);
+  }
+
+  .logo {
+    height: 28px;
+    width: auto;
+    transition: opacity 0.3s ease;
+  }
+
+  .logo:hover {
+    opacity: 0.8;
+  }
+  .bottom-section .bottom-edge {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    fill: #696969;
+    transform: rotate(180deg);
+  }
+
+
+
+  #yubico-logo {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    opacity: 0.5;
+    transition: opacity 0.3s ease;
+  }
+
+  #yubico-logo:hover {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+
+  @media (max-width: 600px) {
+    #title {
+      width: 140vw;
+      margin: 0;
+      transform: translateX(-15%);
+    }
+    .bottom-section {
+      min-height: 30vh;
+    }
+    .bottom-section p {
+      font-size: 1.2em;
+      bottom: 45%;
+    }
+    .bottom-section button {
+      font-size: 1.2em;
+      bottom: 35%;
+    }
+  }
+</style>
+
+<!-- Top Right Sign-in Button -->
+<div class="top-right-button">
+  <%= form_tag('/auth/slack_openid', method: 'post', data: {turbo: false}) do %>
+    <button type='submit' class="sign-in-button">
+      Sign in with Slack
+    </button>
+  <% end %>
+</div>
+
+<!-- Top Left Logo -->
+<a href="https://hackclub.com" target="_blank" class="top-left-logo">
+  <img src="https://assets.hackclub.com/flag-orpheus-top.svg" alt="Hack Club">
+</a>
+
+<!-- SiegeWeb Original Content -->
+<div class='top-section'>
+	<img id="title" src="<%= asset_path('logo.webp') %>" alt="Siege"/>
+	
+	<!-- Parchment Background -->
+	<div class="parchment-background"></div>
+</div>
+
+<canvas id="canvas">
+  Your browser does not support the HTML5 canvas tag.
+</canvas>
+
+<!-- Bottom Section -->
+<div class="bottom-section">
+  <svg class="bottom-edge" viewBox="0 0 1440 120" preserveAspectRatio="none">
+    <path d="M0,96 C180,150 360,88 540,110 C720,140 900,88 1080,105 C1260,130 1380,92 1440,96 L1440,0 L0,0 Z"></path>
+  </svg>
+  
+  <p>Are you ready to take up the challenge?</p>
+  
+  <%= form_tag('/auth/slack_openid', method: 'post', data: {turbo: false}) do %>
+    <button type='submit' class="sign-in-button">
+      Sign in with Slack
+    </button>
+  <% end %>
+  
+
+</div>
+
+<script>
+  // SiegeWeb Original JavaScript
+  const canvasBackgroundSrc = '<%= asset_path('long-parchment.webp') %>';
+  const castleImageSrc = '<%= asset_path('castle.webp') %>';
+  const meepleImageSrc = '<%= asset_path('meeple/meeple-blue.png') %>'
+
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+
+  // Set canvas dimensions
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight * 3;
+
+  // Overlay canvas so we don't overwrite the background with the path and castles
+  const overlayCanvas = document.createElement('canvas');
+  const overlayCtx = overlayCanvas.getContext('2d');
+  overlayCanvas.width = canvas.width;
+  overlayCanvas.height = canvas.height;
+    overlayCanvas.style.position = 'absolute';
+  overlayCanvas.style.left = '0';
+  overlayCanvas.style.top = '80vh';
+  overlayCanvas.style.margin = '0';
+  overlayCanvas.style.padding = '0';
+  overlayCanvas.style.boxSizing = 'border-box';
+  document.body.appendChild(overlayCanvas);
+
+  // Clear the top section background
+  function makeBackgroundImage() {
+    ctx.beginPath();
+
+    ctx.moveTo(0, 0);
+    // Use exact SVG curve from footer but adjusted to top with very reduced intensity: M0,0 C180,13.5 360,-2 540,3.5 C720,11 900,-2 1080,2.25 C1260,8.5 1380,-1 1440,0
+    ctx.bezierCurveTo(canvas.width * 180/1440, canvas.height * 13.5/120, canvas.width * 360/1440, canvas.height * -2/120, canvas.width * 540/1440, canvas.height * 3.5/120);
+    ctx.bezierCurveTo(canvas.width * 720/1440, canvas.height * 11/120, canvas.width * 900/1440, canvas.height * -2/120, canvas.width * 1080/1440, canvas.height * 2.25/120);
+    ctx.bezierCurveTo(canvas.width * 1260/1440, canvas.height * 8.5/120, canvas.width * 1380/1440, canvas.height * -1/120, canvas.width, 0);
+    ctx.lineTo(canvas.width, canvas.height);
+    ctx.lineTo(0, canvas.height);
+    ctx.closePath();
+
+    const img = new Image();
+    img.src = canvasBackgroundSrc;
+    img.onload = () => {
+      ctx.fillStyle = ctx.createPattern(img, 'repeat');
+      ctx.fill();
+    }
+
+    img.onerror = () => {
+      console.error('Failed to load image at ' + img.src);
+      ctx.fillStyle = '#d3d3d3'; // Fallback color
+      ctx.fill();
+    }
+  }
+
+  // Function to draw a smooth, dotted path
+  function drawDottedPath(points) {
+    overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+    overlayCtx.lineWidth = 10;
+    overlayCtx.strokeStyle = '#ab895f';
+    overlayCtx.setLineDash([40, 80]); // Dotted line pattern
+
+    overlayCtx.beginPath();
+    overlayCtx.moveTo(points[0].x, points[0].y);
+
+    for (let i = 1; i < points.length - 2; i++) {
+      const cpX = (points[i].x + points[i + 1].x) / 2;
+      const cpY = (points[i].y + points[i + 1].y) / 2;
+      overlayCtx.quadraticCurveTo(points[i].x, points[i].y, cpX, cpY);
+    }
+
+    // For the last two points
+    overlayCtx.quadraticCurveTo(
+      points[points.length - 2].x,
+      points[points.length - 2].y,
+      points[points.length - 1].x,
+      points[points.length - 1].y
+    );
+
+    overlayCtx.stroke();
+  }
+
+  function addCastleImage(x, y, text) {
+    const img = new Image();
+    img.src = castleImageSrc;
+
+    img.onload = () => {
+      let imgWidth = img.width / 2; // Scale down the image
+      let imgHeight = img.height / 2;
+      if (imgWidth > overlayCanvas.width / 3) {
+        imgWidth = overlayCanvas.width / 3; // Limit width to a third of canvas width       
+        imgHeight = (img.height / img.width) * imgWidth; // Maintain aspect ratio
+      }
+      const imgX = x - imgWidth / 2; // Center the image at (x, y)
+      const imgY = y - imgHeight / 2;
+
+      overlayCtx.drawImage(img, imgX, imgY, imgWidth, imgHeight);
+
+      if (text) {
+        overlayCtx.fillStyle = 'black';
+        overlayCtx.textAlign = 'center';
+        text = text.split('\n');
+        const textLength = Math.max(...text.map(line => line.length));
+        overlayCtx.font = (imgWidth * 2 / textLength) + 'px IM Fell English';
+        for (let i = 0; i < text.length; i++) {
+          overlayCtx.fillText(text[i], x, imgY + imgHeight + 50 + i * (imgWidth * 2 / textLength));
+        }
+      }
+    }
+
+    img.onerror = () => { console.error('Failed to load image at ' + img.src); }
+  }
+
+  let meeple;
+  function addMeeple(x, y) {
+    meeple = document.createElement('div');
+    meeple.id = 'meeple';
+    meeple.style.backgroundImage = `url(${meepleImageSrc})`;
+    meeple.style.left = (x - 40) + 'px';
+    meeple.style.top = (y - 100 + window.innerHeight * 0.8) + 'px';
+		meeple.style.zIndex = 1000;
+		meeple.style.width = '200px';
+		meeple.style.height = '200px';
+    document.body.appendChild(meeple);
+  }
+
+  // Move meeple smoothly along the path as the user scrolls
+  window.addEventListener('scroll', () => {
+    if (!meeple) return; // Ensure meeple is loaded
+    const scrollFraction = Math.max((window.scrollY - window.innerHeight / 2), 0) * points.length / (document.body.scrollHeight - window.innerHeight);
+    const pointIndex = Math.min(Math.floor(scrollFraction), points.length - 1);
+    const nextPointIndex = Math.min(pointIndex + 1, points.length - 1);
+    const t = scrollFraction - pointIndex;
+    const x = (1 - t) * points[pointIndex].x + t * points[nextPointIndex].x;
+    const y = (1 - t) * points[pointIndex].y + t * points[nextPointIndex].y;
+
+    // Move the meeple to its new position (bigger size)
+    meeple.style.left = (x - 40) + 'px';
+    meeple.style.top = (y - 100 + window.innerHeight * 0.8) + 'px';
+  });
+
+
+
+  // Points from top center to bottom center
+  const points = [
+    { x: canvas.width / 3, y: canvas.height * 0.1 },
+    { x: 3 * canvas.width / 4, y: canvas.height * 0.3 },
+    { x: canvas.width / 3, y: canvas.height * 0.5 },
+    { x: canvas.width / 4, y: canvas.height * 0.7 },
+    { x: canvas.width / 2, y: canvas.height * 0.9 }
+  ];
+
+  // Text for the castles
+  const texts = [
+    "code 10 hours",
+    "vote on the\nbest projects",
+    "get prizes",
+    "ship every week",
+    "get a framework"
+  ]
+
+  // Initial drawing
+  makeBackgroundImage();
+
+  // Draw the dotted path
+  drawDottedPath(points);
+
+  for (let i = 0; i < points.length; i++) {
+    addCastleImage(points[i].x, points[i].y, texts[i]);
+  }
+
+  addMeeple(points[0].x, points[0].y);
+</script>
+
+<!-- Footer with logo sections -->
+<footer class="landing-footer">
+  <div class="landing-footer-section">
+    <span>A</span>
+    <a href="https://hackclub.com" target="_blank" class="landing-footer-link">
+      <img src="https://assets.hackclub.com/flag-standalone.svg" alt="Hack Club" class="landing-footer-logo hackclub">
+    </a>
+    <span>program. Made by teens for teens.</span>
+  </div>
+  <div class="landing-footer-section yubico-footer">
+    <span>Also sponsored by</span>
+    <a href="https://www.yubico.com" target="_blank" class="landing-footer-link">
+      <img src="https://resources.yubico.com/53ZDUYE6/at/q2tsde-8kenzk-4cg1pz/Yubico_Logo_Big_PNG.png?auto=webp&format=png&width=100&height=28" alt="Yubico" class="landing-footer-logo">
+    </a>
+  </div>
+</footer>

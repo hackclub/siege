@@ -8,3 +8,174 @@
  *
  * Consider organizing styles into separate files for maintainability.
  */
+
+/* Global font styles */
+* {
+  font-family: "IM Fell English", serif;
+}
+
+/* Global heading styles */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: "Jaini", "IM Fell English", serif;
+}
+
+h2 {
+  font-size: 2rem;
+}
+
+/* Global button used across forms and details pages */
+.submit-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "IM Fell English", serif;
+  font-size: 1.125rem;
+  padding: 0.75rem 1.25rem;
+  position: relative;
+  border: 3px solid rgba(64, 43, 32, 0.75);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.submit-button::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border-radius: inherit;
+  border: 3px solid rgba(64, 43, 32, 0.55);
+  pointer-events: none;
+  transition: inset 0.2s ease-in-out;
+}
+
+.submit-button:hover {
+  filter: brightness(0.95);
+}
+.submit-button:hover::after {
+  inset: 1px;
+}
+.submit-button:active::after {
+  inset: 7px;
+}
+
+/* Danger variant for destructive actions */
+.submit-button--danger {
+  color: #b91c1c; /* red-700 */
+  border-color: #b91c1c;
+}
+.submit-button--danger::after {
+  border-color: #ef4444; /* red-500 */
+}
+
+/* Project card styles */
+.project-card {
+  position: relative;
+  padding: 1.5rem;
+  border: 3px solid rgba(64, 43, 32, 0.75);
+}
+.project-card::after {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border: 3px dotted rgba(64, 43, 32, 0.55);
+  transition: inset 0.2s ease-in-out;
+  pointer-events: none;
+}
+.project-card:hover::after {
+  inset: 2px;
+}
+.project-card:active::after {
+  inset: 9px;
+}
+.project-card.is-static:hover::after,
+.project-card.is-static:active::after {
+  inset: 8px;
+}
+
+.project-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+.project-title {
+  font-weight: 600;
+  font-size: 1.25rem;
+  margin: 0;
+}
+.project-description {
+  margin: 0 0 1.25rem 0;
+  opacity: 0.85;
+}
+
+.project-links {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+.project-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border: 3px solid rgba(64, 43, 32, 0.75);
+  text-decoration: none;
+  color: inherit;
+  position: relative;
+  z-index: 2;
+}
+.project-link:hover {
+  filter: brightness(0.95);
+}
+.project-link.is-disabled {
+  opacity: 0.5;
+  pointer-events: none;
+  cursor: not-allowed;
+}
+
+.project-time {
+  font-size: 0.875rem;
+  font-weight: 600;
+  opacity: 0.8;
+  margin-bottom: 1rem;
+}
+.project-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+.project-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  border: 2px solid rgba(64, 43, 32, 0.75);
+  border-radius: 0.375rem;
+}
+.project-updated {
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+.icon-sm {
+  width: 1rem;
+  height: 1rem;
+}
+.icon-xs {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+.project-card-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  text-decoration: none;
+}

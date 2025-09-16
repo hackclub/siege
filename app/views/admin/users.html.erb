@@ -1,0 +1,733 @@
+<% content_for :title, "Admin - All Users" %>
+
+<% content_for :head do %>
+  <style>
+    /* Coin image styles */
+    .coin-icon {
+      display: inline;
+      vertical-align: baseline;
+      margin-left: 4px;
+    }
+    .coin-icon-large { width: 24px; height: 24px; }
+    .coin-icon-medium { width: 20px; height: 20px; }
+    .coin-icon-small { width: 16px; height: 16px; }
+
+    /* Toggle switch styles */
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 40px;
+      height: 20px;
+    }
+    
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: .4s;
+      border-radius: 20px;
+    }
+    
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 16px;
+      width: 16px;
+      left: 2px;
+      bottom: 2px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+    
+    input:checked + .toggle-slider {
+      background-color: #dc2626;
+    }
+    
+    input:checked + .toggle-slider:before {
+      transform: translateX(20px);
+    }
+
+    .admin-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+      overflow-x: hidden;
+    }
+    .admin-header {
+      margin-bottom: 2rem;
+    }
+    .admin-title {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      color: #402b20;
+    }
+    .admin-subtitle {
+      font-size: 1.1rem;
+      color: #6b5b4a;
+      margin-bottom: 2rem;
+    }
+    .filters-section {
+      background: rgba(255, 255, 255, 0.9);
+      border: 2px solid rgba(64, 43, 32, 0.2);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    .filters-form {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      align-items: end;
+    }
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .filter-label {
+      font-weight: 600;
+      color: #402b20;
+      font-size: 0.9rem;
+    }
+    .filter-input, .filter-select {
+      padding: 0.5rem;
+      border: 2px solid rgba(64, 43, 32, 0.3);
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+    .filter-input:focus, .filter-select:focus {
+      outline: none;
+      border-color: rgba(64, 43, 32, 0.6);
+    }
+    .filter-button {
+      padding: 0.5rem 1rem;
+      background: #402b20;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .filter-button:hover {
+      background: #2d1e16;
+    }
+    
+    .refresh-cache-btn {
+      padding: 0.75rem 1.5rem;
+      background: #059669;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 0.9rem;
+    }
+    
+    .refresh-cache-btn:hover {
+      background: #047857;
+      transform: translateY(-1px);
+    }
+    
+    /* Pagination Styles */
+    .pagination-container {
+      margin-top: 2rem;
+      padding: 1.5rem;
+      background: rgba(255, 255, 255, 0.9);
+      border: 2px solid rgba(64, 43, 32, 0.2);
+      border-radius: 12px;
+      text-align: center;
+    }
+    
+    .pagination-info {
+      margin-bottom: 1rem;
+      font-size: 0.9rem;
+      color: #6b5b4a;
+    }
+    
+    .pagination-controls {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    
+    .pagination-link {
+      padding: 0.5rem 0.75rem;
+      background: #402b20;
+      color: white;
+      text-decoration: none;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    
+    .pagination-link:hover {
+      background: #2d1e16;
+      transform: translateY(-1px);
+    }
+    
+    .pagination-current {
+      padding: 0.5rem 0.75rem;
+      background: #059669;
+      color: white;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+    
+    .pagination-ellipsis {
+      padding: 0.5rem 0.5rem;
+      color: #6b5b4a;
+      font-weight: 500;
+    }
+    .users-count {
+      font-size: 0.9rem;
+      color: #6b5b4a;
+      margin-bottom: 1rem;
+    }
+    .users-grid {
+      display: grid;
+      gap: 1rem;
+      grid-template-columns: 1fr;
+      width: 100%;
+      min-height: 0;
+    }
+    
+    @media (min-width: 768px) {
+      .users-grid {
+        grid-template-columns: repeat(1, 1fr);
+      }
+    }
+    
+    @media (min-width: 1024px) {
+      .users-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    
+    @media (min-width: 1800px) {
+      .users-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+    .user-card {
+      background: rgba(255, 255, 255, 0.95);
+      border: 2px solid rgba(64, 43, 32, 0.15);
+      border-radius: 12px;
+      padding: 1.5rem;
+      transition: all 0.2s;
+      cursor: pointer;
+      width: 100%;
+      box-sizing: border-box;
+      min-width: 0;
+      overflow: hidden;
+    }
+    .user-card:hover {
+      border-color: rgba(64, 43, 32, 0.4);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      transform: translateY(-2px);
+    }
+    .user-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 0.75rem;
+    }
+    .user-name {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: #402b20;
+      margin: 0;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+    }
+    .user-status {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+    .status-out { background-color: #fee2e2; color: #dc2626; }
+    .status-working { background-color: #dbeafe; color: #2563eb; }
+    .status-completed { background-color: #d1fae5; color: #059669; }
+    .user-meta {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+    .meta-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+    .meta-label {
+      font-size: 0.8rem;
+      color: #6b5b4a;
+      font-weight: 500;
+    }
+    .meta-value {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #402b20;
+    }
+    .user-rank {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      text-transform: capitalize;
+    }
+    .rank-user { background-color: #f3f4f6; color: #374151; }
+    .rank-viewer { background-color: #dbeafe; color: #1e40af; }
+    .rank-admin { background-color: #fed7aa; color: #ea580c; }
+    .rank-super_admin { background-color: #fecaca; color: #dc2626; }
+    .progress-section {
+      margin-top: 0.75rem;
+    }
+    .progress-label {
+      font-size: 0.8rem;
+      color: #6b5b4a;
+      margin-bottom: 0.25rem;
+    }
+    .progress-bar {
+      width: 100%;
+      height: 8px;
+      background-color: #f3f4f6;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #059669 0%, #10b981 100%);
+      transition: width 0.3s ease;
+    }
+    .progress-text {
+      font-size: 0.8rem;
+      color: #402b20;
+      margin-top: 0.25rem;
+      font-weight: 500;
+    }
+    .clear-filters {
+      background: #6b5b4a;
+      color: white;
+      text-decoration: none;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      display: inline-block;
+      transition: background 0.2s;
+    }
+    .clear-filters:hover {
+      background: #5a4a3a;
+      color: white;
+      text-decoration: none;
+    }
+    .meeple-preview {
+      width: 24px;
+      height: 24px;
+      display: inline-block;
+      vertical-align: middle;
+      margin-left: 0.5rem;
+    }
+    
+    .fraud-link {
+      display: inline-block;
+      padding: 0.5rem 1rem;
+      background: #6366f1;
+      color: white;
+      text-decoration: none;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+    
+    .fraud-link:hover {
+      background: #4f46e5;
+      color: white;
+      text-decoration: none;
+      transform: translateY(-1px);
+    }
+  </style>
+<% end %>
+
+<div class="admin-container">
+  <div class="admin-header">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+      <div>
+        <h1 class="admin-title">All Users</h1>
+        <p class="admin-subtitle">Comprehensive view of all users and their progress</p>
+      </div>
+      <div style="text-align: right;">
+        <%= button_to "🔄 Refresh Hackatime Cache", admin_refresh_hackatime_cache_path, 
+            method: :post, 
+            class: "refresh-cache-btn",
+            data: { confirm: "This will clear the Hackatime trust cache. Trust status will be refreshed on next page load. Continue?" } %>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filters Section -->
+  <div class="filters-section">
+    <%= form_with url: admin_users_path, method: :get, class: "filters-form", local: true do |form| %>
+      <div class="filter-group">
+        <%= form.label :name, "User Name", class: "filter-label" %>
+        <%= form.text_field :name, value: params[:name], placeholder: "Search by name...", class: "filter-input" %>
+      </div>
+      
+      <div class="filter-group">
+        <%= form.label :referred_by, "Referred By", class: "filter-label" %>
+        <%= form.text_field :referred_by, value: params[:referred_by], placeholder: "Referrer name or ID...", class: "filter-input" %>
+      </div>
+      
+      <div class="filter-group">
+        <%= form.label :status, "Status", class: "filter-label" %>
+        <%= form.select :status,
+            options_for_select(@user_statuses.map { |s| [s.capitalize, s] }, params[:status]),
+            { prompt: "All statuses" },
+            { class: "filter-select" } %>
+      </div>
+      
+      <div class="filter-group">
+        <%= form.label :rank, "Rank", class: "filter-label" %>
+        <%= form.select :rank,
+            options_for_select(@user_ranks.map { |r| [r.humanize, r] }, params[:rank]),
+            { prompt: "All ranks" },
+            { class: "filter-select" } %>
+      </div>
+      
+      <div class="filter-group">
+        <%= form.label :hackatime_trust, "Hackatime Trust", class: "filter-label" %>
+        <%= form.select :hackatime_trust,
+            options_for_select([
+              ['All Trust Levels', ''],
+              ['Trusted', 'trusted'],
+              ['Neutral', 'neutral'],
+              ['Banned', 'banned'],
+              ['Unknown/Error', 'unknown']
+            ], params[:hackatime_trust]),
+            { prompt: "All trust levels" },
+            { class: "filter-select" } %>
+      </div>
+      
+      <% if current_user&.super_admin? %>
+        <div class="filter-group">
+          <%= form.label :min_age, "Min Age", class: "filter-label" %>
+          <%= form.number_field :min_age, value: params[:min_age], placeholder: "Minimum age", class: "filter-input", min: 0, max: 120 %>
+        </div>
+        
+        <div class="filter-group">
+          <%= form.label :max_age, "Max Age", class: "filter-label" %>
+          <%= form.number_field :max_age, value: params[:max_age], placeholder: "Maximum age", class: "filter-input", min: 0, max: 120 %>
+        </div>
+      <% end %>
+      
+      <div class="filter-group">
+        <%= form.submit "Filter", class: "filter-button" %>
+      </div>
+    <% end %>
+    
+    <% if params[:name].present? || params[:referred_by].present? || params[:status].present? || params[:rank].present? || params[:hackatime_trust].present? || params[:min_age].present? || params[:max_age].present? %>
+      <div style="margin-top: 1rem;">
+        <%= link_to "Clear All Filters", admin_users_path, class: "clear-filters" %>
+      </div>
+    <% end %>
+  </div>
+
+  <!-- Users Count -->
+  <div class="users-count">
+    Showing <%= @users.count %> user<%= @users.count == 1 ? '' : 's' %>
+    <% if params[:name].present? || params[:referred_by].present? || params[:status].present? || params[:rank].present? || params[:hackatime_trust].present? || params[:min_age].present? || params[:max_age].present? %>
+      (filtered)
+    <% end %>
+  </div>
+
+  <!-- Users Grid -->
+  <div class="users-grid">
+    <% if @users.any? %>
+             <% @users.each do |user| %>
+         <% current_week_seconds = @user_week_seconds[user.id] || 0 %>
+         <% progress_percent = [(current_week_seconds / 36000.0 * 100).round(1), 100].min %>
+         <% readable_time = format_time_from_seconds(current_week_seconds) %>
+        
+        <div class="user-card" onclick="window.location.href='<%= admin_user_details_path(user) %>'">
+          <div class="user-header">
+            <h3 class="user-name">
+              <span><%= user.id %> - </span>
+              <%= user.name %>
+              <% if user.display_name.present? && user.display_name != user.name %>
+                <span style="color: #666; font-weight: normal;">(<%= user.display_name %>)</span>
+              <% end %>
+              <% if user.meeple %>
+                <img src="<%= asset_path("meeple/meeple-#{user.meeple.color}.png") %>" alt="<%= user.meeple.color %> meeple" class="meeple-preview" />
+              <% end %>
+            </h3>
+            <span class="user-status status-<%= user.status %>">
+              <%= user.status.capitalize %>
+            </span>
+          </div>
+          
+          <div class="user-meta">
+            <div class="meta-item">
+              <span class="meta-label">Coins</span>
+              <span class="meta-value"><%= user.coins || 0 %><img src="<%= asset_path('coin.png') %>" alt="coin" class="coin-icon coin-icon-small" /></span>
+            </div>
+            
+                         <div class="meta-item">
+               <span class="meta-label">Projects</span>
+               <span class="meta-value"><%= @user_project_counts[user.id] || 0 %></span>
+             </div>
+            
+            <div class="meta-item">
+              <span class="meta-label">Rank</span>
+              <span class="user-rank rank-<%= user.rank %>"><%= user.rank.humanize %></span>
+            </div>
+            
+            <div class="meta-item">
+              <span class="meta-label">This Week</span>
+              <span class="meta-value"><%= readable_time %></span>
+            </div>
+            
+            <div class="meta-item">
+              <span class="meta-label">Verification</span>
+              <span class="meta-value">
+                <% if user.idv_rec.present? %>
+                  <span style="color: #059669; font-weight: 600;">✓ Verified</span>
+                  <button onclick="event.stopPropagation(); clearVerification(<%= user.id %>);" 
+                          style="background: #dc2626; color: white; border: none; border-radius: 4px; padding: 2px 6px; font-size: 0.7rem; cursor: pointer; margin-left: 4px;">
+                    Clear
+                  </button>
+                <% else %>
+                  <span style="color: #dc2626; font-weight: 600;">✗ Not Verified</span>
+                <% end %>
+              </span>
+            </div>
+            
+            <div class="meta-item">
+              <span class="meta-label">Hackatime Trust</span>
+              <span class="meta-value" id="hackatime-trust-<%= user.id %>">
+                <span style="color: #6b7280; font-weight: 600;">⏳ Loading...</span>
+              </span>
+            </div>
+            
+            <div class="meta-item">
+              <span class="meta-label">Out</span>
+              <span class="meta-value">
+                <select onchange="updateUserStatus(<%= user.id %>, this.value)" 
+                        onclick="event.stopPropagation();"
+                        style="background: white; border: 1px solid #ccc; padding: 2px; border-radius: 4px; font-size: 0.8rem;">
+                  <option value="working" <%= 'selected' if user.status == 'working' %>>Working</option>
+                  <option value="out" <%= 'selected' if user.status == 'out' %>>Out</option>
+                  <option value="banned" <%= 'selected' if user.status == 'banned' %>>Banned</option>
+                  <option value="new" <%= 'selected' if user.status == 'new' %>>New</option>
+                </select>
+              </span>
+            </div>
+            
+            <div class="meta-item">
+              <span class="meta-label">Slack ID</span>
+              <span class="meta-value"><%= user.slack_id %></span>
+            </div>
+            
+            <% if user.referrer.present? %>
+              <div class="meta-item">
+                <span class="meta-label">Referred By</span>
+                <span class="meta-value"><%= user.referrer.id %> - <%= user.referrer.name %></span>
+              </div>
+            <% end %>
+          </div>
+          
+          <% if user.slack_id.present? %>
+            <div style="margin-top: 0.75rem; text-align: center;">
+              <a href="https://dash.fraud.land/profile/<%= user.slack_id %>" target="_blank" class="fraud-link" onclick="event.stopPropagation();">
+                View Fraud.land Profile
+              </a>
+            </div>
+          <% end %>
+          
+          <div class="progress-section">
+            <div class="progress-label">Week Progress (<%= progress_percent %>%)</div>
+            <div class="progress-bar">
+              <div class="progress-fill" style="width: <%= progress_percent %>%;"></div>
+            </div>
+            <div class="progress-text">
+              <%= progress_percent >= 100 ? "Siege Complete!" : "#{readable_time} / 10h" %>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    <% else %>
+      <div style="text-align: center; padding: 3rem; color: #6b5b4a;">
+        <h3>No users found</h3>
+        <p>Try adjusting your filters or check back later.</p>
+      </div>
+    <% end %>
+    
+    <!-- Pagination -->
+    <% if @total_pages > 1 %>
+      <div class="pagination-container">
+        <div class="pagination-info">
+          Showing <%= (@current_page - 1) * @per_page + 1 %> to <%= [@current_page * @per_page, @total_count].min %> of <%= @total_count %> users
+        </div>
+        <div class="pagination-controls">
+          <% if @current_page > 1 %>
+            <%= link_to "← Previous", admin_users_path(page: @current_page - 1, name: params[:name], referred_by: params[:referred_by], status: params[:status], rank: params[:rank], hackatime_trust: params[:hackatime_trust], min_age: params[:min_age], max_age: params[:max_age]), class: "pagination-link" %>
+          <% end %>
+          
+          <% @total_pages.times do |page_num| %>
+            <% page_num = page_num + 1 %>
+            <% if page_num == @current_page %>
+              <span class="pagination-current"><%= page_num %></span>
+            <% elsif page_num == 1 || page_num == @total_pages || (page_num >= @current_page - 2 && page_num <= @current_page + 2) %>
+              <%= link_to page_num, admin_users_path(page: page_num, name: params[:name], referred_by: params[:referred_by], status: params[:status], rank: params[:rank], hackatime_trust: params[:hackatime_trust], min_age: params[:min_age], max_age: params[:max_age]), class: "pagination-link" %>
+            <% elsif page_num == @current_page - 3 || page_num == @current_page + 3 %>
+              <span class="pagination-ellipsis">...</span>
+            <% end %>
+          <% end %>
+          
+          <% if @current_page < @total_pages %>
+            <%= link_to "Next →", admin_users_path(page: @current_page + 1, name: params[:name], referred_by: params[:referred_by], status: params[:status], rank: params[:rank], hackatime_trust: params[:hackatime_trust], min_age: params[:min_age], max_age: params[:max_age]), class: "pagination-link" %>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<script>
+function updateUserStatus(userId, newStatus) {
+const statusMessages = {
+  'working': 'Are you sure you want to mark this user as working? They will be able to create and submit projects.',
+'out': 'Are you sure you want to mark this user as out? They will see "your siege has failed" but can still participate.',
+'banned': 'Are you sure you want to ban this user? They will not be able to create projects, submit projects, vote, or use the market.',
+'new': 'Are you sure you want to mark this user as new? This means they haven\'t completed the welcome flow.'
+};
+
+  const actionMap = {
+    'working': 'set_active',
+    'out': 'set_out',
+    'banned': 'set_banned'
+  };
+  
+  const message = statusMessages[newStatus] || `Are you sure you want to change this user's status to ${newStatus}?`;
+  const action = actionMap[newStatus] || 'set_active';
+     
+  if (confirm(message)) {
+    fetch(`/admin/users/${userId}/${action}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        // Optionally refresh the page or show a success message
+        location.reload();
+      } else {
+        alert('Error updating user status: ' + (data.error || 'Unknown error'));
+        // Revert the toggle
+        event.target.checked = !isOut;
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('Error updating user status. Please try again.');
+      // Revert the toggle
+      event.target.checked = !isOut;
+    });
+  } else {
+    // Revert the toggle if user cancels
+    event.target.checked = !isOut;
+  }
+}
+
+function clearVerification(userId) {
+  if (confirm('Are you sure you want to clear this user\'s identity verification? They will need to verify again to submit projects.')) {
+    fetch(`/admin/users/${userId}/clear_verification`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        location.reload();
+      } else {
+        alert('Failed to clear verification: ' + (data.error || 'Unknown error'));
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('Failed to clear verification. Please try again.');
+    });
+  }
+}
+
+// Load hackatime trust data asynchronously
+document.addEventListener('DOMContentLoaded', function() {
+  // Get all user IDs from the page
+  const trustElements = document.querySelectorAll('[id^="hackatime-trust-"]');
+  
+  trustElements.forEach(element => {
+    const userId = element.id.replace('hackatime-trust-', '');
+    
+    // Fetch hackatime trust data for this user
+    fetch(`/admin/users/${userId}/hackatime_trust`, {
+      method: 'GET',
+      headers: {
+        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content,
+        'Accept': 'application/json'
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      // Update the display with the trust status
+      let statusHtml = '';
+      switch(data.status) {
+        case 'trusted':
+          statusHtml = '<span style="color: #059669; font-weight: 600;">✓ Trusted</span>';
+          break;
+        case 'neutral':
+          statusHtml = '<span style="color: #2563eb; font-weight: 600;">○ Neutral</span>';
+          break;
+        case 'banned':
+          statusHtml = '<span style="color: #dc2626; font-weight: 600;">✗ Banned</span>';
+          break;
+        case 'error':
+          statusHtml = `<span style="color: #dc2626; font-weight: 600;" title="${data.message || 'API Error'}">⚠ Error</span>`;
+          break;
+        default:
+          statusHtml = `<span style="color: #6b7280; font-weight: 600;" title="${data.message || 'Unknown status'}">? Unknown</span>`;
+      }
+      element.innerHTML = statusHtml;
+    })
+    .catch(error => {
+      console.error('Error loading hackatime trust for user', userId, ':', error);
+      element.innerHTML = '<span style="color: #dc2626; font-weight: 600;">⚠ Error</span>';
+    });
+  });
+});
+</script>

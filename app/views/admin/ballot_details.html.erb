@@ -1,0 +1,491 @@
+<% content_for :title, "Admin - Ballot Details" %>
+
+<% content_for :head do %>
+  <style>
+    .admin-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    
+    .admin-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    
+    .admin-title {
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: #402b20;
+      margin: 0;
+    }
+    
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.5rem;
+      background: rgba(255, 255, 255, 0.95);
+      border: 2px solid rgba(64, 43, 32, 0.2);
+      border-radius: 8px;
+      text-decoration: none;
+      color: #402b20;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    
+    .back-link:hover {
+      border-color: rgba(64, 43, 32, 0.4);
+      transform: translateY(-1px);
+      text-decoration: none;
+      color: #402b20;
+    }
+    
+    /* Ballot Info */
+    .ballot-info-section {
+      background: rgba(255, 255, 255, 0.95);
+      border: 2px solid rgba(64, 43, 32, 0.15);
+      border-radius: 12px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    }
+    
+    .ballot-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 1.5rem;
+    }
+    
+    .ballot-title {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #402b20;
+      margin: 0;
+    }
+    
+    .ballot-status {
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    
+    .ballot-status.voted {
+      background: #d1fae5;
+      color: #065f46;
+    }
+    
+    .ballot-status.pending {
+      background: #fef3c7;
+      color: #92400e;
+    }
+    
+    .ballot-details-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    
+    .ballot-detail {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    
+    .ballot-detail-label {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #6b5b4a;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .ballot-detail-value {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #402b20;
+    }
+    
+    .ballot-reasoning {
+      margin-top: 1.5rem;
+      padding: 1.5rem;
+      background: rgba(64, 43, 32, 0.05);
+      border-radius: 8px;
+      border-left: 4px solid #402b20;
+    }
+    
+    .ballot-reasoning-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #402b20;
+      margin-bottom: 0.5rem;
+    }
+    
+    .ballot-reasoning-text {
+      font-size: 1rem;
+      color: #6b5b4a;
+      line-height: 1.6;
+    }
+    
+    /* Votes Section */
+    .votes-section {
+      background: rgba(255, 255, 255, 0.95);
+      border: 2px solid rgba(64, 43, 32, 0.15);
+      border-radius: 12px;
+      padding: 2rem;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    }
+    
+    .votes-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #402b20;
+      margin-bottom: 1.5rem;
+    }
+    
+    .votes-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1.5rem;
+    }
+    
+    .vote-card {
+      border: 2px solid rgba(64, 43, 32, 0.15);
+      border-radius: 8px;
+      padding: 1.5rem;
+      transition: all 0.2s;
+    }
+    
+    .vote-card:hover {
+      border-color: rgba(64, 43, 32, 0.3);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    
+    .vote-card.voted {
+      border-color: #10b981;
+      background: rgba(16, 185, 129, 0.05);
+    }
+    
+    .vote-card.no-project {
+      border-color: #6b7280;
+      background: rgba(107, 114, 128, 0.05);
+      opacity: 0.7;
+    }
+    
+    .vote-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 1rem;
+    }
+    
+    .vote-number {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #402b20;
+    }
+    
+    .vote-status {
+      padding: 0.25rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    
+    .vote-status.voted {
+      background: #d1fae5;
+      color: #065f46;
+    }
+    
+    .vote-status.pending {
+      background: #fef3c7;
+      color: #92400e;
+    }
+    
+    .vote-status.no-project {
+      background: #f3f4f6;
+      color: #6b7280;
+    }
+    
+    .project-info {
+      margin-bottom: 1rem;
+    }
+    
+    .project-name {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #402b20;
+      margin-bottom: 0.25rem;
+    }
+    
+    .project-user {
+      font-size: 0.9rem;
+      color: #6b5b4a;
+      margin-bottom: 0.5rem;
+    }
+    
+    .project-description {
+      font-size: 0.9rem;
+      color: #6b5b4a;
+      line-height: 1.4;
+      margin-bottom: 1rem;
+    }
+    
+    .vote-details {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    
+    .vote-detail {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+    
+    .vote-detail-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #6b5b4a;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .vote-detail-value {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #402b20;
+    }
+    
+    .star-rating-display {
+      display: flex;
+      gap: 0.25rem;
+      margin-top: 0.5rem;
+    }
+    
+    .star {
+      font-size: 1.2rem;
+      color: #ddd;
+    }
+    
+    .star.filled {
+      color: #ffc107;
+    }
+    
+         .no-project-message {
+       text-align: center;
+       color: #6b7280;
+       font-style: italic;
+       padding: 1rem;
+     }
+     
+     /* Admin Actions */
+     .ballot-admin-actions {
+       margin-top: 2rem;
+       padding: 1.5rem;
+       background: rgba(64, 43, 32, 0.05);
+       border-radius: 8px;
+       border-left: 4px solid #dc2626;
+     }
+     
+     .admin-actions-title {
+       font-size: 1.1rem;
+       font-weight: 600;
+       color: #dc2626;
+       margin-bottom: 1rem;
+     }
+     
+     .admin-actions-buttons {
+       display: flex;
+       gap: 1rem;
+       flex-wrap: wrap;
+     }
+     
+     .edit-ballot-button {
+       display: inline-block;
+       padding: 0.75rem 1.5rem;
+       background: #402b20;
+       color: white;
+       text-decoration: none;
+       border-radius: 6px;
+       font-weight: 600;
+       transition: background-color 0.2s;
+     }
+     
+     .edit-ballot-button:hover {
+       background: #2d1f17;
+       text-decoration: none;
+       color: white;
+     }
+     
+           .delete-ballot-button {
+        display: inline-block;
+        padding: 0.75rem 1.5rem;
+        background: #dc2626;
+        color: white;
+        text-decoration: none;
+        border-radius: 6px;
+        font-weight: 600;
+        transition: background-color 0.2s;
+        border: none;
+        cursor: pointer;
+        font-family: inherit;
+        font-size: inherit;
+      }
+      
+      .delete-ballot-button:hover {
+        background: #b91c1c;
+        text-decoration: none;
+        color: white;
+      }
+    
+    @media (max-width: 768px) {
+      .admin-header {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      
+      .ballot-header {
+        flex-direction: column;
+        gap: 1rem;
+      }
+      
+      .ballot-details-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .votes-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+<% end %>
+
+<div class="admin-container">
+  <div class="admin-header">
+    <h1 class="admin-title">Ballot Details</h1>
+    <%= link_to admin_ballots_path, class: "back-link" do %>
+      ← Back to Ballots
+    <% end %>
+  </div>
+  
+  <!-- Ballot Information -->
+  <div class="ballot-info-section">
+    <div class="ballot-header">
+      <h2 class="ballot-title">Week <%= @ballot.week %> Ballot</h2>
+      <div class="ballot-status <%= @ballot.voted? ? 'voted' : 'pending' %>">
+        <%= @ballot.voted? ? 'Voted' : 'Pending' %>
+      </div>
+    </div>
+    
+    <div class="ballot-details-grid">
+      <div class="ballot-detail">
+        <div class="ballot-detail-label">Voter</div>
+        <div class="ballot-detail-value"><%= @ballot.user.name %></div>
+      </div>
+      
+      <div class="ballot-detail">
+        <div class="ballot-detail-label">Week</div>
+        <div class="ballot-detail-value"><%= @ballot.week %></div>
+      </div>
+      
+      <div class="ballot-detail">
+        <div class="ballot-detail-label">Created</div>
+        <div class="ballot-detail-value"><%= @ballot.created_at.strftime("%B %d, %Y at %I:%M %p") %></div>
+      </div>
+      
+      
+      
+      <% if @ballot.voted? %>
+        <div class="ballot-detail">
+          <div class="ballot-detail-label">Voted On</div>
+          <div class="ballot-detail-value"><%= @ballot.updated_at.strftime("%B %d, %Y at %I:%M %p") %></div>
+        </div>
+      <% end %>
+    </div>
+    
+         <% if @ballot.reasoning.present? %>
+       <div class="ballot-reasoning">
+         <div class="ballot-reasoning-title">Voter's Reasoning</div>
+         <div class="ballot-reasoning-text"><%= @ballot.reasoning %></div>
+       </div>
+     <% end %>
+     
+     <!-- Admin Actions -->
+     <div class="ballot-admin-actions">
+       <h4 class="admin-actions-title">Admin Actions</h4>
+       <div class="admin-actions-buttons">
+         <%= link_to "Edit Ballot", edit_admin_ballot_path(@ballot), class: "edit-ballot-button" %>
+                   <%= button_to "Delete Ballot", admin_ballot_path(@ballot), 
+              method: :delete, 
+              data: { confirm: "Are you sure you want to delete this ballot? This action cannot be undone." },
+              class: "delete-ballot-button" %>
+       </div>
+     </div>
+   </div>
+  
+  <!-- Votes Section -->
+  <div class="votes-section">
+         <h3 class="votes-title">Votes</h3>
+    
+    <div class="votes-grid">
+      <% @ballot.votes.each_with_index do |vote, index| %>
+        <div class="vote-card <%= vote.voted? ? 'voted' : '' %> <%= vote.project.nil? ? 'no-project' : '' %>">
+          <div class="vote-header">
+            <div class="vote-number">Vote <%= index + 1 %></div>
+            <div class="vote-status <%= vote.voted? ? 'voted' : 'pending' %> <%= vote.project.nil? ? 'no-project' : '' %>">
+              <% if vote.project.nil? %>
+                No Project
+              <% else %>
+                <%= vote.voted? ? 'Voted' : 'Pending' %>
+              <% end %>
+            </div>
+          </div>
+          
+          <% if vote.project %>
+            <div class="project-info">
+              <div class="project-name"><%= vote.project.name %></div>
+              <div class="project-user">by <%= vote.project.user.name %></div>
+              <% if vote.project.description.present? %>
+                <div class="project-description"><%= vote.project.description %></div>
+              <% end %>
+            </div>
+            
+            <div class="vote-details">
+              <div class="vote-detail">
+                <div class="vote-detail-label">Star Rating</div>
+                <div class="vote-detail-value">
+                  <div class="star-rating-display">
+                    <% 5.times do |star_index| %>
+                      <span class="star <%= star_index < vote.star_count ? 'filled' : '' %>">★</span>
+                    <% end %>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="vote-detail">
+                <div class="vote-detail-label">Vote Status</div>
+                <div class="vote-detail-value"><%= vote.voted? ? 'Voted' : 'Not Voted' %></div>
+              </div>
+            </div>
+          <% else %>
+            <div class="no-project-message">
+              No project assigned to this vote
+            </div>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,100 @@
+<div class="admin-section">
+  <div class="admin-header">
+    <h1>Cosmetics Management</h1>
+    <%= link_to 'Add New Cosmetic', new_admin_cosmetic_path, class: 'btn btn-primary' %>
+  </div>
+
+  <div class="admin-content">
+    <% if @cosmetics.any? %>
+      <div class="admin-table-container">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Image</th>
+              <th>Name</th>
+              <th>Type</th>
+              <th>Cost</th>
+              <th>Purchasable</th>
+              <th>Description</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @cosmetics.each do |cosmetic| %>
+              <tr>
+                <td>
+                  <% if cosmetic.image.attached? %>
+                    <%= image_tag cosmetic.image, class: 'cosmetic-thumbnail', alt: cosmetic.name %>
+                  <% else %>
+                    <span class="no-image">No image</span>
+                  <% end %>
+                </td>
+                <td><%= cosmetic.name %></td>
+                <td><%= cosmetic.type %></td>
+                <td><%= cosmetic.cost %> 🪙</td>
+                <td>
+                  <% if cosmetic.purchasable? %>
+                    <span class="badge badge-success">Yes</span>
+                  <% else %>
+                    <span class="badge badge-secondary">No</span>
+                  <% end %>
+                </td>
+                <td><%= truncate(cosmetic.description, length: 50) %></td>
+                <td>
+                  <div class="admin-actions">
+                    <%= link_to 'View', admin_cosmetic_path(cosmetic), class: 'btn btn-sm btn-outline' %>
+                    <%= link_to 'Edit', edit_admin_cosmetic_path(cosmetic), class: 'btn btn-sm btn-outline' %>
+                    <%= link_to 'Delete', admin_cosmetic_path(cosmetic), 
+                        class: 'btn btn-sm btn-danger', 
+                        method: :delete,
+                        data: { 
+                          turbo_method: :delete, 
+                          turbo_confirm: 'Are you sure you want to delete this cosmetic?',
+                          confirm: 'Are you sure you want to delete this cosmetic?' 
+                        } %>
+                  </div>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <div class="admin-empty-state">
+        <p>No cosmetics found. <%= link_to 'Add the first cosmetic', new_admin_cosmetic_path %>.</p>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<style>
+  .cosmetic-thumbnail {
+    width: 50px;
+    height: 50px;
+    object-fit: cover;
+    border-radius: 4px;
+  }
+
+  .no-image {
+    color: #666;
+    font-style: italic;
+    font-size: 0.9em;
+  }
+
+  .badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+
+  .badge-success {
+    background-color: #10b981;
+    color: white;
+  }
+
+  .badge-secondary {
+    background-color: #6b7280;
+    color: white;
+  }
+</style>

@@ -1,0 +1,467 @@
+<% content_for :title, "Admin - Shop Purchases" %>
+
+<% content_for :head do %>
+  <style>
+    .admin-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    
+    .admin-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    
+    .admin-title {
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: #402b20;
+      margin: 0;
+    }
+    
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.5rem;
+      background: rgba(255, 255, 255, 0.95);
+      border: 2px solid rgba(64, 43, 32, 0.2);
+      border-radius: 8px;
+      text-decoration: none;
+      color: #402b20;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    
+    .back-link:hover {
+      border-color: rgba(64, 43, 32, 0.4);
+      transform: translateY(-1px);
+      text-decoration: none;
+      color: #402b20;
+    }
+    
+    /* Filters */
+    .filters-section {
+      background: rgba(255, 255, 255, 0.95);
+      border: 2px solid rgba(64, 43, 32, 0.15);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    }
+    
+    .filters-title {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: #402b20;
+      margin-bottom: 1rem;
+    }
+    
+    .filters-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      align-items: end;
+    }
+    
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    
+    .filter-label {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #6b5b4a;
+    }
+    
+    .filter-input {
+      padding: 0.75rem;
+      border: 1px solid rgba(64, 43, 32, 0.2);
+      border-radius: 6px;
+      font-size: 0.9rem;
+      background: white;
+    }
+    
+    .filter-select {
+      padding: 0.75rem;
+      border: 1px solid rgba(64, 43, 32, 0.2);
+      border-radius: 6px;
+      font-size: 0.9rem;
+      background: white;
+    }
+    
+    .filter-button {
+      padding: 0.75rem 1.5rem;
+      background: #402b20;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    
+    .filter-button:hover {
+      background: #2d1f17;
+    }
+    
+    .clear-filters {
+      padding: 0.75rem 1rem;
+      background: transparent;
+      color: #6b5b4a;
+      border: 1px solid rgba(64, 43, 32, 0.2);
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+    }
+    
+    .clear-filters:hover {
+      background: rgba(64, 43, 32, 0.05);
+      text-decoration: none;
+      color: #6b5b4a;
+    }
+    
+    /* Stats Section */
+    .stats-section {
+      background: rgba(255, 255, 255, 0.95);
+      border: 2px solid rgba(64, 43, 32, 0.15);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    }
+    
+    .stats-title {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: #402b20;
+      margin-bottom: 1rem;
+    }
+    
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+    
+    .stat-card {
+      background: rgba(255, 255, 255, 0.7);
+      border: 1px solid rgba(64, 43, 32, 0.1);
+      border-radius: 8px;
+      padding: 1.5rem;
+      text-align: center;
+    }
+    
+    .stat-card h3 {
+      margin: 0 0 0.5rem 0;
+      color: #6b5b4a;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .stat-number {
+      margin: 0;
+      font-size: 2rem;
+      font-weight: bold;
+      color: #402b20;
+    }
+    
+    /* Purchases Grid */
+    .purchases-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1.5rem;
+    }
+    
+    @media (min-width: 1200px) {
+      .purchases-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+    
+    @media (min-width: 900px) and (max-width: 1199px) {
+      .purchases-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    
+    .purchase-card {
+      background: rgba(255, 255, 255, 0.95);
+      border: 2px solid rgba(64, 43, 32, 0.15);
+      border-radius: 12px;
+      padding: 1.5rem;
+      transition: all 0.2s;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    }
+    
+    .purchase-card:hover {
+      border-color: rgba(64, 43, 32, 0.3);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    }
+    
+    .purchase-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 1rem;
+    }
+    
+    .purchase-item {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #402b20;
+    }
+    
+    .purchase-status {
+      padding: 0.25rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    
+    .purchase-status.fulfilled {
+      background: #d1fae5;
+      color: #065f46;
+    }
+    
+    .purchase-status.unfulfilled {
+      background: #fef3c7;
+      color: #92400e;
+    }
+    
+    .purchase-user {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #6b5b4a;
+      margin-bottom: 0.5rem;
+    }
+    
+    .purchase-details {
+      margin: 1rem 0;
+    }
+    
+    .purchase-detail {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 0.5rem;
+      font-size: 0.9rem;
+    }
+    
+    .purchase-detail-label {
+      color: #6b5b4a;
+      font-weight: 500;
+    }
+    
+    .purchase-detail-value {
+      color: #402b20;
+      font-weight: 600;
+    }
+    
+    .purchase-actions {
+      margin-top: 1.5rem;
+      text-align: center;
+    }
+    
+    .view-purchase-button {
+      display: inline-block;
+      padding: 0.75rem 1.5rem;
+      background: #402b20;
+      color: white;
+      text-decoration: none;
+      border-radius: 6px;
+      font-weight: 600;
+      transition: background-color 0.2s;
+    }
+    
+    .view-purchase-button:hover {
+      background: #2d1f17;
+      text-decoration: none;
+      color: white;
+    }
+    
+    .btn {
+      display: inline-block;
+      padding: 0.75rem 1.5rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-align: center;
+      text-decoration: none;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .btn-danger {
+      background: #dc2626;
+      color: white;
+    }
+    
+    .btn-danger:hover {
+      background: #b91c1c;
+      text-decoration: none;
+      color: white;
+    }
+    
+    .btn-warning {
+      background: #f59e0b;
+      color: white;
+    }
+    
+    .btn-warning:hover {
+      background: #d97706;
+      text-decoration: none;
+      color: white;
+    }
+    
+    .btn-sm {
+      padding: 0.5rem 1rem;
+      font-size: 0.8rem;
+    }
+    
+    .no-purchases {
+      text-align: center;
+      padding: 3rem;
+      color: #6b5b4a;
+      font-size: 1.1rem;
+    }
+    
+    @media (max-width: 768px) {
+      .admin-header {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      
+      .filters-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .purchases-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+<% end %>
+
+<div class="admin-container">
+  <div class="admin-header">
+    <h1 class="admin-title">Shop Purchases</h1>
+    <%= link_to admin_path, class: "back-link" do %>
+      ← Back to Dashboard
+    <% end %>
+  </div>
+  
+  <!-- Filters -->
+  <div class="filters-section">
+    <h3 class="filters-title">Filters</h3>
+    <%= form_with url: admin_shop_purchases_path, method: :get, local: true do |form| %>
+      <div class="filters-grid">
+        <div class="filter-group">
+          <label class="filter-label">Fulfillment Status</label>
+          <%= form.select :fulfilled, 
+              options_for_select([["All", ""], ["Fulfilled", "true"], ["Unfulfilled", "false"]], params[:fulfilled]), 
+              {}, 
+              { class: "filter-select" } %>
+        </div>
+        
+        <div class="filter-group">
+          <label class="filter-label">Item Name</label>
+          <%= form.text_field :item_name, value: params[:item_name], placeholder: "Search by item...", class: "filter-input" %>
+        </div>
+        
+        <div class="filter-group">
+          <label class="filter-label">User Name</label>
+          <%= form.text_field :user_name, value: params[:user_name], placeholder: "Search by user...", class: "filter-input" %>
+        </div>
+        
+        <div class="filter-group">
+          <%= form.submit "Apply Filters", class: "filter-button" %>
+        </div>
+        
+        <div class="filter-group">
+          <%= link_to "Clear Filters", admin_shop_purchases_path, class: "clear-filters" %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+  
+  <!-- Stats -->
+  <div class="stats-section">
+    <h3 class="stats-title">Statistics</h3>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <h3>Total Purchases</h3>
+        <p class="stat-number"><%= @purchases.count %></p>
+      </div>
+      <div class="stat-card">
+        <h3>Unfulfilled</h3>
+        <p class="stat-number"><%= ShopPurchase.unfulfilled.count %></p>
+      </div>
+      <div class="stat-card">
+        <h3>Total Coins Spent</h3>
+        <p class="stat-number"><%= ShopPurchase.sum(:coins_spent) %></p>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Purchases Grid -->
+  <% if @purchases.any? %>
+    <div class="purchases-grid">
+      <% @purchases.each do |purchase| %>
+        <div class="purchase-card">
+          <div class="purchase-header">
+            <div class="purchase-item"><%= purchase.item_name %></div>
+            <div class="purchase-status <%= purchase.fulfilled? ? 'fulfilled' : 'unfulfilled' %>">
+              <%= purchase.fulfilled? ? 'Fulfilled' : 'Unfulfilled' %>
+            </div>
+          </div>
+          
+          <div class="purchase-user">
+            <%= purchase.user.name %>
+          </div>
+          
+          <div class="purchase-details">
+            <div class="purchase-detail">
+              <span class="purchase-detail-label">Price:</span>
+              <span class="purchase-detail-value"><%= purchase.coins_spent %> 🪙</span>
+            </div>
+            <div class="purchase-detail">
+              <span class="purchase-detail-label">Purchased:</span>
+              <span class="purchase-detail-value"><%= purchase.purchased_at.strftime("%b %d, %Y") %></span>
+            </div>
+          </div>
+          
+          <div class="purchase-actions">
+            <%= link_to "View Details", admin_shop_purchase_details_path(purchase), class: "view-purchase-button" %>
+            <%= button_to "Refund", admin_refund_shop_purchase_path(purchase), 
+                method: :post, 
+                class: "btn btn-warning btn-sm",
+                data: { confirm: "Are you sure you want to refund this purchase? This will delete the purchase and return #{purchase.coins_spent} coins to #{purchase.user.name}. This action cannot be undone." },
+                style: "margin-left: 0.5rem;" %>
+            <%= button_to "Delete", admin_delete_shop_purchase_path(purchase), 
+                method: :delete, 
+                class: "btn btn-danger btn-sm",
+                data: { confirm: "Are you sure you want to delete this purchase? This action cannot be undone." },
+                style: "margin-left: 0.5rem;" %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  <% else %>
+    <div class="no-purchases">
+      <p>No purchases found matching your criteria.</p>
+    </div>
+  <% end %>
+</div>

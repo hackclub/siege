@@ -1,0 +1,13 @@
+<div class="admin-section">
+  <div class="admin-header">
+    <h1>Edit Physical Item</h1>
+    <div class="admin-actions">
+      <%= link_to 'View', admin_physical_item_path(@physical_item), class: 'btn btn-outline' %>
+      <%= link_to 'Back to List', admin_physical_items_path, class: 'btn btn-outline' %>
+    </div>
+  </div>
+
+  <div class="admin-content">
+    <%= render 'form', physical_item: @physical_item %>
+  </div>
+</div>

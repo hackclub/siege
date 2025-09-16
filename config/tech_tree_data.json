@@ -1,0 +1,363 @@
+{
+	"laptop": {
+		"type": "laptop",
+		"initialNode": {
+			"id": "laptop_base",
+			"title": "Choose Your Laptop",
+			"price": 0,
+			"description": "Select your starting laptop configuration",
+			"shape": "pill",
+			"size": "large",
+			"options": [
+				{
+					"id": "framework_12",
+					"title": "Framework 12",
+					"description": "The most basic of fw12's"
+				},
+				{
+					"id": "framework_13",
+					"title": "Framework 13 Mainboard",
+					"description": "like a laptop but no top... or bottom... or sides..."
+				}
+			]
+		},
+		"branches": {
+			"framework_12": {
+				"left": {
+					"id": "ram_12",
+					"title": "+8GB RAM",
+					"price": 150,
+					"description": "get your ram game up!!!!",
+					"maxPurchases": 7,
+					"currentPurchases": 0,
+					"purchased": false
+				},
+				"up": {
+					"id": "cpu_12",
+					"title": "CPU Upgrade",
+					"price": 900,
+					"description": "get that i5-1334U you've always wanted",
+					"purchased": false
+				},
+				"right": {
+					"id": "ssd_12",
+					"title": "1TB SSD",
+					"price": 300,
+					"description": "you can download your whole steam library on this one!",
+					"purchased": false
+				},
+				"up2": {
+					"id": "framework_13_upgrade",
+					"title": "Framework 13",
+					"price": 300,
+					"description": "woah is that 1 more inch? that'll be 50 coins! (ts is the 7640U that I have :D)",
+					"requires": "CPU Upgrade",
+					"purchased": false
+				},
+				"rightright2": {
+					"id": "ssd_2tb_12",
+					"title": "2TB SSD",
+					"price": 600,
+					"description": "now you can just about download unreal engine",
+					"requires": "1TB SSD",
+					"purchased": false
+				},
+				"left3": {
+					"id": "display_2k8_12",
+					"title": "2.8K Display",
+					"price": 900,
+					"description": "can you call it a macbook if they rounded the corners?",
+					"requires": "Framework 13",
+					"purchased": false
+				},
+				"up3": {
+					"id": "cpu2_12",
+					"title": "CPU Upgrade 2",
+					"price": 300,
+					"description": "this one's speedy (Ultra 5 125H)",
+					"requires": "Framework 13",
+					"purchased": false
+				},
+				"up4": {
+					"id": "cpu3_12",
+					"title": "CPU Upgrade 3",
+					"price": 600,
+					"description": "the latest gen and super quick (Ryzen AI 5 340)",
+					"requires": "CPU Upgrade 2",
+					"purchased": false
+				}
+			},
+			"framework_13": {
+				"left": {
+					"id": "ram_13",
+					"title": "+8GB RAM",
+					"price": 150,
+					"description": "get your ram game up!!!!",
+					"maxPurchases": 7,
+					"currentPurchases": 0,
+					"purchased": false
+				},
+				"up": {
+					"id": "cpu_13",
+					"title": "CPU Upgrade",
+					"price": 600,
+					"description": "get that i5-1334U you've always wanted",
+					"purchased": false
+				},
+				"right": {
+					"id": "ssd_13",
+					"title": "1TB SSD",
+					"price": 300,
+					"description": "you can download your whole steam library on this one!",
+					"purchased": false
+				},
+				"rightright2": {
+					"id": "ssd_2tb_13",
+					"title": "2TB SSD",
+					"price": 600,
+					"description": "now you can just about download unreal engine",
+					"requires": "1TB SSD",
+					"purchased": false
+				},
+				"up2": {
+					"id": "cpu2_13",
+					"title": "CPU Upgrade 2",
+					"price": 250,
+					"description": "this one's speedy (Ultra 5 125H)",
+					"requires": "CPU Upgrade",
+					"purchased": false
+				},
+				"up3": {
+					"id": "cpu3_13",
+					"title": "CPU Upgrade 3",
+					"price": 350,
+					"description": "the latest gen and super quick (Ryzen AI 5 340)",
+					"requires": "CPU Upgrade 2",
+					"purchased": false
+				},
+				"left4": {
+					"id": "framework_desktop_mb_13",
+					"title": "Framework Desktop Mainboard",
+					"price": 500,
+					"description": "this is a... desktop. theres no screen! (Ryzen 7 7840HS)",
+					"requires": "CPU Upgrade 2",
+					"purchased": false
+				},
+				"right4": {
+					"id": "framework_16_mb_13",
+					"title": "Framework 16 Mainboard",
+					"price": 250,
+					"description": "this one's uhhh... bigger? not sure why you'd want this... (Ryzen AI 7 350)",
+					"requires": "CPU Upgrade 2",
+					"purchased": false
+				}
+			}
+		}
+	},
+	"laptop_grant": {
+		"type": "laptop_grant",
+		"initialNode": {
+			"id": "laptop_grant_base",
+			"title": "$650 Laptop Grant",
+			"price": 0,
+			"description": "Your base laptop grant",
+			"shape": "circle",
+			"size": "large",
+			"purchased": true
+		},
+		"branches": {
+			"laptop_grant_base": {
+				"left": {
+					"id": "grant_10",
+					"title": "+$10 Grant",
+					"price": 100,
+					"description": "Add $10 to your laptop grant",
+					"maxPurchases": null,
+					"currentPurchases": 0,
+					"purchased": false
+				},
+				"up": {
+					"id": "grant_50",
+					"title": "+$50 Grant",
+					"price": 400,
+					"description": "Add $50 to your laptop grant",
+					"maxPurchases": null,
+					"currentPurchases": 0,
+					"purchased": false
+				},
+				"right": {
+					"id": "grant_100",
+					"title": "+$100 Grant",
+					"price": 600,
+					"description": "Add $100 to your laptop grant",
+					"maxPurchases": null,
+					"currentPurchases": 0,
+					"purchased": false
+				}
+			}
+		}
+	},
+	"tablet": {
+		"type": "tablet",
+		"initialNode": {
+			"id": "tablet_base",
+			"title": "Choose Your Tablet",
+			"price": 0,
+			"description": "Select your starting tablet configuration",
+			"shape": "pill",
+			"size": "large",
+			"options": [
+				{
+					"id": "ipad_mini",
+					"title": "iPad Mini",
+					"description": "Compact Apple tablet with excellent performance"
+				},
+				{
+					"id": "oneplus_pad_2",
+					"title": "OnePlus Pad 2",
+					"description": "Android tablet with great value"
+				},
+				{
+					"id": "galaxy_tab_s10_fe",
+					"title": "Galaxy Tab S10 FE+",
+					"description": "Samsung tablet with premium features"
+				}
+			]
+		},
+		"branches": {
+			"ipad_mini": {
+				"left": {
+					"id": "apple_pencil",
+					"title": "Apple Pencil",
+					"price": 400,
+					"description": "draw good",
+					"purchased": false
+				},
+				"up": {
+					"id": "ipad_air_11",
+					"title": "iPad Air 11",
+					"price": 300,
+					"description": "11-inch iPad Air with better performance",
+					"purchased": false
+				},
+				"right": {
+					"id": "smart_folio",
+					"title": "Smart Folio",
+					"price": 400,
+					"description": "Protective case with stand functionality",
+					"purchased": false
+				},
+				"leftleft2": {
+					"id": "apple_pencil_pro",
+					"title": "Apple Pencil Pro",
+					"price": 300,
+					"description": "draw gooder",
+					"requires": "Apple Pencil",
+					"purchased": false
+				},
+				"up2": {
+					"id": "ipad_air_13",
+					"title": "iPad Air 13",
+					"price": 1200,
+					"description": "Larger 13-inch iPad Air",
+					"requires": "iPad Air 11",
+					"purchased": false
+				},
+				"up3": {
+					"id": "ipad_pro_11",
+					"title": "iPad Pro 11",
+					"price": 1200,
+					"description": "Professional iPad with M2 chip",
+					"requires": "iPad Air 13",
+					"purchased": false
+				},
+				"rightright2": {
+					"id": "magic_keyboard_folio",
+					"title": "Magic Keyboard Folio",
+					"price": 1200,
+					"description": "Full keyboard case with trackpad",
+					"requires": "Smart Folio,iPad Air 11",
+					"purchased": false
+				}
+			},
+			"oneplus_pad_2": {
+				"left": {
+					"id": "oneplus_stylo_2",
+					"title": "OnePlus Stylo 2",
+					"price": 450,
+					"description": "draw good",
+					"purchased": false
+				},
+				"up": {
+					"id": "oneplus_pad_3",
+					"title": "OnePlus Pad 3",
+					"price": 900,
+					"description": "Upgraded OnePlus tablet",
+					"purchased": false
+				},
+				"right": {
+					"id": "smart_folio_op",
+					"title": "Smart Folio",
+					"price": 250,
+					"description": "Protective case with stand functionality",
+					"purchased": false
+				},
+				"rightright2": {
+					"id": "smart_keyboard_op",
+					"title": "Smart Keyboard",
+					"price": 900,
+					"description": "Keyboard case for productivity",
+					"requires": "Smart Folio,OnePlus Pad 3",
+					"purchased": false
+				}
+			},
+			"galaxy_tab_s10_fe": {
+				"left": {
+					"id": "s_pen",
+					"title": "S Pen",
+					"price": 350,
+					"description": "draw good",
+					"purchased": false
+				},
+				"up": {
+					"id": "galaxy_tab_s11",
+					"title": "Galaxy Tab S11",
+					"price": 1250,
+					"description": "Latest Samsung tablet with enhanced features",
+					"purchased": false
+				},
+				"right": {
+					"id": "smart_book_cover",
+					"title": "Smart Book Cover",
+					"price": 400,
+					"description": "Protective book-style case",
+					"purchased": false
+				},
+				"leftleft2": {
+					"id": "s_pen_creator",
+					"title": "S Pen Creator Edition",
+					"price": 250,
+					"description": "draw gooder",
+					"requires": "S Pen",
+					"purchased": false
+				},
+				"up2": {
+					"id": "galaxy_tab_s10_plus",
+					"title": "Galaxy Tab S10+",
+					"price": 500,
+					"description": "Premium Samsung tablet with larger display",
+					"requires": "Galaxy Tab S11",
+					"purchased": false
+				},
+				"rightright2": {
+					"id": "book_cover_keyboard",
+					"title": "Book Cover Keyboard Slim",
+					"price": 500,
+					"description": "Slim keyboard case for productivity",
+					"requires": "Smart Book Cover",
+					"purchased": false
+				}
+			}
+		}
+	}
+}

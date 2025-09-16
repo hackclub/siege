@@ -1,0 +1,76 @@
+<%= render "shared/form_field_styles" %>
+
+    <fieldset class="fieldset">
+      <legend class="fieldset-legend">First Name</legend>
+      <div class="underline-field">
+        <%= form.text_field :first_name, placeholder: "John", required: true, autocomplete: "given-name", class: "text-input validator" %>
+      </div>
+    </fieldset>
+
+    <fieldset class="fieldset">
+      <legend class="fieldset-legend">Last Name</legend>
+      <div class="underline-field">
+        <%= form.text_field :last_name, placeholder: "Smith", required: true, autocomplete: "family-name", class: "text-input validator" %>
+      </div>
+    </fieldset>
+
+    <fieldset class="fieldset">
+      <legend class="fieldset-legend">Birthday</legend>
+      <div class="underline-field">
+        <%= form.date_field :birthday, required: true, autocomplete: "bday", class: "text-input validator" %>
+      </div>
+    </fieldset>
+
+    <fieldset class="fieldset">
+      <legend class="fieldset-legend">Preferred Shipping Name</legend>
+      <div class="underline-field">
+        <%= form.text_field :shipping_name, placeholder: "Optional - name to use on shipping labels", autocomplete: "name", class: "text-input validator" %>
+      </div>
+    </fieldset>
+
+    <fieldset class="fieldset">
+      <legend class="fieldset-legend">Address Line 1</legend>
+      <div class="underline-field">
+        <%= form.text_field :line_one, placeholder: "10 Downing Street", required: true, autocomplete: "address-line1", class: "text-input validator" %>
+      </div>
+    </fieldset>
+
+    <fieldset class="fieldset">
+      <legend class="fieldset-legend">Address Line 2</legend>
+      <div class="underline-field">
+        <%= form.text_field :line_two, placeholder: "Westminster", autocomplete: "address-line2", class: "text-input validator" %>
+      </div>
+    </fieldset>
+
+    <fieldset class="fieldset">
+      <legend class="fieldset-legend">City</legend>
+      <div class="underline-field">
+        <%= form.text_field :city, placeholder: "London", required: true, autocomplete: "address-level2", class: "text-input validator" %>
+      </div>
+    </fieldset>
+
+    <fieldset class="fieldset">
+      <legend class="fieldset-legend">County/Province/State</legend>
+      <div class="underline-field">
+        <%= form.text_field :state, placeholder: "City of Westminster", required: true, autocomplete: "address-level1", class: "text-input validator" %>
+      </div>
+    </fieldset>
+
+    <fieldset class="fieldset">
+      <legend class="fieldset-legend">Postcode/ZIP Code</legend>
+      <div class="underline-field">
+        <%= form.text_field :postcode, placeholder: "SW1A 2AA", autocomplete: "postal-code", required: true, class: "text-input validator" %>
+      </div>
+    </fieldset>
+
+    <fieldset class="fieldset">
+      <legend class="fieldset-legend">Country</legend>
+      <div class="underline-field">
+        <%= form.country_select :country,
+        { selected: @detected_country, prompt: 'Select a country', required: true },
+        { class: 'select-input validator' } %>
+      </div>
+    </fieldset>
+
+    <% submit_label = form.object.persisted? ? "Save" : "Submit" %>
+    <button type="submit" class="submit-button"><%= submit_label %></button>

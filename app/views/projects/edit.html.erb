@@ -1,0 +1,32 @@
+<% content_for :title, "Edit project" %>
+
+<%= render "projects/page_styles" %>
+<%= render "shared/error_styles" %>
+
+<div class="projects-new">
+  <div class="projects-new-topbar">
+    <%= link_to project_path(@project), class: "projects-back button-ghost" do %>
+      <%= lucide_icon('arrow-left') %>
+      Back to <%= @project.name %>
+    <% end %>
+  </div>
+
+  <div class="projects-new-header">
+    <h1 class="projects-new-title">Edit project</h1>
+  </div>
+
+  <div class="projects-new-body">
+    <% if @project&.errors&.any? %>
+      <div id="error_explanation" class="error-explanation">
+        <h2><%= pluralize(@project.errors.count, "error") %> prohibited this project from being saved:</h2>
+        <ul>
+          <% @project.errors.full_messages.each do |message| %>
+            <li><%= message %></li>
+          <% end %>
+        </ul>
+      </div>
+    <% end %>
+
+    <%= render "form", project: @project %>
+  </div>
+</div>

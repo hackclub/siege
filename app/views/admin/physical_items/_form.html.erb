@@ -1,0 +1,169 @@
+<%= form_with(model: [:admin, physical_item], local: true, multipart: true) do |form| %>
+  <% if physical_item.errors.any? %>
+    <div class="alert alert-danger">
+      <h4><%= pluralize(physical_item.errors.count, "error") %> prohibited this physical item from being saved:</h4>
+      <ul>
+        <% physical_item.errors.full_messages.each do |message| %>
+          <li><%= message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="form-grid">
+    <div class="form-section">
+      <div class="field">
+        <%= form.label :name, class: 'form-label' %>
+        <%= form.text_field :name, class: 'form-input', placeholder: 'Enter physical item name' %>
+      </div>
+
+      <div class="field">
+        <%= form.label :cost, class: 'form-label' %>
+        <%= form.number_field :cost, class: 'form-input', placeholder: '0', min: 0 %>
+        <small class="form-help">Cost in coins</small>
+      </div>
+
+      <div class="field">
+        <%= form.label :purchasable, class: 'form-label' %>
+        <div class="checkbox-wrapper">
+          <%= form.check_box :purchasable, class: 'form-checkbox' %>
+          <span class="checkbox-label">Available for purchase in shop</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="field">
+        <%= form.label :image, class: 'form-label' %>
+        <%= form.file_field :image, class: 'form-input', accept: 'image/*' %>
+        <small class="form-help">Upload an image for this physical item</small>
+        <% if physical_item.image.attached? %>
+          <div class="current-image">
+            <p>Current image:</p>
+            <%= image_tag physical_item.image, class: 'preview-image', alt: physical_item.name %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+
+    <div class="form-section full-width">
+      <div class="field">
+        <%= form.label :description, class: 'form-label' %>
+        <%= form.text_area :description, class: 'form-textarea', rows: 4, placeholder: 'Enter a description for this physical item' %>
+        <small class="form-help">Optional description visible to users</small>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-actions">
+    <%= form.submit class: 'btn btn-primary' %>
+    <%= link_to 'Cancel', admin_physical_items_path, class: 'btn btn-outline' %>
+  </div>
+<% end %>
+
+<style>
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-bottom: 2rem;
+  }
+
+  .form-section.full-width {
+    grid-column: 1 / -1;
+  }
+
+  .field {
+    margin-bottom: 1.5rem;
+  }
+
+  .form-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: #1f2937;
+  }
+
+  .form-input,
+  .form-textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+  }
+
+  .form-input:focus,
+  .form-textarea:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  .form-help {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.75rem;
+    color: #6b7280;
+  }
+
+  .checkbox-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .form-checkbox {
+    width: auto;
+    margin: 0;
+  }
+
+  .checkbox-label {
+    font-size: 0.875rem;
+    color: #1f2937;
+  }
+
+  .current-image {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: #f9fafb;
+    border-radius: 0.375rem;
+  }
+
+  .preview-image {
+    max-width: 200px;
+    max-height: 200px;
+    border-radius: 0.375rem;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  }
+
+  .form-actions {
+    display: flex;
+    gap: 1rem;
+    padding-top: 2rem;
+    border-top: 1px solid #e5e7eb;
+  }
+
+  .alert {
+    padding: 1rem;
+    border-radius: 0.375rem;
+    margin-bottom: 2rem;
+  }
+
+  .alert-danger {
+    background-color: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #991b1b;
+  }
+
+  .alert h4 {
+    margin: 0 0 0.5rem 0;
+    font-weight: 600;
+  }
+
+  .alert ul {
+    margin: 0;
+    padding-left: 1.5rem;
+  }
+</style>

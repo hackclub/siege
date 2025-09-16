@@ -1,0 +1,629 @@
+<% content_for :title, "Admin - All Projects" %>
+
+<% content_for :head do %>
+  <style>
+    .admin-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    .admin-header {
+      margin-bottom: 2rem;
+    }
+    .admin-title {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      color: #402b20;
+    }
+    .admin-subtitle {
+      font-size: 1.1rem;
+      color: #6b5b4a;
+      margin-bottom: 2rem;
+    }
+    .filters-section {
+      background: rgba(255, 255, 255, 0.9);
+      border: 2px solid rgba(64, 43, 32, 0.2);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    .filters-form {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      align-items: end;
+    }
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .filter-label {
+      font-weight: 600;
+      color: #402b20;
+      font-size: 0.9rem;
+    }
+    .filter-input, .filter-select {
+      padding: 0.5rem;
+      border: 2px solid rgba(64, 43, 32, 0.3);
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+    .filter-input:focus, .filter-select:focus {
+      outline: none;
+      border-color: rgba(64, 43, 32, 0.6);
+    }
+    .filter-button {
+      padding: 0.5rem 1rem;
+      background: #402b20;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .filter-button:hover {
+      background: #2d1e16;
+    }
+    .projects-count {
+      font-size: 0.9rem;
+      color: #6b5b4a;
+      margin-bottom: 1rem;
+    }
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 0.25rem;
+    }
+    .checkbox-label {
+      font-size: 0.9rem;
+      color: #402b20;
+      margin: 0;
+      cursor: pointer;
+    }
+    .projects-grid {
+      display: grid;
+      gap: 1rem;
+      grid-template-columns: 1fr;
+    }
+
+    @media (min-width: 768px) {
+      .projects-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (min-width: 1200px) {
+      .projects-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    @media (min-width: 1600px) {
+      .projects-grid {
+        grid-template-columns: repeat(4, 1fr);
+      }
+    }
+    .project-card {
+      background: rgba(255, 255, 255, 0.95);
+      border: 2px solid rgba(64, 43, 32, 0.15);
+      border-radius: 12px;
+      padding: 1.5rem;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+    .project-card:hover {
+      border-color: rgba(64, 43, 32, 0.4);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      transform: translateY(-2px);
+    }
+    .project-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 0.75rem;
+    }
+    .project-title {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: #402b20;
+      margin: 0;
+    }
+    .project-week {
+      font-size: 0.85rem;
+      color: #6b5b4a;
+      background: rgba(64, 43, 32, 0.1);
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+    }
+    .project-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.75rem;
+      font-size: 0.9rem;
+    }
+    .project-badges {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+    .project-owner-info {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .project-owner {
+      font-weight: 600;
+      color: #402b20;
+    }
+
+    .fraud-link-small {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      background: #6366f1;
+      color: white;
+      text-decoration: none;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+
+    .fraud-link-small:hover {
+      background: #4f46e5;
+      color: white;
+      text-decoration: none;
+      transform: translateY(-1px);
+    }
+
+    .project-actions {
+      margin-top: 1rem;
+      display: flex;
+      justify-content: flex-start;
+    }
+
+    .delete-project-btn {
+      background: #dc2626;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .delete-project-btn:hover {
+      background: #b91c1c;
+      transform: translateY(-1px);
+    }
+    .hide-project-btn, .unhide-project-btn {
+      padding: 0.25rem 0.75rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      border: 1px solid #f59e0b;
+      background-color: transparent;
+      color: #f59e0b;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-right: 0.5rem;
+    }
+    .hide-project-btn:hover {
+      background-color: #f59e0b;
+      color: white;
+    }
+    .unhide-project-btn {
+      border-color: #10b981;
+      color: #10b981;
+    }
+    .unhide-project-btn:hover {
+      background-color: #10b981;
+      color: white;
+    }
+    .hidden-project {
+      opacity: 0.6;
+      border-style: dashed !important;
+    }
+    .hidden-badge {
+      font-size: 0.7rem;
+      font-weight: 700;
+      background-color: #ef4444;
+      color: white;
+      padding: 0.2rem 0.4rem;
+      border-radius: 4px;
+      margin-left: 0.5rem;
+    }
+    .project-status {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+    .status-building { background-color: #fef3c7; color: #92400e; }
+    .status-submitted { background-color: #f3e8ff; color: #7c3aed; }
+    .status-pending_voting { background-color: #dbeafe; color: #1e40af; }
+    .status-finished { background-color: #d1fae5; color: #065f46; }
+    .airtable-status {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+    .in-airtable { background-color: #d1fae5; color: #065f46; }
+    .not-in-airtable { background-color: #fee2e2; color: #dc2626; }
+    .project-description {
+      color: #6b5b4a;
+      font-size: 0.95rem;
+      line-height: 1.5;
+      margin-bottom: 0.75rem;
+    }
+    .project-links {
+      display: flex;
+      gap: 0.75rem;
+      font-size: 0.85rem;
+    }
+    .project-link {
+      color: #6366f1;
+      text-decoration: none;
+      padding: 0.25rem 0.5rem;
+      border: 1px solid #6366f1;
+      border-radius: 4px;
+      transition: all 0.2s;
+    }
+    .project-link:hover {
+      background: #6366f1;
+      color: white;
+    }
+    .project-link.disabled {
+      color: #9ca3af;
+      border-color: #9ca3af;
+      cursor: not-allowed;
+    }
+    .project-link.disabled:hover {
+      background: transparent;
+      color: #9ca3af;
+    }
+    .clear-filters {
+      background: #6b5b4a;
+      color: white;
+      text-decoration: none;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      display: inline-block;
+      transition: background 0.2s;
+    }
+    .clear-filters:hover {
+      background: #5a4a3a;
+      color: white;
+      text-decoration: none;
+    }
+
+    .project-hackatime {
+      margin: 0.75rem 0;
+      padding: 0.5rem;
+      background: rgba(5, 150, 105, 0.1);
+      border-radius: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .hackatime-label {
+      font-size: 0.85rem;
+      color: #6b5b4a;
+      font-weight: 500;
+    }
+
+    .hackatime-value {
+      font-size: 0.9rem;
+      color: #059669;
+      font-weight: 600;
+    }
+
+    /* Pagination Styles */
+    .pagination-container {
+      margin-top: 2rem;
+      padding: 1.5rem;
+      background: rgba(255, 255, 255, 0.9);
+      border: 2px solid rgba(64, 43, 32, 0.2);
+      border-radius: 12px;
+      text-align: center;
+    }
+
+    .pagination-info {
+      margin-bottom: 1rem;
+      font-size: 0.9rem;
+      color: #6b5b4a;
+    }
+
+    .pagination-controls {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .pagination-link {
+      padding: 0.5rem 0.75rem;
+      background: #402b20;
+      color: white;
+      text-decoration: none;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+
+    .pagination-link:hover {
+      background: #2d1e16;
+      transform: translateY(-1px);
+    }
+
+    .pagination-current {
+      padding: 0.5rem 0.75rem;
+      background: #059669;
+      color: white;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .pagination-ellipsis {
+      padding: 0.5rem 0.5rem;
+      color: #6b5b4a;
+      font-weight: 500;
+    }
+  </style>
+<% end %>
+
+<div class="admin-container">
+  <div class="admin-header">
+    <h1 class="admin-title">All Projects</h1>
+    <p class="admin-subtitle">Comprehensive view of all projects across all users</p>
+  </div>
+
+  <!-- Filters Section -->
+  <div class="filters-section">
+    <%= form_with url: admin_projects_path, method: :get, class: "filters-form", local: true do |form| %>
+      <div class="filter-group">
+        <%= form.label :name, "Project Name", class: "filter-label" %>
+        <%= form.text_field :name, value: params[:name], placeholder: "Search by name...", class: "filter-input" %>
+      </div>
+
+      <div class="filter-group">
+        <%= form.label :owner, "Owner", class: "filter-label" %>
+        <%= form.select :owner,
+            options_from_collection_for_select(@users, :name, :name, params[:owner]),
+            { prompt: "All owners" },
+            { class: "filter-select" } %>
+      </div>
+
+      <div class="filter-group">
+        <%= form.label :status, "Status", class: "filter-label" %>
+        <%= form.select :status,
+            options_for_select(@statuses.map { |s| [s.capitalize, s] }, params[:status]),
+            { prompt: "All statuses" },
+            { class: "filter-select" } %>
+      </div>
+
+      <div class="filter-group">
+        <%= form.label :week, "Week", class: "filter-label" %>
+        <%= form.select :week,
+            options_for_select(@available_weeks.map { |w| ["Week #{w}", w] }, params[:week]),
+            { prompt: "All weeks" },
+            { class: "filter-select" } %>
+      </div>
+
+      <% if current_user&.super_admin? %>
+        <div class="filter-group">
+          <%= form.label :show_hidden, "Show Hidden", class: "filter-label" %>
+          <div class="checkbox-group">
+            <%= form.check_box :show_hidden, { checked: @show_hidden }, "true", "" %>
+            <%= form.label :show_hidden, "Show hidden projects", class: "checkbox-label" %>
+          </div>
+        </div>
+      <% end %>
+
+      <div class="filter-group">
+        <%= form.submit "Filter", class: "filter-button" %>
+      </div>
+    <% end %>
+
+    <% if params[:name].present? || params[:owner].present? || params[:status].present? || params[:week].present? || params[:show_hidden].present? %>
+      <div style="margin-top: 1rem;">
+        <%= link_to "Clear All Filters", admin_projects_path, class: "clear-filters" %>
+      </div>
+    <% end %>
+  </div>
+
+  <!-- Projects Count -->
+  <div class="projects-count">
+    Showing <%= @projects.count %> project<%= @projects.count == 1 ? '' : 's' %>
+    <% if params[:name].present? || params[:owner].present? || params[:status].present? || params[:week].present? || params[:show_hidden].present? %>
+      (filtered)
+    <% end %>
+  </div>
+
+  <!-- Projects Grid -->
+  <div class="projects-grid">
+    <% if @projects.any? %>
+      <% @projects.each do |project| %>
+        <div class="project-card <%= 'hidden-project' if project.hidden? && @show_hidden %>" onclick="window.location.href='<%= project_path(project) %>'">
+          <div class="project-header">
+            <h3 class="project-title">
+              <%= project.name %>
+              <% if project.hidden? && current_user&.super_admin? %>
+                <span class="hidden-badge">HIDDEN</span>
+              <% end %>
+            </h3>
+            <span class="project-week"><%= project.week_badge_text %></span>
+          </div>
+
+          <div class="project-meta">
+            <div class="project-owner-info">
+              <span class="project-owner">by <%= project.user.name %></span>
+              <% if project.user.slack_id.present? %>
+                <a href="https://dash.fraud.land/profile/<%= project.user.slack_id %>" target="_blank" class="fraud-link-small" onclick="event.stopPropagation();">
+                  Fraud.land
+                </a>
+              <% end %>
+            </div>
+            <div class="project-badges">
+              <span class="project-status status-<%= project.status %>">
+                <%= project.status.capitalize %>
+              </span>
+              <span class="airtable-status <%= project.in_airtable? ? 'in-airtable' : 'not-in-airtable' %>">
+                <%= project.in_airtable? ? 'In Airtable' : 'Not Synced' %>
+              </span>
+            </div>
+          </div>
+
+          <div class="project-coin-value" style="margin: 0.5rem 0; padding: 0.5rem; background: rgba(245, 158, 11, 0.1); border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 0.85rem; color: #6b5b4a; font-weight: 500;">Coin Value:</span>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <input type="number"
+                     id="coin-value-<%= project.id %>"
+                     value="<%= project.coin_value || 0 %>"
+                     min="0"
+                     step="0.01"
+                     style="width: 80px; padding: 0.25rem; border: 1px solid rgba(64, 43, 32, 0.3); border-radius: 4px; font-size: 0.85rem;"
+                     onchange="updateProjectCoinValue(<%= project.id %>, this.value)"
+                     onclick="event.stopPropagation()">
+              <%= image_tag 'coin.png', style: 'width: 16px; height: 16px;' %>
+            </div>
+          </div>
+
+          <div class="project-description">
+            <%= truncate(project.description, length: 150) %>
+          </div>
+
+          <% total_seconds = project_total_hackatime_time(project) %>
+          <% if total_seconds > 0 %>
+            <div class="project-hackatime">
+              <span class="hackatime-label">Total Time:</span>
+              <span class="hackatime-value"><%= format_time_from_seconds(total_seconds) %></span>
+            </div>
+          <% end %>
+
+          <div class="project-links">
+            <% if project.repo_url.present? %>
+              <%= safe_project_link "Repository", project.repo_url, target: "_blank", class: "project-link", onclick: "event.stopPropagation()" %>
+            <% else %>
+              <span class="project-link disabled">No Repository</span>
+            <% end %>
+
+            <% if project.demo_url.present? %>
+              <%= safe_project_link "Demo", project.demo_url, target: "_blank", class: "project-link", onclick: "event.stopPropagation()" %>
+            <% else %>
+              <span class="project-link disabled">No Demo</span>
+            <% end %>
+          </div>
+
+          <div class="project-actions">
+            <% if current_user&.super_admin? %>
+              <% if project.hidden? %>
+                <%= button_to "Unhide", admin_unhide_project_path(project),
+                    method: :patch,
+                    class: "unhide-project-btn",
+                    onclick: "event.stopPropagation();" %>
+              <% else %>
+                <%= button_to "Hide", admin_hide_project_path(project),
+                    method: :patch,
+                    class: "hide-project-btn",
+                    onclick: "event.stopPropagation();" %>
+              <% end %>
+            <% end %>
+            
+            <%= button_to "Delete", admin_project_path(project),
+                method: :delete,
+                class: "delete-project-btn",
+                onclick: "event.stopPropagation(); return confirm('Are you sure you want to delete this project? This action cannot be undone.');",
+                data: { confirm: "Are you sure you want to delete this project? This action cannot be undone." } %>
+          </div>
+        </div>
+      <% end %>
+    <% else %>
+      <div style="text-align: center; padding: 3rem; color: #6b5b4a;">
+        <h3>No projects found</h3>
+        <p>Try adjusting your filters or check back later.</p>
+      </div>
+    <% end %>
+
+    <!-- Pagination -->
+    <% if @total_pages > 1 %>
+      <div class="pagination-container">
+        <div class="pagination-info">
+          Showing <%= (@current_page - 1) * @per_page + 1 %> to <%= [@current_page * @per_page, @total_count].min %> of <%= @total_count %> projects
+        </div>
+        <div class="pagination-controls">
+          <% if @current_page > 1 %>
+            <%= link_to "← Previous", admin_projects_path(page: @current_page - 1, name: params[:name], owner: params[:owner], status: params[:status], week: params[:week]), class: "pagination-link" %>
+          <% end %>
+
+          <% @total_pages.times do |page_num| %>
+            <% page_num = page_num + 1 %>
+            <% if page_num == @current_page %>
+              <span class="pagination-current"><%= page_num %></span>
+            <% elsif page_num == 1 || page_num == @total_pages || (page_num >= @current_page - 2 && page_num <= @current_page + 2) %>
+              <%= link_to page_num, admin_projects_path(page: page_num, name: params[:name], owner: params[:owner], status: params[:status], week: params[:week]), class: "pagination-link" %>
+            <% elsif page_num == @current_page - 3 || page_num == @current_page + 3 %>
+              <span class="pagination-ellipsis">...</span>
+            <% end %>
+          <% end %>
+
+          <% if @current_page < @total_pages %>
+            <%= link_to "Next →", admin_projects_path(page: @current_page + 1, name: params[:name], owner: params[:owner], status: params[:status], week: params[:week]), class: "pagination-link" %>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<script>
+  function updateProjectCoinValue(projectId, newValue) {
+    fetch(`/admin/projects/${projectId}/update_coin_value`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+      },
+      body: JSON.stringify({ coin_value: newValue })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        // Show a brief success indicator
+        const input = document.getElementById(`coin-value-${projectId}`);
+        input.style.backgroundColor = 'rgba(34, 197, 94, 0.1)';
+        input.style.borderColor = '#22c55e';
+
+        setTimeout(() => {
+          input.style.backgroundColor = '';
+          input.style.borderColor = '';
+        }, 1000);
+      } else {
+        alert('Error updating coin value: ' + (data.error || 'Unknown error'));
+        // Reset to previous value on error
+        location.reload();
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('Error updating coin value. Please try again.');
+      // Reset to previous value on error
+      location.reload();
+    });
+  }
+</script>

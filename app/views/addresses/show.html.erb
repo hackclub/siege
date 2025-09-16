@@ -1,0 +1,474 @@
+<% content_for :head do %>
+  <style>
+    .details-title {
+      font-weight: 700;
+      font-size: 2.25rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .details-content {
+      padding: 0;
+      margin: 0;
+      background: transparent;
+      box-shadow: none;
+      border-radius: 0;
+    }
+
+    .details-field {
+      margin-bottom: 1.25rem;
+    }
+    .details-field:last-of-type {
+      margin-bottom: 1.75rem;
+    }
+
+    .details-label {
+      display: block;
+      color: inherit;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .details-value {
+      color: inherit;
+      font-size: 1.125rem;
+    }
+
+    .details-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+    }
+
+    .chambers-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 2rem;
+      align-items: flex-start;
+    }
+
+    .meeple-section {
+      grid-column: 1;
+    }
+
+    .address-section {
+      grid-column: 2;
+    }
+
+    .referral-section {
+      grid-column: 3;
+    }
+
+    .meeple-preview {
+      width: 100px;
+      height: 100px;
+      margin: 1rem 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: visible;
+    }
+
+    .meeple-preview img {
+      width: 100px;
+      height: 100px;
+      object-fit: contain;
+    }
+
+    .color-options {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 1rem;
+      margin-bottom: 1.5rem;
+      max-width: 200px;
+    }
+
+    .color-option {
+      width: 30px;
+      height: 30px;
+      border: 3px solid transparent;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: border-color 0.2s ease;
+    }
+
+    .color-option.active {
+      border-color: #402b20;
+    }
+
+    .color-option.blue { background-color: #3b82f6; }
+    .color-option.red { background-color: #ef4444; }
+    .color-option.pink { background-color: #ec4899; }
+    .color-option.green { background-color: #10b981; }
+    .color-option.orange { background-color: #f97316; }
+    .color-option.purple { background-color: #8b5cf6; }
+    .color-option.cyan { background-color: #06b6d4; }
+    .color-option.yellow { background-color: #eab308; }
+
+    .color-option img {
+      width: 60px;
+      height: 60px;
+      filter: brightness(0) invert(1);
+      transform: translate(1px, -5px);
+    }
+
+    @media (max-width: 768px) {
+      .chambers-layout {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+      }
+      
+      .meeple-section,
+      .address-section,
+      .referral-section {
+        grid-column: 1;
+      }
+    }
+  </style>
+<% end %>
+
+<div class="details-show">
+  <h1 class="details-title">The Chambers</h1>
+  
+  <div class="chambers-layout">
+    <div class="meeple-section">
+      <h2 class="details-label">Your Meeple</h2>
+      <div class="meeple-preview" id="meeple-display-container">
+        <!-- MeepleDisplay will render here -->
+      </div>
+      <div class="color-options">
+        <% @meeple.unlocked_colors.each do |color| %>
+          <div class="color-option <%= color %> <%= 'active' if @meeple.color == color %>" 
+               data-color="<%= color %>" 
+               onclick="updateMeepleColor('<%= color %>')">
+            <img src="<%= image_path("meeple/meeple-#{color}.png") %>" alt="<%= color.capitalize %>" />
+          </div>
+        <% end %>
+      </div>
+      <div class="details-field">
+        <strong class="details-label">Cosmetics:</strong>
+        <p class="details-value">None equipped</p>
+      </div>
+    </div>
+    
+    <div class="address-section">
+      <h2 class="details-label">Your Details</h2>
+      <div class="details-content">
+        <% if @address.present? %>
+          <div class="details-field">
+            <strong class="details-label">Name:</strong>
+            <p class="details-value"><%= @address.first_name %> <%= @address.last_name %></p>
+          </div>
+          <div class="details-field">
+            <strong class="details-label">Birthday:</strong>
+            <p class="details-value"><%= @address.birthday.strftime("%B %d, %Y") if @address.birthday %></p>
+          </div>
+          <% if @address.shipping_name.present? %>
+            <div class="details-field">
+              <strong class="details-label">Preferred Shipping Name:</strong>
+              <p class="details-value"><%= @address.shipping_name %></p>
+            </div>
+          <% end %>
+          <div class="details-field">
+            <strong class="details-label">Address:</strong>
+            <div class="details-value" style="white-space: pre-line;">
+<%= @address.line_one %>
+<% if @address.line_two.present? %><%= @address.line_two %>
+<% end %><%= @address.city %>, <%= @address.state %> <%= @address.postcode %>
+<%= @address.human_country %></div>
+          </div>
+          <div class="details-actions">
+            <%= link_to "Edit Details", edit_chambers_path, class: "submit-button" %>
+          </div>
+        <% else %>
+          <div class="details-field">
+            <p class="details-value">Complete your account setup to participate fully in Siege.</p>
+          </div>
+          <div class="details-actions">
+            <button onclick="startAddressSetup()" class="submit-button">Finish setting up your account</button>
+          </div>
+        <% end %>
+      </div>
+    </div>
+    
+    <div class="referral-section">
+      <h2 class="details-label">Referrals</h2>
+      <div class="details-content">
+        <div class="details-field">
+          <strong class="details-label">Your Referral ID:</strong>
+          <p class="details-value">
+            <%= current_user.id %>
+            <br>
+            <small>
+              Share this link to refer others: 
+              <%= link_to root_url(ref: current_user.id), root_url(ref: current_user.id), target: "_blank" %>
+            </small>
+          </p>
+        </div>
+        <% if current_user.referrer.present? %>
+          <div class="details-field">
+            <strong class="details-label">Referred by:</strong>
+            <p class="details-value"><%= current_user.referrer.name %> (ID: <%= current_user.referrer.id %>)</p>
+          </div>
+        <% end %>
+        
+        <div class="details-field">
+          <strong class="details-label">Your Referrals:</strong>
+          <p class="details-value">
+            <%= @user_referral_count %> <%= @user_referral_count == 1 ? 'referral' : 'referrals' %>
+            <% if @user_referral_count == 0 %>
+              <br><small style="color: #666;">Share your referral link to start referring others!</small>
+            <% end %>
+          </p>
+        </div>
+        
+        <% if @top_referrers.any? %>
+          <div class="details-field">
+            <strong class="details-label">Top Referrers:</strong>
+            <div class="details-value">
+              <ol style="margin: 0.5rem 0; padding-left: 1.5rem; font-size: 0.9rem;">
+                <% @top_referrers.each_with_index do |(user_id, name, count), index| %>
+                  <li style="margin-bottom: 0.25rem;">
+                    <%= name %> - <%= count %> <%= count == 1 ? 'referral' : 'referrals' %>
+                  </li>
+                <% end %>
+              </ol>
+            </div>
+          </div>
+        <% end %>
+        
+        <div class="details-actions">
+          <%= button_to "Sign out", logout_path, method: :delete, class: "submit-button signout-button" %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function startAddressSetup() {
+  showModalAlert('Starting identity verification... Please complete the verification in the popup window.', 'Verification Required');
+  
+  const authorizer = new SubmitAuthorizer();
+  
+  authorizer.authorize()
+    .then(result => {
+      // Use the identity data directly from the SubmitAuthorizer result
+      if (result.verified && result.identityData) {
+        // Process identity and address data on the server
+        return fetch('/process_identity_and_address', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+          },
+          body: JSON.stringify({ 
+            identity_data: result.identityData,
+            idv_rec: result.idvRec
+          })
+        });
+      } else {
+        throw new Error('Identity verification not completed');
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      switch (data.status) {
+        case 'address_created':
+          // All data collected, ask for optional shipping name
+          hideModal();
+          showShippingNameModalForSetup();
+          break;
+        case 'partial_data':
+        case 'missing_address':
+          // Need manual address setup
+          window.location.href = data.redirect_url;
+          break;
+        case 'verified':
+          // User already had address, reload page
+          window.location.reload();
+          break;
+        case 'verification_failed':
+        case 'error':
+          throw new Error(data.message || 'Verification failed');
+        default:
+          throw new Error('Unknown response status');
+      }
+    })
+    .catch(error => {
+      console.error('Verification error:', error);
+      if (error.message === 'Authorization cancelled by user') {
+        showModalAlert('Identity verification was cancelled.', 'Verification Cancelled');
+      } else {
+        showModalAlert('Identity verification failed. Please try again or contact @Olive on slack.', 'Error');
+      }
+    });
+}
+
+// Shipping name modal for setup flow (reloads page after completion)
+function showShippingNameModalForSetup() {
+  const modal = document.getElementById('modal');
+  const modalTitle = document.getElementById('modal-title');
+  const modalMessage = document.getElementById('modal-message');
+  const modalActions = document.getElementById('modal-actions');
+  
+  modalTitle.textContent = 'Almost done!';
+  modalMessage.innerHTML = '';
+  modalActions.innerHTML = '';
+  
+  // Create explanation text
+  const explanationText = document.createElement('p');
+  explanationText.textContent = 'Your address has been set up automatically. You can optionally set a preferred shipping name if you want packages sent to a different name than what\'s on your ID.';
+  explanationText.style.cssText = 'font-size: 1rem; line-height: 1.5; margin-bottom: 1.5rem;';
+  modalMessage.appendChild(explanationText);
+  
+  // Create input field with proper styling
+  const fieldset = document.createElement('fieldset');
+  fieldset.className = 'fieldset';
+  fieldset.style.cssText = 'margin: 1.5rem 0;';
+  
+  const legend = document.createElement('legend');
+  legend.className = 'fieldset-legend';
+  legend.textContent = 'Preferred Shipping Name (Optional)';
+  
+  const underlineField = document.createElement('div');
+  underlineField.className = 'underline-field';
+  
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'text-input';
+  input.placeholder = 'Leave blank to use your name from ID';
+  
+  underlineField.appendChild(input);
+  fieldset.appendChild(legend);
+  fieldset.appendChild(underlineField);
+  modalMessage.appendChild(fieldset);
+  
+  // Create buttons
+  const skipBtn = document.createElement('button');
+  skipBtn.textContent = 'Skip';
+  skipBtn.className = 'submit-button modal-button';
+  skipBtn.addEventListener('click', () => {
+    hideModal();
+    window.location.reload(); // Reload to show updated chambers page
+  });
+  
+  const continueBtn = document.createElement('button');
+  continueBtn.textContent = 'Continue';
+  continueBtn.className = 'submit-button modal-button';
+  continueBtn.addEventListener('click', () => {
+    const shippingName = input.value.trim();
+    
+    if (shippingName) {
+      // Save shipping name
+      fetch('/set_shipping_name', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+        },
+        body: JSON.stringify({ shipping_name: shippingName })
+      }).then(() => {
+        hideModal();
+        window.location.reload(); // Reload to show updated chambers page
+      }).catch(() => {
+        // Continue even if shipping name update fails
+        hideModal();
+        window.location.reload();
+      });
+    } else {
+      // Skip shipping name
+      hideModal();
+      window.location.reload();
+    }
+  });
+  
+  modalActions.appendChild(skipBtn);
+  modalActions.appendChild(continueBtn);
+  
+  modal.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  
+  // Focus input
+  setTimeout(() => input.focus(), 100);
+}
+</script>
+
+<script>
+const colorPaths = {
+  'blue': '<%= asset_path("meeple/meeple-blue.png") %>',
+  'red': '<%= asset_path("meeple/meeple-red.png") %>',
+  'pink': '<%= asset_path("meeple/meeple-pink.png") %>',
+  'green': '<%= asset_path("meeple/meeple-green.png") %>',
+  'orange': '<%= asset_path("meeple/meeple-orange.png") %>',
+  'purple': '<%= asset_path("meeple/meeple-purple.png") %>',
+  'cyan': '<%= asset_path("meeple/meeple-cyan.png") %>',
+  'yellow': '<%= asset_path("meeple/meeple-yellow.png") %>'
+};
+
+function updateMeepleColor(color) {
+  const colorOptions = document.querySelectorAll('.color-option');
+  
+  // Update color options UI
+  colorOptions.forEach(option => {
+    option.classList.toggle('active', option.dataset.color === color);
+  });
+  
+  // Update meeple display
+  const userData = {
+    meeple: {
+      color: color,
+      imageSrc: colorPaths[color],
+      meeple_cosmetics: []
+    }
+  };
+  
+  const meepleDisplay = new MeepleDisplay(userData, 100, 120);
+  const container = document.getElementById('meeple-display-container');
+  if (container) {
+    meepleDisplay.renderToHTML(container);
+  }
+  
+  // Send request to server asynchronously
+  fetch('<%= chambers_path %>', {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+    },
+    body: JSON.stringify({ meeple: { color: color } })
+  }).then(response => {
+    if (!response.ok) {
+      console.error('Failed to update meeple color');
+      location.reload();
+    }
+  }).catch(error => {
+    console.error('Error updating meeple color:', error);
+    location.reload();
+  });
+}
+
+// Initialize MeepleDisplay
+document.addEventListener('DOMContentLoaded', function() {
+  const userData = {
+    meeple: {
+      color: '<%= @meeple.color %>',
+      imageSrc: '<%= image_path("meeple/meeple-#{@meeple.color}.png") %>',
+      meeple_cosmetics: [
+        // You'll need to populate this with actual equipped cosmetics
+        // For now, we'll leave it empty
+      ]
+    }
+  };
+  
+  const meepleDisplay = new MeepleDisplay(userData, 100, 120);
+  const container = document.getElementById('meeple-display-container');
+  if (container) {
+    meepleDisplay.renderToHTML(container);
+  }
+});
+</script>

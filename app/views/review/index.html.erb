@@ -1,0 +1,338 @@
+<% content_for :title, "Review - All Projects" %>
+
+<% content_for :head do %>
+  <style>
+    .review-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    .review-header {
+      margin-bottom: 2rem;
+    }
+    .review-title {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      color: #402b20;
+    }
+    .review-subtitle {
+      font-size: 1.1rem;
+      color: #6b5b4a;
+      margin-bottom: 2rem;
+    }
+    .filters-section {
+      background: rgba(255, 255, 255, 0.9);
+      border: 2px solid rgba(64, 43, 32, 0.2);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    .filters-title {
+      font-size: 1.2rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      color: #402b20;
+    }
+    .filters-form {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+      align-items: end;
+    }
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+    }
+    .filter-label {
+      font-size: 0.9rem;
+      font-weight: 500;
+      margin-bottom: 0.5rem;
+      color: #402b20;
+    }
+    .filter-input, .filter-select, .filter-button {
+      padding: 0.75rem;
+      border: 2px solid rgba(64, 43, 32, 0.2);
+      border-radius: 8px;
+      font-size: 1rem;
+    }
+    .filter-button {
+      background: #059669;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    .filter-button:hover {
+      background: #047857;
+    }
+    .clear-filters {
+      color: #6366f1;
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+
+    .project-hackatime {
+      margin: 0.75rem 0;
+      padding: 0.5rem;
+      background: rgba(5, 150, 105, 0.1);
+      border-radius: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .hackatime-label {
+      font-size: 0.85rem;
+      color: #6b5b4a;
+      font-weight: 500;
+    }
+
+    .hackatime-value {
+      font-size: 0.9rem;
+      color: #059669;
+      font-weight: 600;
+    }
+    .projects-count {
+      font-size: 1.1rem;
+      font-weight: 500;
+      margin-bottom: 1.5rem;
+      color: #402b20;
+    }
+    .projects-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+      gap: 1.5rem;
+    }
+    .project-card {
+      background: rgba(255, 255, 255, 0.9);
+      border: 2px solid rgba(64, 43, 32, 0.1);
+      border-radius: 12px;
+      padding: 1.5rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .project-card:hover {
+      border-color: rgba(64, 43, 32, 0.3);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    .project-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 0.75rem;
+    }
+    .project-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #402b20;
+      margin: 0;
+    }
+    .project-week {
+      font-size: 0.85rem;
+      color: #6b5b4a;
+      background: rgba(64, 43, 32, 0.1);
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+    }
+    .project-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.75rem;
+      font-size: 0.9rem;
+    }
+    .project-badges {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+    .project-owner {
+      font-weight: 600;
+      color: #402b20;
+    }
+    .project-status {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+    .status-building { background-color: #fef3c7; color: #92400e; }
+    .status-submitted { background-color: #f3e8ff; color: #7c3aed; }
+    .status-pending_voting { background-color: #dbeafe; color: #1e40af; }
+    .status-finished { background-color: #d1fae5; color: #065f46; }
+    .project-description {
+      color: #6b5b4a;
+      font-size: 0.95rem;
+      line-height: 1.5;
+      margin-bottom: 0.75rem;
+    }
+    .project-links {
+      display: flex;
+      gap: 0.75rem;
+      font-size: 0.85rem;
+    }
+    .project-link {
+      color: #6366f1;
+      text-decoration: none;
+      padding: 0.25rem 0.5rem;
+      border: 1px solid #6366f1;
+      border-radius: 4px;
+      transition: all 0.2s ease;
+    }
+    .project-link:hover {
+      background: #6366f1;
+      color: white;
+    }
+    .project-link.disabled {
+      color: #9ca3af;
+      border-color: #d1d5db;
+      cursor: not-allowed;
+    }
+    .empty-state {
+      text-align: center;
+      padding: 3rem;
+      color: #6b5b4a;
+    }
+    .empty-state h3 {
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+      color: #402b20;
+    }
+  </style>
+<% end %>
+
+<div class="review-container">
+  <div class="review-header">
+    <h1 class="review-title">Project Review</h1>
+    <p class="review-subtitle">Review and manage project statuses</p>
+  </div>
+
+  <!-- Filters Section -->
+  <div class="filters-section">
+    <h3 class="filters-title">Filter Projects</h3>
+    <%= form_with url: review_path, method: :get, local: true, class: "filters-form" do |form| %>
+      <div class="filter-group">
+        <%= form.label :name, "Project Name", class: "filter-label" %>
+        <%= form.text_field :name, value: params[:name], placeholder: "Search by name...", class: "filter-input" %>
+      </div>
+
+      <div class="filter-group">
+        <%= form.label :owner, "Owner", class: "filter-label" %>
+        <%= form.select :owner,
+            options_from_collection_for_select(@users, :name, :name, params[:owner]),
+            { prompt: "All owners" },
+            { class: "filter-select" } %>
+      </div>
+
+      <div class="filter-group">
+        <%= form.label :status, "Status", class: "filter-label" %>
+        <%= form.select :status,
+            options_for_select(@statuses.map { |s| [s.capitalize, s] }, params[:status] || 'submitted'),
+            { prompt: "All statuses" },
+            { class: "filter-select" } %>
+      </div>
+
+      <div class="filter-group">
+        <%= form.label :week, "Week", class: "filter-label" %>
+        <%= form.select :week,
+            options_for_select(@available_weeks.map { |w| ["Week #{w}", w] }, params[:week]&.to_i),
+            { prompt: "All weeks" },
+            { class: "filter-select" } %>
+      </div>
+
+      <div class="filter-group">
+        <%= form.label :sort, "Sort By", class: "filter-label" %>
+        <%= form.select :sort,
+            options_for_select([
+              ['Newest First', 'newest'],
+              ['Oldest First', 'oldest'],
+              ['Most Hours', 'most_hours'],
+              ['Least Hours', 'least_hours']
+            ], params[:sort]),
+            { prompt: "Default (Newest)" },
+            { class: "filter-select" } %>
+      </div>
+
+      <div class="filter-group">
+        <%= form.submit "Apply", class: "filter-button" %>
+      </div>
+    <% end %>
+
+    <% if params[:name].present? || params[:owner].present? || params[:status].present? || params[:week].present? || params[:sort].present? %>
+      <div style="margin-top: 1rem;">
+        <%= link_to "Clear All Filters", review_path, class: "clear-filters" %>
+      </div>
+    <% end %>
+  </div>
+
+  <!-- Projects Count -->
+  <div class="projects-count">
+    Showing <%= @projects.count %> project<%= @projects.count == 1 ? '' : 's' %>
+    <% if params[:name].present? || params[:owner].present? || params[:status].present? || params[:week].present? %>
+      (filtered)
+    <% end %>
+    <% if params[:sort].present? %>
+      - sorted by <%= params[:sort].humanize.downcase %>
+    <% end %>
+  </div>
+
+  <!-- Projects Grid -->
+  <div class="projects-grid">
+    <% if @projects.any? %>
+      <% @projects.each do |project| %>
+        <div class="project-card" onclick="window.location.href='<%= review_project_path(project) %>'">
+          <div class="project-header">
+            <h3 class="project-title"><%= project.name %></h3>
+            <span class="project-week"><%= project.week_badge_text %></span>
+          </div>
+
+          <div class="project-meta">
+            <span class="project-owner">by <%= project.user.name %></span>
+            <div class="project-badges">
+              <span class="project-status status-<%= project.status %>">
+                <%= project.status.capitalize %>
+              </span>
+            </div>
+          </div>
+
+          <div class="project-description">
+            <%= truncate(project.description, length: 150) %>
+          </div>
+
+          <% total_seconds = project_total_hackatime_time(project) %>
+          <% if total_seconds > 0 %>
+            <div class="project-hackatime">
+              <span class="hackatime-label">Total Time:</span>
+              <span class="hackatime-value"><%= format_time_from_seconds(total_seconds) %></span>
+            </div>
+          <% end %>
+
+          <div class="project-links">
+            <% if project.repo_url.present? %>
+              <%= safe_project_link "Repository", project.repo_url, target: "_blank", class: "project-link", onclick: "event.stopPropagation()" %>
+            <% else %>
+              <span class="project-link disabled">No Repository</span>
+            <% end %>
+
+            <% if project.demo_url.present? %>
+              <%= safe_project_link "Demo", project.demo_url, target: "_blank", class: "project-link", onclick: "event.stopPropagation()" %>
+            <% else %>
+              <span class="project-link disabled">No Demo</span>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+    <% else %>
+      <div class="empty-state">
+        <h3>No Projects Found</h3>
+        <p>There are no projects matching your current filters.</p>
+        <% if params[:name].present? || params[:owner].present? || params[:status].present? %>
+          <%= link_to "Clear filters", review_path, class: "clear-filters" %>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+</div>

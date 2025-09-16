@@ -1,0 +1,487 @@
+<% content_for :title, "Review - #{@project.name}" %>
+
+<% content_for :head do %>
+  <style>
+    .review-detail-container {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    .review-detail-header {
+      margin-bottom: 2rem;
+    }
+    .review-detail-title {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      color: #402b20;
+    }
+    .review-detail-subtitle {
+      font-size: 1.1rem;
+      color: #6b5b4a;
+      margin-bottom: 1rem;
+    }
+    .back-link {
+      color: #6366f1;
+      text-decoration: none;
+      font-size: 0.9rem;
+      margin-bottom: 2rem;
+      display: inline-block;
+    }
+    .back-link:hover {
+      text-decoration: underline;
+    }
+    
+    .review-detail-subtitle {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    
+    .slack-dm-button {
+      background: #4A154B;
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: background-color 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .slack-dm-button:hover {
+      background: #3A0F3A;
+      color: white;
+      text-decoration: none;
+    }
+    
+    .detail-grid {
+      display: grid;
+      grid-template-columns: 1fr 350px;
+      gap: 2rem;
+      margin-bottom: 2rem;
+    }
+    
+    @media (max-width: 768px) {
+      .detail-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    .detail-section {
+      background: rgba(255, 255, 255, 0.9);
+      border: 2px solid rgba(64, 43, 32, 0.1);
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+    
+    .section-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      color: #402b20;
+    }
+    
+    .detail-field {
+      margin-bottom: 1rem;
+    }
+    
+    .detail-label {
+      font-weight: 600;
+      color: #402b20;
+      margin-bottom: 0.25rem;
+      display: block;
+    }
+    
+    .detail-value {
+      color: #6b5b4a;
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+    
+    .status-badge {
+      display: inline-block;
+      padding: 0.5rem 1rem;
+      border-radius: 12px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      margin-top: 0.25rem;
+    }
+    
+    .status-building { background-color: #fef3c7; color: #92400e; }
+    .status-submitted { background-color: #f3e8ff; color: #7c3aed; }
+    .status-pending_voting { background-color: #dbeafe; color: #1e40af; }
+    .status-finished { background-color: #d1fae5; color: #065f46; }
+    
+    .project-links {
+      display: flex;
+      gap: 0.75rem;
+      margin-top: 0.5rem;
+    }
+    
+    .project-link {
+      color: #6366f1;
+      text-decoration: none;
+      padding: 0.5rem 1rem;
+      border: 1px solid #6366f1;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      transition: all 0.2s ease;
+    }
+    
+    .project-link:hover {
+      background: #6366f1;
+      color: white;
+    }
+    
+    .project-link.disabled {
+      color: #9ca3af;
+      border-color: #d1d5db;
+      cursor: not-allowed;
+    }
+    
+    .status-update-form {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 1.5rem;
+    }
+    
+    .form-group {
+      margin-bottom: 1rem;
+    }
+    
+    .form-label {
+      font-weight: 600;
+      color: #402b20;
+      margin-bottom: 0.5rem;
+      display: block;
+    }
+    
+    .form-select, .form-textarea {
+      width: 100%;
+      padding: 0.75rem;
+      border: 2px solid rgba(64, 43, 32, 0.2);
+      border-radius: 6px;
+      font-size: 0.95rem;
+    }
+    
+    .form-textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+    
+    .form-button {
+      background: #059669;
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 6px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+    
+    .form-button:hover {
+      background: #047857;
+    }
+    
+    .stonemason-feedback-description {
+      color: #6b5b4a;
+      margin-bottom: 1rem;
+      font-size: 0.95rem;
+    }
+    
+    .stonemason-feedback-textarea {
+      min-height: 100px;
+    }
+    
+    .stonemason-feedback-help {
+      color: #6b7280;
+      font-size: 0.85rem;
+      margin-top: 0.5rem;
+      display: block;
+    }
+    
+    .logs-section {
+      margin-top: 2rem;
+    }
+    
+    .log-entry {
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+    
+    .log-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+    
+    .log-status-change {
+      font-weight: 600;
+      color: #402b20;
+    }
+    
+    .log-timestamp {
+      font-size: 0.85rem;
+      color: #6b7280;
+    }
+    
+    .log-reviewer {
+      font-size: 0.9rem;
+      color: #6b5b4a;
+      margin-bottom: 0.5rem;
+    }
+    
+    .log-message {
+      font-size: 0.9rem;
+      color: #374151;
+      font-style: italic;
+    }
+    
+    .no-logs {
+      text-align: center;
+      color: #6b7280;
+      font-style: italic;
+      padding: 2rem;
+    }
+    
+    .hackatime-projects {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+    
+    .hackatime-project {
+      background: rgba(64, 43, 32, 0.1);
+      color: #402b20;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.85rem;
+    }
+    
+    .hackatime-total {
+      background: rgba(5, 150, 105, 0.1);
+      padding: 0.75rem;
+      border-radius: 6px;
+      border-left: 4px solid #059669;
+    }
+    
+    .hackatime-time {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #059669;
+    }
+  </style>
+<% end %>
+
+<div class="review-detail-container">
+  <div class="review-detail-header">
+    <%= link_to "← Back to Project Review", review_path, class: "back-link" %>
+    <h1 class="review-detail-title"><%= @project.name %></h1>
+    <div class="review-detail-subtitle">
+      <span>by <%= @project.user.name %> • Created <%= @project.created_at.strftime("%B %d, %Y") %></span>
+      <% if @project.user.slack_id.present? %>
+        <a href="https://app.slack.com/client/T0266FRGM/D0266FRGM/user_profile/<%= @project.user.slack_id %>" 
+           target="_blank" 
+           class="slack-dm-button"
+           title="Open Slack DM with <%= @project.user.name %>">
+          💬 DM in Slack
+        </a>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="detail-grid">
+    <!-- Project Details -->
+    <div class="detail-section">
+      <h2 class="section-title">Project Information</h2>
+      
+      <div class="detail-field">
+        <span class="detail-label">Description</span>
+        <div class="detail-value"><%= @project.description.presence || "No description provided" %></div>
+      </div>
+      
+      <div class="detail-field">
+        <span class="detail-label">Current Status</span>
+        <span class="status-badge status-<%= @project.status %>">
+          <%= @project.status.capitalize %>
+        </span>
+      </div>
+      
+      <% if @project.is_update %>
+        <div class="detail-field">
+          <span class="detail-label">Project Type</span>
+          <span class="status-badge" style="background-color: #fbbf24; color: #92400e;">
+            Update
+          </span>
+        </div>
+      <% end %>
+      
+      <div class="detail-field">
+        <span class="detail-label">ELO Rating</span>
+        <div class="detail-value"><%= @project.elo || "Not rated" %></div>
+      </div>
+      
+      <div class="detail-field">
+        <span class="detail-label">Links</span>
+        <div class="project-links">
+          <% if @project.repo_url.present? %>
+            <%= link_to "Repository", @project.repo_url, target: "_blank", class: "project-link" %>
+          <% else %>
+            <span class="project-link disabled">No Repository</span>
+          <% end %>
+          
+          <% if @project.demo_url.present? %>
+            <%= link_to "Demo", @project.demo_url, target: "_blank", class: "project-link" %>
+          <% else %>
+            <span class="project-link disabled">No Demo</span>
+          <% end %>
+        </div>
+      </div>
+      
+      <% if @project.hackatime_projects.present? && @project.hackatime_projects.any? %>
+        <div class="detail-field">
+          <span class="detail-label">Hackatime Projects</span>
+          <div class="hackatime-projects">
+            <% @project.hackatime_projects.each do |hackatime_project| %>
+              <span class="hackatime-project"><%= hackatime_project %></span>
+            <% end %>
+          </div>
+        </div>
+        
+        <% total_seconds = project_total_hackatime_time(@project) %>
+        <% if total_seconds > 0 %>
+          <div class="detail-field">
+            <span class="detail-label">Total Hackatime</span>
+            <div class="detail-value hackatime-total">
+              <span class="hackatime-time"><%= format_time_from_seconds(total_seconds) %></span>
+            </div>
+          </div>
+        <% end %>
+      <% end %>
+    </div>
+
+    <!-- Status Update Panel -->
+    <div class="detail-section">
+      <h2 class="section-title">Update Status</h2>
+      
+      <%= form_with url: review_project_status_path(@project), method: :patch, local: true, class: "status-update-form" do |form| %>
+        <div class="form-group">
+          <%= form.label :new_status, "New Status", class: "form-label" %>
+          <%= form.select :new_status, 
+              options_for_select([
+                ['Building', 'building'],
+                ['Submitted', 'submitted'],
+                ['Pending Voting', 'pending_voting'], 
+                ['Finished', 'finished']
+              ], 'pending_voting'),
+              { prompt: "Select new status" },
+              { class: "form-select", required: true } %>
+        </div>
+        
+        <div class="form-group">
+          <%= form.label :message, "Review Notes (Optional)", class: "form-label" %>
+          <%= form.text_area :message, 
+              placeholder: "Add any notes about this status change...",
+              class: "form-textarea" %>
+        </div>
+        
+        <%= form.submit "Update Status", class: "form-button" %>
+      <% end %>
+    </div>
+  </div>
+
+  <!-- Stonemason Feedback Section -->
+  <div class="detail-section">
+    <div class="section-content">
+      <h2 class="section-title">Stonemason Feedback</h2>
+      <p class="stonemason-feedback-description">
+        Add feedback for the project creator. This will be visible to them while the project is in "building" status.
+      </p>
+
+      <div class="form-group">
+        <label class="form-label">Feedback for <%= @project.user.name %>:</label>
+        <textarea id="stonemason-feedback" class="form-textarea stonemason-feedback-textarea" placeholder="Add feedback for the project creator..."><%= @project.stonemason_feedback %></textarea>
+        <small class="stonemason-feedback-help">
+          This feedback will be shown to the user only when the project status is "building".
+        </small>
+      </div>
+
+      <button type="button" onclick="updateStonemasonFeedback()" class="form-button">
+        Save Stonemason Feedback
+      </button>
+    </div>
+  </div>
+
+  <!-- Review Logs -->
+  <div class="detail-section logs-section">
+    <h2 class="section-title">Review History</h2>
+    
+    <% if @project.logs.any? %>
+      <% @project.logs.reverse.each do |log| %>
+        <div class="log-entry">
+          <div class="log-header">
+            <span class="log-status-change">
+              <%= log['old_status']&.capitalize %> → <%= log['new_status']&.capitalize %>
+            </span>
+            <span class="log-timestamp">
+              <%= Time.parse(log['timestamp']).strftime("%B %d, %Y at %l:%M %p") %>
+            </span>
+          </div>
+          <div class="log-reviewer">
+            Changed by <%= log['reviewer_name'] %>
+          </div>
+          <% if log['message'].present? %>
+            <div class="log-message">
+              "<%= log['message'] %>"
+            </div>
+          <% end %>
+        </div>
+      <% end %>
+    <% else %>
+      <div class="no-logs">
+        No review history yet
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<script>
+function updateStonemasonFeedback() {
+  const feedback = document.getElementById('stonemason-feedback').value;
+  
+  fetch('<%= review_update_stonemason_feedback_path(@project) %>', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+    },
+    body: JSON.stringify({ 
+      stonemason_feedback: feedback
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      alert('Stonemason feedback updated successfully!');
+    } else {
+      alert('Error updating stonemason feedback: ' + (data.error || 'Unknown error'));
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    alert('Error updating stonemason feedback. Please try again.');
+  });
+}
+</script>

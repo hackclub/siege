@@ -1,0 +1,290 @@
+<style>
+  .admin-dashboard {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+  .admin-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 2rem;
+    color: #402b20;
+    text-align: center;
+  }
+  .admin-layout {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 3rem;
+    align-items: start;
+  }
+  @media (max-width: 768px) {
+    .admin-layout {
+      grid-template-columns: 1fr;
+      gap: 2rem;
+    }
+  }
+  
+  /* Navigation Column */
+  .nav-column {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .nav-button {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 1.25rem;
+    background: rgba(255, 255, 255, 0.95);
+    border: 2px solid rgba(64, 43, 32, 0.2);
+    border-radius: 12px;
+    text-decoration: none;
+    color: #402b20;
+    font-weight: 600;
+    font-size: 1rem;
+    transition: all 0.2s;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  }
+  .nav-button:hover {
+    border-color: rgba(64, 43, 32, 0.4);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    text-decoration: none;
+    color: #402b20;
+  }
+  .nav-button-icon {
+    width: 20px;
+    height: 20px;
+    opacity: 0.7;
+  }
+  
+  /* Statistics Column */
+  .stats-column {
+    background: rgba(255, 255, 255, 0.95);
+    border: 2px solid rgba(64, 43, 32, 0.15);
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  }
+  .stats-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #402b20;
+    margin-bottom: 1.5rem;
+    text-align: center;
+  }
+  .week-info {
+    text-align: center;
+    margin-bottom: 2rem;
+    padding: 1rem;
+    background: rgba(64, 43, 32, 0.05);
+    border-radius: 12px;
+  }
+  .week-number {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #402b20;
+    margin-bottom: 0.25rem;
+  }
+  .week-label {
+    font-size: 1rem;
+    color: #6b5b4a;
+    font-weight: 500;
+  }
+  
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+  .stat-card {
+    text-align: center;
+    padding: 1.25rem;
+    background: rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(64, 43, 32, 0.1);
+    border-radius: 12px;
+    transition: all 0.2s;
+  }
+  .stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+  .stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #402b20;
+    margin-bottom: 0.25rem;
+  }
+  .stat-label {
+    font-size: 0.9rem;
+    color: #6b5b4a;
+    font-weight: 500;
+  }
+  
+  .project-status-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+  .status-card {
+    text-align: center;
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid rgba(64, 43, 32, 0.1);
+  }
+  .status-building {
+    background: #fef3c7;
+    color: #92400e;
+  }
+  .status-submitted {
+    background: #f3e8ff;
+    color: #7c3aed;
+  }
+  .status-pending_voting {
+    background: #dbeafe;
+    color: #1e40af;
+  }
+  .status-finished {
+    background: #d1fae5;
+    color: #065f46;
+  }
+  .status-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+  }
+  .status-label {
+    font-size: 0.8rem;
+    font-weight: 500;
+    text-transform: capitalize;
+  }
+</style>
+
+<div class="admin-dashboard">
+  <h1 class="admin-title">Admin Dashboard</h1>
+  
+  <div class="admin-layout">
+    <!-- Navigation Column -->
+    <div class="nav-column">
+      <%= link_to admin_projects_path, class: "nav-button" do %>
+        <svg class="nav-button-icon" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z"></path>
+        </svg>
+        Manage Projects
+      <% end %>
+      
+      <%= link_to admin_users_path, class: "nav-button" do %>
+        <svg class="nav-button-icon" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"></path>
+        </svg>
+        Manage Users
+      <% end %>
+      
+      <%= link_to admin_ballots_path, class: "nav-button" do %>
+        <svg class="nav-button-icon" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"></path>
+          <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"></path>
+        </svg>
+        View Ballots
+      <% end %>
+      
+      <%= link_to admin_referrals_path, class: "nav-button" do %>
+        <svg class="nav-button-icon" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"></path>
+        </svg>
+        Referrals
+      <% end %>
+      
+      <%= link_to admin_weekly_overview_path, class: "nav-button" do %>
+        <svg class="nav-button-icon" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"></path>
+        </svg>
+        Weekly Overview
+      <% end %>
+      
+      <%= link_to admin_analytics_path, class: "nav-button" do %>
+        <svg class="nav-button-icon" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"></path>
+        </svg>
+        Analytics
+      <% end %>
+      
+      <%= link_to admin_shop_purchases_path, class: "nav-button" do %>
+        <svg class="nav-button-icon" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M10 2L3 7v11a1 1 0 001 1h12a1 1 0 001-1V7l-7-5zM8 15v-4h4v4H8z" clip-rule="evenodd"></path>
+        </svg>
+        Shop Purchases
+      <% end %>
+      
+      <%= link_to admin_cosmetics_path, class: "nav-button" do %>
+        <svg class="nav-button-icon" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        Manage Cosmetics
+      <% end %>
+      
+      <%= link_to admin_physical_items_path, class: "nav-button" do %>
+        <svg class="nav-button-icon" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" clip-rule="evenodd"></path>
+        </svg>
+        Physical Items
+      <% end %>
+      
+      <% if current_user&.super_admin? %>
+        <%= link_to admin_flipper_path, class: "nav-button" do %>
+          <svg class="nav-button-icon" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M5 12a1 1 0 102 0V6.414l1.293 1.293a1 1 0 001.414-1.414l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L5 6.414V12zM15 8a1 1 0 10-2 0v5.586l-1.293-1.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L15 13.586V8z"></path>
+          </svg>
+          Feature Flags
+        <% end %>
+      <% end %>
+    </div>
+    
+    <!-- Statistics Column -->
+    <div class="stats-column">
+      <h2 class="stats-title">Current Week Statistics</h2>
+      
+      <!-- Week Info -->
+      <div class="week-info">
+        <div class="week-number">Week <%= @current_week_number %></div>
+        <div class="week-label">Siege Week</div>
+      </div>
+      
+      <!-- User Stats -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value"><%= @total_users %></div>
+          <div class="stat-label">Total Users</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value"><%= @users_working %></div>
+          <div class="stat-label">Users Working</div>
+        </div>
+      </div>
+      
+      <!-- Project Status Breakdown -->
+      <h3 style="font-size: 1.1rem; font-weight: 600; color: #402b20; margin-bottom: 1rem; text-align: center;">
+        Projects by Status (<%= @total_projects %> total)
+      </h3>
+      <div class="project-status-grid">
+        <div class="status-card status-building">
+          <div class="status-value"><%= @projects_building %></div>
+          <div class="status-label">Building</div>
+        </div>
+        <div class="status-card status-submitted">
+          <div class="status-value"><%= @projects_submitted %></div>
+          <div class="status-label">Submitted</div>
+        </div>
+        <div class="status-card status-pending_voting">
+          <div class="status-value"><%= @projects_pending_voting %></div>
+          <div class="status-label">Pending Voting</div>
+        </div>
+        <div class="status-card status-finished">
+          <div class="status-value"><%= @projects_finished %></div>
+          <div class="status-label">Finished</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

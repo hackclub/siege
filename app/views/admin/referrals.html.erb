@@ -1,0 +1,111 @@
+<% content_for :title, "Admin - Referrals" %>
+
+<% content_for :head do %>
+  <style>
+    .referrals-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    
+    .referrals-header {
+      margin-bottom: 2rem;
+    }
+    
+    .referrals-title {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+    
+    .referrals-subtitle {
+      color: #666;
+      font-size: 1.1rem;
+    }
+    
+    .referrals-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .referrals-table th,
+    .referrals-table td {
+      padding: 1rem;
+      text-align: left;
+      border-bottom: 1px solid #eee;
+    }
+    
+    .referrals-table th {
+      background: #f8f9fa;
+      font-weight: 600;
+      color: #333;
+    }
+    
+    .referrals-table tr:hover {
+      background: #f8f9fa;
+    }
+    
+    .referral-count {
+      font-weight: 600;
+      color: #2563eb;
+    }
+    
+    .user-link {
+      color: #2563eb;
+      text-decoration: none;
+    }
+    
+    .user-link:hover {
+      text-decoration: underline;
+    }
+    
+    .no-referrals {
+      text-align: center;
+      padding: 3rem;
+      color: #666;
+      font-size: 1.1rem;
+    }
+  </style>
+<% end %>
+
+<div class="referrals-container">
+  <div class="referrals-header">
+    <h1 class="referrals-title">Referral Leaderboard</h1>
+    <p class="referrals-subtitle">Users sorted by total referrals</p>
+  </div>
+  
+  <% if @referrers.any? %>
+    <table class="referrals-table">
+      <thead>
+        <tr>
+          <th>Rank</th>
+          <th>User</th>
+          <th>Referrals</th>
+          <th>Referral ID</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @referrers.each_with_index do |user, index| %>
+          <tr>
+            <td><%= index + 1 %></td>
+            <td>
+              <%= link_to user.name, admin_user_details_path(user), class: "user-link" %>
+            </td>
+            <td>
+              <span class="referral-count"><%= @referral_counts[user.id] || 0 %></span>
+            </td>
+            <td><%= user.id %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% else %>
+    <div class="no-referrals">
+      <p>No referrals have been made yet.</p>
+    </div>
+  <% end %>
+</div>

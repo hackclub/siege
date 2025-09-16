@@ -1,0 +1,45 @@
+<% content_for :head do %>
+  <style>
+    .details-form-container {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      width: 100%;
+    }
+
+    .details-form-title {
+      font-weight: 700;
+      font-size: 2.25rem;
+      text-align: center;
+      margin-bottom: 1.75rem;
+    }
+
+    .details-form-wrapper {
+      width: 100%;
+      max-width: 28rem;
+      margin-left: auto;
+      margin-right: auto;
+    }
+  </style>
+<% end %>
+<%= render "shared/error_styles" %>
+
+<div class="details-form-container">
+
+  <% if @address&.errors&.any? %>
+    <div id="error_explanation" class="error-explanation">
+      <h2 class="font-bold"><%= pluralize(@address.errors.count, "error") %> prohibited these details from being saved:</h2>
+      <ul>
+        <% @address.errors.full_messages.each do |message| %>
+          <li><%= message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="details-form-wrapper">
+    <%= form_with model: @address, url: chambers_path, method: (@address.persisted? ? :patch : :post), local: true do |form| %>
+      <%= render "form", form: form %>
+    <% end %>
+  </div>
+</div>

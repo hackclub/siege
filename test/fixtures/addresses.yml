@@ -1,0 +1,25 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  first_name: John
+  last_name: Doe
+  birthday: 1990-05-15
+  shipping_name: Johnny D
+  line_one: 15 Falls Road
+  city: Shelburne
+  postcode: 05482
+  country: US
+  state: Vermont
+  user: one
+
+two:
+  first_name: Jane
+  last_name: Smith
+  birthday: 1985-12-03
+  line_one: 8605 Santa Monica Blvd
+  line_two: Suite 100
+  city: Los Angeles
+  postcode: 90069
+  state: California
+  country: US
+  user: two

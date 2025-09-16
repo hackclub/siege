@@ -1,0 +1,446 @@
+<% content_for :title, "Admin - Ballots" %>
+
+<% content_for :head do %>
+  <style>
+    .admin-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    
+    .admin-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    
+    .admin-title {
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: #402b20;
+      margin: 0;
+    }
+    
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.5rem;
+      background: rgba(255, 255, 255, 0.95);
+      border: 2px solid rgba(64, 43, 32, 0.2);
+      border-radius: 8px;
+      text-decoration: none;
+      color: #402b20;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    
+    .back-link:hover {
+      border-color: rgba(64, 43, 32, 0.4);
+      transform: translateY(-1px);
+      text-decoration: none;
+      color: #402b20;
+    }
+    
+    /* Filters */
+    .filters-section {
+      background: rgba(255, 255, 255, 0.95);
+      border: 2px solid rgba(64, 43, 32, 0.15);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    }
+    
+    .filters-title {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: #402b20;
+      margin-bottom: 1rem;
+    }
+    
+    .filters-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      align-items: end;
+    }
+    
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    
+    .filter-label {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #6b5b4a;
+    }
+    
+    .filter-input {
+      padding: 0.75rem;
+      border: 1px solid rgba(64, 43, 32, 0.2);
+      border-radius: 6px;
+      font-size: 0.9rem;
+      background: white;
+    }
+    
+    .filter-select {
+      padding: 0.75rem;
+      border: 1px solid rgba(64, 43, 32, 0.2);
+      border-radius: 6px;
+      font-size: 0.9rem;
+      background: white;
+    }
+    
+    .filter-button {
+      padding: 0.75rem 1.5rem;
+      background: #402b20;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    
+    .filter-button:hover {
+      background: #2d1f17;
+    }
+    
+    .clear-filters {
+      padding: 0.75rem 1rem;
+      background: transparent;
+      color: #6b5b4a;
+      border: 1px solid rgba(64, 43, 32, 0.2);
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .clear-filters:hover {
+      background: rgba(64, 43, 32, 0.05);
+    }
+    
+    /* Ballots Grid */
+    .ballots-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+      gap: 1.5rem;
+    }
+    
+    .ballot-card {
+      background: rgba(255, 255, 255, 0.95);
+      border: 2px solid rgba(64, 43, 32, 0.15);
+      border-radius: 12px;
+      padding: 1.5rem;
+      transition: all 0.2s;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    }
+    
+    .ballot-card:hover {
+      border-color: rgba(64, 43, 32, 0.3);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    }
+    
+    .ballot-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 1rem;
+    }
+    
+    .ballot-week {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #402b20;
+    }
+    
+    .ballot-status {
+      padding: 0.25rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    
+    .ballot-status.voted {
+      background: #d1fae5;
+      color: #065f46;
+    }
+    
+    .ballot-status.pending {
+      background: #fef3c7;
+      color: #92400e;
+    }
+    
+    .ballot-user {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #6b5b4a;
+      margin-bottom: 0.5rem;
+    }
+    
+    .ballot-details {
+      margin: 1rem 0;
+    }
+    
+    .ballot-detail {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 0.5rem;
+      font-size: 0.9rem;
+    }
+    
+    .ballot-detail-label {
+      color: #6b5b4a;
+      font-weight: 500;
+    }
+    
+    .ballot-detail-value {
+      color: #402b20;
+      font-weight: 600;
+    }
+    
+    .ballot-reasoning {
+      margin-top: 1rem;
+      padding: 1rem;
+      background: rgba(64, 43, 32, 0.05);
+      border-radius: 8px;
+      font-size: 0.9rem;
+      color: #6b5b4a;
+      line-height: 1.4;
+    }
+    
+    .ballot-actions {
+      margin-top: 1.5rem;
+      text-align: center;
+    }
+    
+    .view-ballot-button {
+      display: inline-block;
+      padding: 0.75rem 1.5rem;
+      background: #402b20;
+      color: white;
+      text-decoration: none;
+      border-radius: 6px;
+      font-weight: 600;
+      transition: background-color 0.2s;
+    }
+    
+    .view-ballot-button:hover {
+      background: #2d1f17;
+      text-decoration: none;
+      color: white;
+    }
+    
+    .no-ballots {
+      text-align: center;
+      padding: 3rem;
+      color: #6b5b4a;
+      font-size: 1.1rem;
+    }
+    
+    @media (max-width: 768px) {
+      .admin-header {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      
+      .filters-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .ballots-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    /* Pagination Styles */
+    .pagination-container {
+      margin-top: 2rem;
+      padding: 1.5rem;
+      background: rgba(255, 255, 255, 0.9);
+      border: 2px solid rgba(64, 43, 32, 0.2);
+      border-radius: 12px;
+      text-align: center;
+    }
+    
+    .pagination-info {
+      margin-bottom: 1rem;
+      font-size: 0.9rem;
+      color: #6b5b4a;
+    }
+    
+    .pagination-controls {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    
+    .pagination-link {
+      padding: 0.5rem 0.75rem;
+      background: #402b20;
+      color: white;
+      text-decoration: none;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    
+    .pagination-link:hover {
+      background: #2d1e16;
+      transform: translateY(-1px);
+    }
+    
+    .pagination-current {
+      padding: 0.5rem 0.75rem;
+      background: #059669;
+      color: white;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+    
+    .pagination-ellipsis {
+      padding: 0.5rem 0.5rem;
+      color: #6b5b4a;
+      font-weight: 500;
+    }
+  </style>
+<% end %>
+
+<div class="admin-container">
+  <div class="admin-header">
+    <h1 class="admin-title">Ballots</h1>
+    <%= link_to admin_path, class: "back-link" do %>
+      ← Back to Dashboard
+    <% end %>
+  </div>
+  
+  <!-- Filters -->
+  <div class="filters-section">
+    <h3 class="filters-title">Filters</h3>
+    <%= form_with url: admin_ballots_path, method: :get, local: true do |form| %>
+      <div class="filters-grid">
+        <div class="filter-group">
+          <label class="filter-label">User</label>
+          <%= form.select :user, 
+              options_from_collection_for_select(@users, :name, :name, params[:user]), 
+              { prompt: "All users" }, 
+              { class: "filter-select" } %>
+        </div>
+        
+        <div class="filter-group">
+          <label class="filter-label">Week</label>
+          <%= form.select :week, 
+              options_from_collection_for_select(@weeks, :to_s, :to_s, params[:week]), 
+              { prompt: "All weeks" }, 
+              { class: "filter-select" } %>
+        </div>
+        
+        <div class="filter-group">
+          <label class="filter-label">Voted Status</label>
+          <%= form.select :voted, 
+              options_for_select([["All", ""], ["Voted", "true"], ["Not Voted", "false"]], params[:voted]), 
+              {}, 
+              { class: "filter-select" } %>
+        </div>
+        
+        <div class="filter-group">
+          <%= form.submit "Apply Filters", class: "filter-button" %>
+        </div>
+        
+        <div class="filter-group">
+          <%= link_to "Clear Filters", admin_ballots_path, class: "clear-filters" %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+  
+  <!-- Ballots Grid -->
+  <% if @ballots.any? %>
+    <div class="ballots-grid">
+      <% @ballots.each do |ballot| %>
+        <div class="ballot-card">
+          <div class="ballot-header">
+            <div class="ballot-week">Week <%= ballot.week %></div>
+            <div class="ballot-status <%= ballot.voted? ? 'voted' : 'pending' %>">
+              <%= ballot.voted? ? 'Voted' : 'Pending' %>
+            </div>
+          </div>
+          
+          <div class="ballot-user">
+            <%= ballot.user.name %>
+          </div>
+          
+                     <div class="ballot-details">
+             <div class="ballot-detail">
+               <span class="ballot-detail-label">Created:</span>
+               <span class="ballot-detail-value"><%= ballot.created_at.strftime("%b %d, %Y") %></span>
+             </div>
+            <% if ballot.voted? %>
+              <div class="ballot-detail">
+                <span class="ballot-detail-label">Voted:</span>
+                <span class="ballot-detail-value"><%= ballot.updated_at.strftime("%b %d, %Y") %></span>
+              </div>
+            <% end %>
+          </div>
+          
+          <% if ballot.reasoning.present? %>
+            <div class="ballot-reasoning">
+              <strong>Reasoning:</strong><br>
+              <%= ballot.reasoning %>
+            </div>
+          <% end %>
+          
+          <div class="ballot-actions">
+            <%= link_to "View Details", admin_ballot_details_path(ballot), class: "view-ballot-button" %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  <% else %>
+    <div class="no-ballots">
+      <p>No ballots found matching your criteria.</p>
+    </div>
+  <% end %>
+  
+  <!-- Pagination -->
+  <% if @total_pages > 1 %>
+    <div class="pagination-container">
+      <div class="pagination-info">
+        Showing <%= (@current_page - 1) * @per_page + 1 %> to <%= [@current_page * @per_page, @total_count].min %> of <%= @total_count %> ballots
+      </div>
+      <div class="pagination-controls">
+        <% if @current_page > 1 %>
+          <%= link_to "← Previous", admin_ballots_path(page: @current_page - 1, user: params[:user], week: params[:week], voted: params[:voted]), class: "pagination-link" %>
+        <% end %>
+        
+        <% @total_pages.times do |page_num| %>
+          <% page_num = page_num + 1 %>
+          <% if page_num == @current_page %>
+            <span class="pagination-current"><%= page_num %></span>
+          <% elsif page_num == 1 || page_num == @total_pages || (page_num >= @current_page - 2 && page_num <= @current_page + 2) %>
+            <%= link_to page_num, admin_ballots_path(page: page_num, user: params[:user], week: params[:week], voted: params[:voted]), class: "pagination-link" %>
+          <% elsif page_num == @current_page - 3 || page_num == @current_page + 3 %>
+            <span class="pagination-ellipsis">...</span>
+          <% end %>
+        <% end %>
+        
+        <% if @current_page < @total_pages %>
+          <%= link_to "Next →", admin_ballots_path(page: @current_page + 1, user: params[:user], week: params[:week], voted: params[:voted]), class: "pagination-link" %>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+</div>

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title><%= content_for(:title) || "Ship Or Sink" %></title>
+    <title><%= content_for(:title) || "Siege" %></title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
@@ -13,18 +13,139 @@
     <%# Enable PWA manifest for installable apps (make sure to enable in config/routes.rb too!) %>
     <%#= tag.link rel: "manifest", href: pwa_manifest_path(format: :json) %>
 
-    <link rel="icon" href="/icon.png" type="image/png">
-    <link rel="icon" href="/icon.svg" type="image/svg+xml">
-    <link rel="apple-touch-icon" href="/icon.png">
+    <link rel="icon" href="<%= asset_path('mini-castle.webp') %>" type="image/webp">
+    <link rel="apple-touch-icon" href="<%= asset_path('mini-castle.webp') %>">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital,wght@0,400;1,400&family=Jaini&display=swap" rel="stylesheet">
+
+    <style>
+      html {
+        background: #f5f5f4 url('<%= asset_path("parchment-texture.jpg") %>') repeat;
+        font-family: "IM Fell English", serif;
+        color: #3b2a1a;
+      }
+      body {
+        margin: 0;
+        font-family: inherit;
+        color: inherit;
+      }
+      a {
+        color: #3b2a1a;
+        text-decoration: underline;
+      }
+      a:hover {
+        color: #2d1f13;
+      }
+      h1, h2, h3, h4, h5, h6 {
+        font-family: "Jaini", "IM Fell English", serif;
+      }
+      .app-container {
+        min-height: 100vh;
+        display: flex;
+      }
+      .app-main {
+        flex: 1;
+        padding: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+      }
+    </style>
 
     <%# Includes all stylesheet files in app/assets/stylesheets %>
     <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
     <%= javascript_importmap_tags %>
+
+    <script>
+      console.log("Layout loaded at:", new Date().toISOString());
+
+      // Submit Authorizer for headless identity verification
+      class SubmitAuthorizer {
+        constructor() {
+          this.baseUrl = window.location.origin;
+        }
+
+        async authorize() {
+          // Step 1: Create authorization request
+          const response = await fetch(`${this.baseUrl}/api/submit/authorize`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+            }
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to create authorization request');
+          }
+
+          const { auth_id, popup_url } = await response.json();
+
+          // Step 2: Open popup window
+          const popup = window.open(
+            popup_url,
+            'authorization',
+            'width=500,height=700,scrollbars=yes,resizable=yes'
+          );
+
+          // Step 3: Poll for completion
+          return new Promise((resolve, reject) => {
+            const pollInterval = setInterval(async () => {
+              try {
+                const statusResponse = await fetch(`${this.baseUrl}/api/submit/status/${auth_id}`, {
+                  headers: {
+                    'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+                  }
+                });
+
+                const status = await statusResponse.json();
+
+                if (status.status === 'completed') {
+                  clearInterval(pollInterval);
+                  popup.close();
+                  resolve({
+                    authId: auth_id,
+                    idvRec: status.idv_rec,
+                    completedAt: status.completed_at,
+                    identityData: status.identity_response,
+                    verified: status.verified
+                  });
+                }
+              } catch (error) {
+                clearInterval(pollInterval);
+                popup.close();
+                reject(error);
+              }
+            }, 2000); // Poll every 2 seconds
+
+            // Handle popup closed by user
+            const checkClosed = setInterval(() => {
+              if (popup.closed) {
+                clearInterval(checkClosed);
+                clearInterval(pollInterval);
+                reject(new Error('Authorization cancelled by user'));
+              }
+            }, 1000);
+          });
+        }
+      }
+    </script>
   </head>
 
-  <body>
-    <main class="container mx-auto mt-28 px-5 flex">
-      <%= yield %>
-    </main>
+  <body<%= " class=\"#{content_for(:body_class)}\"".html_safe if content_for?(:body_class) %>>
+    <div class="app-container">
+      <% unless (controller_name == "sessions" && action_name == "new") ||
+                (controller_name == "addresses" && (action_name == "new" || action_name == "create")) ||
+                (controller_name == "welcome") %>
+        <%= render "application/navbar" %>
+      <% end %>
+      <main class="app-main">
+        <%= yield %>
+      </main>
+    </div>
+
+    <%= render "shared/modal" %>
   </body>
 </html>

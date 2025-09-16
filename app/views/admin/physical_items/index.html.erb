@@ -1,0 +1,93 @@
+<div class="admin-section">
+  <div class="admin-header">
+    <h1>Physical Items Management</h1>
+    <%= link_to 'Add New Physical Item', new_admin_physical_item_path, class: 'btn btn-primary' %>
+  </div>
+
+  <div class="admin-content">
+    <% if @physical_items.any? %>
+      <div class="admin-table-container">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Image</th>
+              <th>Name</th>
+              <th>Cost</th>
+              <th>Purchasable</th>
+              <th>Description</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @physical_items.each do |physical_item| %>
+              <tr>
+                <td>
+                  <% if physical_item.image.attached? %>
+                    <%= image_tag physical_item.image, class: 'physical-item-thumbnail', alt: physical_item.name %>
+                  <% else %>
+                    <span class="no-image">No image</span>
+                  <% end %>
+                </td>
+                <td><%= physical_item.name %></td>
+                <td><%= physical_item.cost %> 🪙</td>
+                <td>
+                  <% if physical_item.purchasable? %>
+                    <span class="badge badge-success">Yes</span>
+                  <% else %>
+                    <span class="badge badge-secondary">No</span>
+                  <% end %>
+                </td>
+                <td><%= truncate(physical_item.description, length: 50) %></td>
+                <td>
+                  <div class="admin-actions">
+                    <%= link_to 'View', admin_physical_item_path(physical_item), class: 'btn btn-sm btn-outline' %>
+                    <%= link_to 'Edit', edit_admin_physical_item_path(physical_item), class: 'btn btn-sm btn-outline' %>
+                    <%= link_to 'Delete', admin_physical_item_path(physical_item), 
+                        class: 'btn btn-sm btn-danger', 
+                        data: { turbo_method: :delete, turbo_confirm: 'Are you sure you want to delete this physical item?' } %>
+                  </div>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <div class="admin-empty-state">
+        <p>No physical items found. <%= link_to 'Add the first physical item', new_admin_physical_item_path %>.</p>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<style>
+  .physical-item-thumbnail {
+    width: 50px;
+    height: 50px;
+    object-fit: cover;
+    border-radius: 4px;
+  }
+
+  .no-image {
+    color: #666;
+    font-style: italic;
+    font-size: 0.9em;
+  }
+
+  .badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+
+  .badge-success {
+    background-color: #10b981;
+    color: white;
+  }
+
+  .badge-secondary {
+    background-color: #6b7280;
+    color: white;
+  }
+</style>

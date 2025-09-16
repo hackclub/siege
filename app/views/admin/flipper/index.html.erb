@@ -1,0 +1,177 @@
+<%# Flipper Feature Flags Admin Page %>
+
+<style>
+  .flipper-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+
+  .flipper-header {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 12px;
+    margin-bottom: 2rem;
+    text-align: center;
+  }
+
+  .flipper-title {
+    font-size: 2rem;
+    font-weight: bold;
+    margin: 0 0 0.5rem 0;
+  }
+
+  .flipper-subtitle {
+    font-size: 1rem;
+    opacity: 0.9;
+    margin: 0;
+  }
+
+  .flipper-content {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+
+  .feature-list {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .feature-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 1.5rem;
+    transition: all 0.2s ease;
+  }
+
+  .feature-card:hover {
+    border-color: #059669;
+    box-shadow: 0 2px 8px rgba(5, 150, 105, 0.1);
+  }
+
+  .feature-header {
+    display: flex;
+    justify-content: between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+  }
+
+  .feature-name {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #1f2937;
+    margin: 0;
+  }
+
+  .feature-status {
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+
+  .status-enabled {
+    background: #d1fae5;
+    color: #065f46;
+  }
+
+  .status-disabled {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+
+  .feature-description {
+    color: #6b7280;
+    font-size: 0.875rem;
+    margin: 0;
+  }
+
+  .flipper-ui-link {
+    display: inline-block;
+    background: #059669;
+    color: white;
+    padding: 1rem 2rem;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    transition: background-color 0.2s ease;
+    margin-bottom: 2rem;
+  }
+
+  .flipper-ui-link:hover {
+    background: #047857;
+    color: white;
+    text-decoration: none;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: #6b7280;
+  }
+
+  .empty-state-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+  }
+</style>
+
+<div class="flipper-container">
+  <div class="flipper-header">
+    <h1 class="flipper-title">Feature Flags</h1>
+    <p class="flipper-subtitle">Manage feature toggles and experimental features</p>
+  </div>
+
+  <div class="flipper-content">
+    <a href="/admin/flipper/ui" class="flipper-ui-link">
+      Open Flipper UI
+    </a>
+
+    <% if @features.any? %>
+      <div class="feature-list">
+        <% @features.each do |feature| %>
+          <div class="feature-card">
+            <div class="feature-header">
+              <h3 class="feature-name"><%= feature[:key] %></h3>
+              <span class="feature-status <%= feature[:enabled] ? 'status-enabled' : 'status-disabled' %>">
+                <%= feature[:enabled] ? 'Enabled' : 'Disabled' %>
+              </span>
+            </div>
+            <p class="feature-description"><%= feature[:description] %></p>
+          </div>
+        <% end %>
+      </div>
+    <% else %>
+      <div class="empty-state">
+        <div class="empty-state-icon">🎛️</div>
+        <h3>No feature flags yet</h3>
+        <p>Create your first feature flag using the Flipper UI above.</p>
+      </div>
+    <% end %>
+
+    <% if @available_flags.any? %>
+      <div style="margin-top: 3rem;">
+        <h2 style="color: #1f2937; margin-bottom: 1.5rem; font-size: 1.5rem;">Available Flags</h2>
+        <p style="color: #6b7280; margin-bottom: 1.5rem; font-size: 0.875rem;">
+          These flags are available in the code but haven't been added to the UI yet. You can add them using the Flipper UI above.
+        </p>
+        
+        <div class="feature-list">
+          <% @available_flags.each do |flag| %>
+            <div class="feature-card" style="border-color: #fbbf24; background: #fffbeb;">
+              <div class="feature-header">
+                <h3 class="feature-name" style="color: #92400e;"><%= flag[:key] %></h3>
+                <span class="feature-status" style="background: #fbbf24; color: #92400e;">Available</span>
+              </div>
+              <p class="feature-description"><%= flag[:description] %></p>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</div>

@@ -1,0 +1,50 @@
+<% content_for :title, 'Siege o clock' %>
+
+<div id="countdown"></div>
+<div id="progress-container">
+    <svg width="800" height="200" id="progress-svg">
+        <path id="wave-path" d="M0,100 Q200,50 400,100 T800,100" stroke="black" stroke-width="4" stroke-dasharray="10,5" fill="none"/>
+        <image id="meeple" x="42" y="82" width="32" height="32" href="<%= asset_path('meeple/meeple-red.png') %>"/>
+        <image x="710" y="50" width="80" height="80" href="<%= asset_path('castle.webp') %>"/>
+    </svg>
+</div>
+
+<script>
+    function updateCountdown() {
+        const targetDate = new Date('2025-09-01T14:00:00-04:00'); // 2 PM EDT on Monday Sept 1st
+        const now = new Date();
+        const difference = targetDate - now;
+
+        if (difference <= 0) {
+            document.getElementById('countdown').innerHTML = 'Time is up!';
+            const path = document.getElementById('wave-path');
+            const point = path.getPointAtLength(path.getTotalLength());
+            document.getElementById('meeple').setAttribute('x', point.x - 16);
+            document.getElementById('meeple').setAttribute('y', point.y - 16);
+            return;
+        }
+
+        const totalHours = difference / (1000 * 60 * 60);
+        const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((difference % (1000 * 60)) / 1000);
+
+        document.getElementById('countdown').innerHTML = 
+            days + ' days, ' + hours + ' hours, ' + minutes + ' minutes, ' + seconds + ' seconds';
+
+        // Calculate meeple position along the wave path
+        const progress = Math.max(0, Math.min(24, totalHours));
+        const pathProgress = (24 - progress) / 24; // 0 to 1
+        
+        const path = document.getElementById('wave-path');
+        const pathLength = path.getTotalLength();
+        const point = path.getPointAtLength(pathLength * pathProgress);
+        
+        document.getElementById('meeple').setAttribute('x', point.x - 16);
+        document.getElementById('meeple').setAttribute('y', point.y - 16);
+    }
+
+    updateCountdown();
+    setInterval(updateCountdown, 1000);
+</script>

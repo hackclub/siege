@@ -1,0 +1,821 @@
+<% content_for :title, "Showing project" %>
+
+<% content_for :head do %>
+  <style>
+    .projects-notice { display: inline-block; margin-bottom: 1.25rem; font-weight: 500; color: inherit; padding: 0; background: transparent !important; border: 0; }
+    .projects-notice::before, .projects-notice::after { content: "— — —"; opacity: 0.6; margin: 0 0.5rem; }
+    .projects-header { display: flex; flex-direction: column; gap: 0.75rem; align-items: stretch; justify-content: space-between; }
+    @media (min-width: 640px) { .projects-header { flex-direction: row; align-items: center; } }
+    .projects-title { font-weight: 700; font-size: 2.25rem; }
+    .projects-body { margin-top: 2rem; display: flex; justify-content: flex-start; }
+    .projects-body .project-card { display: inline-block; width: auto; max-width: 40rem; }
+    .projects-index { display: flex; flex-direction: column; height: 100%; }
+    .projects-footer { margin-top: auto; display: flex; flex-wrap: wrap; gap: 0.75rem; margin-bottom: .65em; }
+    @media (min-width: 640px) { .projects-footer { margin-bottom: 1.05em; } }
+    .project-card-actions { margin-top: 1.25rem; display: flex; align-items: center; justify-content: flex-start; }
+    .project-card-links { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
+    .project-link { display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none; padding: 0.5rem 0.75rem; border: 3px solid rgba(64, 43, 32, 0.75); background: transparent; color: inherit; }
+    .project-link:hover { filter: brightness(0.95); }
+    .project-link.is-disabled { opacity: 0.5; pointer-events: none; cursor: not-allowed; filter: none; }
+    .icon-sm { width: 1rem; height: 1rem; margin-right: 0.5rem; }
+    .project-card-tags { margin-top: 1rem; display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .project-tag { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.25rem 0.5rem; border: 2px solid rgba(64, 43, 32, 0.75); }
+    .icon-xs { width: 0.875rem; height: 0.875rem; }
+    .project-card-updated { font-size: 1rem; }
+    .submit-button--primary { background-color: #059669; color: white; }
+    .submit-button--primary:hover { background-color: #047857; }
+    .submit-button--disabled { opacity: 0.6; cursor: not-allowed; background-color: #6b7280; }
+    .project-status-display { 
+      margin-top: 0.75rem; 
+      font-size: 0.875rem; 
+      font-weight: 500; 
+      color: inherit; 
+    }
+    
+    /* Admin Section Styles */
+    .admin-controls-section, .admin-logs-section {
+      margin-top: 1.5rem; 
+      padding-top: 1rem; 
+      border-top: 2px solid rgba(64,43,32,0.3);
+    }
+    .admin-controls-section {
+      margin-top: 1rem;
+    }
+    
+    /* Admin Logs Styles */
+    .admin-logs-container { max-height: 400px; overflow-y: auto; }
+    .log-entry { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; }
+    .log-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+    .log-status-change { font-weight: 600; color: #402b20; }
+    .log-timestamp { font-size: 0.85rem; color: #6b7280; }
+    .log-reviewer { font-size: 0.9rem; color: #6b5b4a; margin-bottom: 0.5rem; }
+    .log-message { font-size: 0.9rem; color: #374151; font-style: italic; background: white; padding: 0.5rem; border-radius: 4px; }
+    .no-logs { text-align: center; color: #6b7280; font-style: italic; padding: 2rem; }
+    
+    /* Reviewer Feedback Styles */
+    .reviewer-feedback-container {
+      margin-top: 1.5rem;
+      margin-bottom: 2rem;
+      padding: 1rem;
+			border-radius: 0;
+			border: 2px solid rgba(64, 43, 32, 0.75);
+    }
+    
+    .reviewer-feedback-title {
+      font-size: 1.1rem;
+      font-weight: bold;
+			margin-top: 0;
+      margin-bottom: 0.75rem;
+    }
+    
+    .reviewer-feedback-content {
+      line-height: 1.6;
+      white-space: pre-wrap;
+    }
+  </style>
+<% end %>
+
+<div class="projects-index">
+  <% if notice.present? %>
+    <p class="projects-notice" id="notice"><%= notice %></p>
+  <% end %>
+
+  <div class="projects-header">
+            <h1 class="projects-title">
+              <%= @project.name %> - Week <%= @project.week_badge_text.gsub('Week ', '') %>
+              <% if @project.hidden? && current_user&.super_admin? %>
+                <span style="font-size: 0.6em; font-weight: 700; background-color: #ef4444; color: white; padding: 0.2rem 0.4rem; border-radius: 4px; margin-left: 0.5rem;">HIDDEN</span>
+              <% end %>
+            </h1>
+  </div>
+	<div class="project-card-updated">
+        <time datetime="<%= @project.updated_at.to_date.iso8601 %>">Updated: <%= @project.updated_at.strftime('%-d %b %Y') %></time>
+      </div>
+
+  <div class="projects-body">
+    <div class="project-details">
+      <p class="project-card-description"><%= @project.description %></p>
+
+      <div class="project-card-actions">
+        <div class="project-card-links">
+          <% repo_url = @project.repo_url.presence %>
+          <%= link_to (repo_url || "#"), target: "_blank", rel: "noopener noreferrer", class: "project-link #{'is-disabled' unless repo_url}" do %>
+            <%= lucide_icon("github", class: "icon-sm") %>
+            <span><%= display_url_or_placeholder(@project.repo_url, "No repo URL") %></span>
+          <% end %>
+
+          <% demo_url = @project.demo_url.presence %>
+          <%= link_to (demo_url || "#"), target: "_blank", rel: "noopener noreferrer", class: "project-link #{'is-disabled' unless demo_url}" do %>
+            <%= lucide_icon("external-link", class: "icon-sm") %>
+            <span><%= display_url_or_placeholder(@project.demo_url, "No demo URL") %></span>
+          <% end %>
+        </div>
+      </div>
+
+      <% if @project.hackatime_projects.present? %>
+        <div class="project-week-time" style="margin-top: 1rem; font-size: 1rem; font-weight: 600; opacity: 0.8;">
+          Time spent: <%= @project.week_time %>
+        </div>
+        <% if @project.user == current_user || can_access_admin? %>
+          <div class="project-card-tags">
+            <% Array(@project.hackatime_projects).each do |hp_name| %>
+              <div class="project-tag">
+                <%= lucide_icon('clock', class: 'icon-xs') %>
+                <span><%= hp_name %></span>
+              </div>
+            <% end %>
+          </div>
+        <% end %>
+        <div class="project-status-display">
+          Status: 
+          <% case @project.status %>
+          <% when 'building' %>
+            Still building
+          <% when 'submitted' %>
+            Submitted for review
+          <% when 'pending_voting' %>
+            Waiting for votes
+          <% when 'finished' %>
+            <% if can_access_admin? && (@average_score || @project.coin_value&.positive?) %>
+              Avg. Score: <%= @average_score || 'N/A' %>, Value: <%= @project.coin_value || 0 %><%= image_tag 'coin.png', style: 'width: 16px; height: 16px; vertical-align: middle; margin-left: 4px;' %>
+            <% elsif (@project.user == current_user || can_access_admin?) && @project.coin_value&.positive? %>
+              Value: <%= @project.coin_value %><%= image_tag 'coin.png', style: 'width: 16px; height: 16px; vertical-align: middle; margin-left: 4px;' %>
+            <% else %>
+              Finished
+            <% end %>
+          <% end %>
+        </div>
+      <% end %>
+
+      <% if @project.finished? && @project.reviewer_feedback.present? && (@project.user == current_user || can_access_admin?) %>
+        <div class="reviewer-feedback-container">
+          <h3 class="reviewer-feedback-title">
+            
+            Reviewer Feedback
+          </h3>
+          <div class="reviewer-feedback-content"><%= @project.reviewer_feedback %></div>
+        </div>
+      <% end %>
+
+      <% if @project.building? && @project.stonemason_feedback.present? && (@project.user == current_user || can_access_admin?) %>
+        <div class="reviewer-feedback-container">
+          <h3 class="reviewer-feedback-title">
+            
+            Stonemason Feedback
+          </h3>
+          <div class="reviewer-feedback-content"><%= @project.stonemason_feedback %></div>
+        </div>
+      <% end %>
+
+      <% if @project.screenshot.attached? %>
+        <div class="project-screenshots" style="margin-top: 1.5rem; margin-bottom: 2rem;">
+          <h3 style="font-size: 1.1rem; font-weight: bold; margin-bottom: 0.75rem;">Screenshot</h3>
+          <div style="border: 2px solid rgba(64, 43, 32, 0.75); border-radius: 8px; overflow: hidden; max-width: 100%; max-height: 500px;">
+            <%= image_tag @project.screenshot, style: "width: 100%; height: auto; max-height: 500px; display: block; object-fit: contain;" %>
+          </div>
+        </div>
+      <% end %>
+
+      <% if @project.finished? && @votes&.any? && can_access_admin? %>
+        <div style="margin-top: 1.5rem; margin-bottom: 2rem;">
+          <h3 style="font-size: 1.1rem; font-weight: bold; margin-bottom: 0.75rem;">Vote Details</h3>
+          <div style="background: rgba(255, 255, 255, 0.9); border: 2px solid rgba(64, 43, 32, 0.15); border-radius: 8px; padding: 1rem;">
+            <% @votes.each do |vote| %>
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid rgba(64, 43, 32, 0.1); <%= vote.voted? ? '' : 'opacity: 0.6;' %>">
+                <div>
+                  <strong><%= vote.ballot.user.name %></strong>
+                  <% unless vote.voted? %>
+                    <span style="color: #dc2626; font-size: 0.8rem; font-style: italic; margin-left: 0.5rem;">(Not cast)</span>
+                  <% end %>
+                </div>
+                <div>
+                  <% if vote.voted? %>
+                    <span style="font-weight: 600;"><%= vote.star_count %> / 5</span>
+                  <% else %>
+                    <span style="color: #6b7280; font-style: italic;">Not voted</span>
+                  <% end %>
+                </div>
+              </div>
+            <% end %>
+            <div style="margin-top: 1rem; padding-top: 0.5rem; border-top: 2px solid rgba(64, 43, 32, 0.2);">
+              <strong>Average Score (cast votes only): <%= @average_score || 'N/A' %></strong>
+            </div>
+          </div>
+        </div>
+      <% end %>
+
+      
+    </div>
+  </div>
+
+  <div class="projects-footer">
+    <%= link_to "Back to projects", projects_path, class: "submit-button" %>
+    
+    <% if @project.user == current_user || can_access_admin? %>
+      <% if can_access_admin? || @project.editable_by_user? %>
+        <%= link_to "Edit this project", edit_project_path(@project), class: "submit-button" %>
+      <% else %>
+        <span class="submit-button submit-button--disabled" title="Cannot edit project during review phase">
+          Edit Locked
+        </span>
+      <% end %>
+      
+      <% if @project.building? %>
+        <% if current_user&.out? %>
+          <span class="submit-button submit-button--disabled" title="Your siege has failed :( Better luck next time!">Submit Project</span>
+        <% else %>
+          <button type="button" class="submit-button" id="submit-project-btn">Submit Project</button>
+        <% end %>
+      <% elsif @project.submitted? %>
+        <span class="submit-button submit-button--disabled">Submitted</span>
+      <% elsif @project.pending_voting? %>
+        <span class="submit-button submit-button--disabled">Pending Voting</span>
+      <% elsif @project.finished? %>
+        <% if @average_score || @project.coin_value&.positive? %>
+          <span class="submit-button submit-button--disabled">
+            Avg. Score: <%= @average_score || 'N/A' %>, Value: <%= @project.coin_value || 0 %><%= image_tag 'coin.png', style: 'width: 16px; height: 16px; vertical-align: middle; margin-left: 4px;' %>
+          </span>
+        <% else %>
+          <span class="submit-button submit-button--disabled">Finished</span>
+        <% end %>
+      <% end %>
+      
+              <% if @project.can_delete? %>
+        <button type="button" class="submit-button submit-button--danger" id="destroy-project-btn">Destroy this project</button>
+      <% end %>
+    <% end %>
+  </div>
+
+  <% if can_access_admin? %>
+    <!-- Admin Status Controls -->
+    <div class="admin-controls-section">
+      <h3 style="font-size: 1.1rem; font-weight: bold; margin-bottom: 0.5rem;">Admin Controls</h3>
+      <div style="margin-bottom: 1rem;">
+        <%= link_to admin_user_details_path(@project.user), class: "submit-button", style: "background-color: #7c3aed;" do %>
+          <%= lucide_icon("user-search", class: "icon-sm") %>
+          <span>Inspect User</span>
+        <% end %>
+      </div>
+      <form action="<%= update_status_project_path(@project) %>" method="patch" style="display: inline-flex; align-items: center; gap: 0.5rem;">
+        <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+        <label for="status" style="font-weight: 600;">Status:</label>
+        <select name="status" id="status" style="padding: 0.25rem 0.5rem; border: 2px solid rgba(64,43,32,0.75); border-radius: 4px;">
+          <option value="building" <%= 'selected' if @project.building? %>>Building</option>
+          <option value="submitted" <%= 'selected' if @project.submitted? %>>Submitted</option>
+          <option value="pending_voting" <%= 'selected' if @project.pending_voting? %>>Pending Voting</option>
+          <option value="finished" <%= 'selected' if @project.finished? %>>Finished</option>
+        </select>
+        <button type="submit" class="submit-button" style="background-color: #6366f1; padding: 0.25rem 0.75rem; font-size: 0.875rem;">Update Status</button>
+      </form>
+      
+      <% if @project.is_update %>
+        <div style="margin-top: 1rem; padding: 0.75rem; background-color: #fbbf24; color: #92400e; border-radius: 6px; font-weight: 600; text-align: center;">
+          🔄 This project is marked as an UPDATE
+        </div>
+      <% end %>
+      
+      <% if current_user&.super_admin? %>
+        <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(64,43,32,0.2);">
+          <h4 style="font-size: 1rem; font-weight: bold; margin-bottom: 0.5rem;">Super Admin Controls</h4>
+          <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem;">
+            <label for="created_date" style="font-weight: 600;">Created Date:</label>
+            <input type="date" 
+                   id="created_date" 
+                   value="<%= @project.created_at.strftime('%Y-%m-%d') %>" 
+                   style="padding: 0.25rem 0.5rem; border: 2px solid rgba(64,43,32,0.75); border-radius: 4px;"
+                   onchange="updateProjectCreatedDate(<%= @project.id %>, this.value)">
+            <span id="created_date_status" style="font-size: 0.875rem; color: #6b7280;"></span>
+          </div>
+          
+          <div style="display: flex; gap: 0.5rem;">
+            <% if @project.hidden? %>
+              <%= button_to "Unhide Project", admin_unhide_project_path(@project),
+                  method: :patch,
+                  class: "submit-button",
+                  style: "background-color: #10b981;" %>
+            <% else %>
+              <%= button_to "Hide Project", admin_hide_project_path(@project),
+                  method: :patch,
+                  class: "submit-button",
+                  style: "background-color: #f59e0b;" %>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+    
+    <!-- Admin Review Logs -->
+    <div class="admin-logs-section">
+      <h3 style="font-size: 1.1rem; font-weight: bold; margin-bottom: 1rem;">Review History</h3>
+      <% if @project.logs.any? %>
+        <div class="admin-logs-container">
+          <% @project.logs.reverse.each do |log| %>
+            <div class="log-entry">
+              <div class="log-header">
+                <span class="log-status-change">
+                  <%= log['old_status']&.capitalize || 'Unknown' %> → <%= log['new_status']&.capitalize || 'Unknown' %>
+                </span>
+                <span class="log-timestamp">
+                  <%= Time.parse(log['timestamp']).strftime("%B %d, %Y at %l:%M %p") rescue 'Unknown time' %>
+                </span>
+              </div>
+              <div class="log-reviewer">
+                Changed by <%= log['reviewer_name'] || 'Unknown reviewer' %>
+              </div>
+              <% if log['message'].present? %>
+                <div class="log-message">
+                  "<%= log['message'] %>"
+                </div>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+      <% else %>
+        <div class="no-logs">
+          No review history yet
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+</div>
+
+  <script>
+    (function(){
+      var t = setTimeout(function(){
+        var n = document.getElementById('notice');
+        if (n && n.parentNode) { n.parentNode.removeChild(n); }
+        clearTimeout(t);
+      }, 5000);
+    })();
+
+      // Project action handlers
+      (function() {
+        function setupHandlers() {
+          const submitBtn = document.getElementById('submit-project-btn');
+          const destroyBtn = document.getElementById('destroy-project-btn');
+
+
+          if (submitBtn) {
+            submitBtn.addEventListener('click', function() {
+              if (typeof showModalConfirm !== 'function') {
+                alert('Modal system not loaded. Please refresh the page.');
+                return;
+              }
+              checkIdentityVerification();
+            });
+          }
+
+          if (destroyBtn) {
+            destroyBtn.addEventListener('click', function() {
+              showModalConfirm(
+                'Are you sure you want to destroy this project? This action cannot be undone.',
+                'Destroy Project',
+                () => {
+                  fetch('<%= project_path(@project) %>', {
+                    method: 'DELETE',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+                    }
+                  })
+                  .then(response => {
+                    if (response.ok) {
+                      window.location.href = '<%= projects_path %>';
+                    } else {
+                      throw new Error('Failed to destroy project');
+                    }
+                  })
+                  .catch(error => {
+                    console.error('Error:', error);
+                    showModalAlert('Failed to destroy project. Please try again.', 'Error');
+                  });
+                },
+                null,
+                true
+              );
+            });
+          }
+
+        }
+        
+        // Set up handlers when DOM is ready
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', setupHandlers);
+        } else {
+          setupHandlers();
+        }
+      })();
+           
+           // Identity verification check function
+           function checkIdentityVerification() {
+             // First check if user already has idv_rec
+             fetch('/check_identity', {
+               method: 'GET',
+               headers: {
+                 'Content-Type': 'application/json',
+                 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+               }
+             })
+             .then(response => response.json())
+             .then(data => {
+               switch (data.status) {
+               case 'verified':
+               showProjectSubmissionChecklist();
+               break;
+                  case 'no_address':
+                    showModal('One last step...', 'We need just a couple more details from you to complete your account so you can submit your project!', [
+                      { text: 'Complete Setup', action: () => { hideModal(); startHeadlessVerification(); } },
+                      { text: 'Cancel', action: () => {} }
+                    ]);
+                    break;
+               case 'not_verified':
+                 // Use headless flow instead of redirect
+               startHeadlessVerification();
+               break;
+               case 'pending':
+               showModalAlert(data.message, 'Verification Pending');
+               break;
+               case 'ineligible':
+               showModalAlert(data.message, 'Ineligible');
+                   break;
+                  case 'error':
+                    showModalAlert(data.message, 'Error');
+                    break;
+                  default:
+                    showModalAlert('Unknown verification status. Please contact @Olive on slack.', 'Error');
+                }
+             })
+             .catch(error => {
+               console.error('Error:', error);
+               showModalAlert('Failed to check identity verification. Please try again or contact @Olive on slack.', 'Error');
+             });
+           }
+
+           // Headless verification function
+           function startHeadlessVerification() {
+             showModalAlert('Starting identity verification... Please complete the verification in the popup window.', 'Verification Required');
+             
+             const authorizer = new SubmitAuthorizer();
+             
+             authorizer.authorize()
+                .then(result => {
+                  // Use the identity data directly from the SubmitAuthorizer result
+                  if (result.verified && result.identityData) {
+                    // Process identity and address data on the server
+                    return fetch('/process_identity_and_address', {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+                      },
+                      body: JSON.stringify({ 
+                        identity_data: result.identityData,
+                        idv_rec: result.idvRec
+                      })
+                    });
+                  } else {
+                    throw new Error('Identity verification not completed');
+                  }
+                })
+             .then(response => response.json())
+             .then(data => {
+             switch (data.status) {
+             case 'address_created':
+               // All data collected, ask for optional shipping name
+               hideModal();
+             showShippingNameModal();
+               break;
+               case 'partial_data':
+             case 'missing_address':
+                 // Need manual address setup
+                   showModal('Setup Required', data.message, [
+                        { text: 'Complete Setup', action: () => { window.location.href = data.redirect_url; } },
+                        { text: 'Cancel', action: () => {} }
+                      ]);
+                      break;
+                    case 'verified':
+                      // User already had address, just proceed
+                      hideModal();
+                      showProjectSubmissionChecklist();
+                      break;
+                    case 'verification_failed':
+                    case 'error':
+                      throw new Error(data.message || 'Verification failed');
+                    default:
+                      throw new Error('Unknown response status');
+                  }
+                })
+               .catch(error => {
+                 console.error('Verification error:', error);
+                 if (error.message === 'Authorization cancelled by user') {
+                   showModalAlert('Identity verification was cancelled. You must complete verification to submit your project.', 'Verification Cancelled');
+                 } else {
+                   showModalAlert('Identity verification failed. Please try again or contact @Olive on slack.', 'Error');
+                 }
+               });
+               }
+            
+               // Modal to ask for optional shipping name
+            function showShippingNameModal() {
+              const modal = document.getElementById('modal');
+              const modalTitle = document.getElementById('modal-title');
+              const modalMessage = document.getElementById('modal-message');
+              const modalActions = document.getElementById('modal-actions');
+              
+              modalTitle.textContent = 'Almost done!';
+              modalMessage.innerHTML = '';
+              modalActions.innerHTML = '';
+              
+              // Create explanation text
+              const explanationText = document.createElement('p');
+              explanationText.textContent = 'Your address has been set up automatically. You can optionally set a preferred shipping name if you want packages sent to a different name than what\'s on your ID.';
+              explanationText.style.cssText = 'font-size: 1rem; line-height: 1.5; margin-bottom: 1.5rem;';
+              modalMessage.appendChild(explanationText);
+              
+              // Create input field with proper styling
+              const fieldset = document.createElement('fieldset');
+              fieldset.className = 'fieldset';
+              fieldset.style.cssText = 'margin: 1.5rem 0;';
+              
+              const legend = document.createElement('legend');
+              legend.className = 'fieldset-legend';
+              legend.textContent = 'Preferred Shipping Name (Optional)';
+              
+              const underlineField = document.createElement('div');
+              underlineField.className = 'underline-field';
+              
+              const input = document.createElement('input');
+              input.type = 'text';
+              input.className = 'text-input';
+              input.placeholder = 'Leave blank to use your name from ID';
+              
+              underlineField.appendChild(input);
+              fieldset.appendChild(legend);
+              fieldset.appendChild(underlineField);
+              modalMessage.appendChild(fieldset);
+              
+              // Create buttons
+              const skipBtn = document.createElement('button');
+              skipBtn.textContent = 'Skip';
+              skipBtn.className = 'submit-button modal-button';
+              skipBtn.addEventListener('click', () => {
+                hideModal();
+                showProjectSubmissionChecklist();
+              });
+              
+              const continueBtn = document.createElement('button');
+              continueBtn.textContent = 'Continue';
+              continueBtn.className = 'submit-button modal-button';
+              continueBtn.addEventListener('click', () => {
+                const shippingName = input.value.trim();
+                
+                if (shippingName) {
+                  // Save shipping name
+                  fetch('/set_shipping_name', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: JSON.stringify({ shipping_name: shippingName })
+                  }).then(() => {
+                    hideModal();
+                    showProjectSubmissionChecklist();
+                  }).catch(() => {
+                    // Continue even if shipping name update fails
+                    hideModal();
+                    showProjectSubmissionChecklist();
+                  });
+                } else {
+                  // Skip shipping name
+                  hideModal();
+                  showProjectSubmissionChecklist();
+                }
+              });
+              
+              modalActions.appendChild(skipBtn);
+              modalActions.appendChild(continueBtn);
+              
+              modal.style.display = 'flex';
+              document.body.style.overflow = 'hidden';
+              
+              // Focus input
+              setTimeout(() => input.focus(), 100);
+            }
+
+            // Project submission checklist function
+           function showProjectSubmissionChecklist() {
+             // Get project data
+             const projectData = {
+             repoUrl: '<%= @project.repo_url %>',
+             demoUrl: '<%= @project.demo_url %>',
+             <% if @project.user == current_user || can_access_admin? %>
+             hackatimeProjects: <%= raw @project.hackatime_projects.to_json %>,
+             <% else %>
+             hackatimeProjects: [],
+             <% end %>
+               projectId: <%= @project.id %>,
+                weekHours: <%= @project.week_hours_numeric %>,
+                hasBypassFlag: <%= Flipper.enabled?(:bypass_10_hour_requirement, current_user) %>,
+                isPreparationPhase: <%= Flipper.enabled?(:preparation_phase, current_user) %>
+              };
+             
+             console.log('Project data:', projectData);
+             
+             // Create checklist items
+             const checklistItems = [
+             { id: 'repo', text: 'Git repo added', checked: false },
+             { id: 'demo', text: 'Demo link added', checked: false },
+             { id: 'demo-live', text: 'Demo link live', checked: false },
+               { id: 'screenshot', text: 'Added a screenshot', checked: false }
+              ];
+             
+             // Add hours requirement only if not in preparation phase
+             if (!<%= Flipper.enabled?(:preparation_phase, current_user) %>) {
+             checklistItems.push({ id: 'hours', text: 'At least 10 hrs coded', checked: false, hours: 0 });
+             }
+              
+              // Add update checkbox
+              checklistItems.push({ 
+                id: 'is-update', 
+                text: 'This is an update to a previously submitted project', 
+                checked: false, 
+                type: 'checkbox',
+                interactive: true
+              });
+             
+             // Check repo URL
+             if (projectData.repoUrl && projectData.repoUrl.trim() !== '') {
+               checklistItems[0].checked = true;
+             }
+             
+             // Check demo URL
+             if (projectData.demoUrl && projectData.demoUrl.trim() !== '') {
+               checklistItems[1].checked = true;
+               
+               // Test demo URL
+               fetch(projectData.demoUrl, { method: 'HEAD', mode: 'no-cors' })
+                 .then(() => {
+                   checklistItems[2].checked = true;
+                   updateChecklistDisplay();
+                 })
+                 .catch(() => {
+                   checklistItems[2].checked = false;
+                   updateChecklistDisplay();
+                 });
+             }
+             
+              // Check screenshot
+              const hasScreenshot = <%= @project.screenshot.attached? %>;
+              const isScreenshotValid = <%= @project.screenshot_valid? %>;
+               
+               if (hasScreenshot && !isScreenshotValid) {
+                 checklistItems[3].checked = false;
+                 checklistItems[3].text = 'Added a screenshot (Current screenshot is corrupted or missing)';
+               } else if (hasScreenshot && isScreenshotValid) {
+                 checklistItems[3].checked = true;
+                 checklistItems[3].text = 'Added a screenshot';
+               } else {
+                 checklistItems[3].checked = false;
+                 checklistItems[3].text = 'Added a screenshot';
+               }
+             
+             // Check hours only if not in preparation phase
+             if (!<%= Flipper.enabled?(:preparation_phase, current_user) %>) {
+               const hours = projectData.weekHours || 0;
+               const hoursItem = checklistItems.find(item => item.id === 'hours');
+               if (hoursItem) {
+                 hoursItem.hours = hours;
+                 hoursItem.checked = hours >= 10 || projectData.hasBypassFlag;
+                 
+                 // Update text for hours item
+                 if (projectData.hackatimeProjects && projectData.hackatimeProjects.length > 0) {
+                   hoursItem.text = `At least 10 hrs coded (${hours}h/10h)`;
+                 } else {
+                   hoursItem.text = 'At least 10 hrs coded (Add Hackatime projects first)';
+                 }
+               }
+             }
+             
+             // Check if project can be submitted (same logic as server-side)
+             const isUserOut = <%= current_user&.out? || false %>;
+             const isPreparationPhase = <%= Flipper.enabled?(:preparation_phase, current_user) %>;
+             const canSubmit = !isUserOut && 
+             projectData.repoUrl && projectData.repoUrl.trim() !== '' &&
+             projectData.demoUrl && projectData.demoUrl.trim() !== '' &&
+             hasScreenshot && isScreenshotValid &&
+             projectData.hackatimeProjects && projectData.hackatimeProjects.length > 0 &&
+              (isPreparationPhase || projectData.weekHours >= 10 || projectData.hasBypassFlag);
+             
+             // Show the checklist modal
+             showModalChecklist(
+             'Project Submission Checklist',
+             checklistItems,
+             canSubmit ? () => {
+             // Submit project with update flag
+             const isUpdate = window.projectUpdateFlag || false;
+             
+             fetch('<%= submit_project_path(@project) %>', {
+             method: 'POST',
+             headers: {
+                 'Content-Type': 'application/json',
+                 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+             },
+             body: JSON.stringify({
+               is_update: isUpdate
+             })
+             })
+             .then(response => {
+               if (response.ok) {
+               window.location.reload();
+             } else {
+                 throw new Error('Failed to submit project');
+                 }
+               })
+             .catch(error => {
+               console.error('Error:', error);
+                 showModalAlert('Failed to submit project. Please try again.', 'Error');
+                 });
+                } : null,
+                () => {
+                  // Cancel action
+                  hideModal();
+                }
+              );
+             
+             // Update checklist display after demo URL check
+             function updateChecklistDisplay() {
+             showModalChecklist(
+             'Project Submission Checklist',
+             checklistItems,
+             canSubmit ? () => {
+             // Submit project with update flag
+             const isUpdate = window.projectUpdateFlag || false;
+             
+             fetch('<%= submit_project_path(@project) %>', {
+             method: 'POST',
+             headers: {
+                 'Content-Type': 'application/json',
+                 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+             },
+             body: JSON.stringify({
+               is_update: isUpdate
+             })
+             })
+             .then(response => {
+               if (response.ok) {
+               window.location.reload();
+             } else {
+                 throw new Error('Failed to submit project');
+                 }
+               })
+             .catch(error => {
+               console.error('Error:', error);
+                 showModalAlert('Failed to submit project. Please try again.', 'Error');
+                 });
+                 } : null,
+                  () => {
+                    // Cancel action
+                    hideModal();
+                  }
+                );
+              }
+           }
+
+           // Update project created date function
+           function updateProjectCreatedDate(projectId, newDate) {
+             const statusElement = document.getElementById('created_date_status');
+             statusElement.textContent = 'Updating...';
+             statusElement.style.color = '#6b7280';
+
+             fetch(`/admin/projects/${projectId}/update_created_date`, {
+               method: 'POST',
+               headers: {
+                 'Content-Type': 'application/json',
+                 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+               },
+               body: JSON.stringify({
+                 created_date: newDate
+               })
+             })
+             .then(response => response.json())
+             .then(data => {
+               if (data.success) {
+                 statusElement.textContent = '✓ Updated';
+                 statusElement.style.color = '#059669';
+                 // Refresh the page after a short delay to show the updated date
+                 setTimeout(() => {
+                   window.location.reload();
+                 }, 1500);
+               } else {
+                 statusElement.textContent = '✗ Error: ' + data.error;
+                 statusElement.style.color = '#dc2626';
+               }
+             })
+             .catch(error => {
+               console.error('Error updating project created date:', error);
+               statusElement.textContent = '✗ Network Error';
+               statusElement.style.color = '#dc2626';
+             });
+           }
+         </script>

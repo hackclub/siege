@@ -1,16 +1,107 @@
 #!/usr/bin/env sh
 
-if ! gem list foreman -i --silent; then
-  echo "Installing foreman..."
-  gem install foreman
+# Development script using Docker Compose
+echo "Starting development environment with Docker Compose..."
+
+# Check if Docker is running and determine command to use
+DOCKER_CMD="docker"
+if ! docker info > /dev/null 2>&1; then
+  if sudo docker info > /dev/null 2>&1; then
+    DOCKER_CMD="sudo docker"
+    echo "Docker is running but requires sudo access."
+  else
+    echo "Docker is not running. Attempting to start Docker..."
+    
+    # Start Docker based on system type
+    if grep -qi microsoft /proc/version 2>/dev/null; then
+      # WSL environment
+      if command -v docker.exe > /dev/null 2>&1; then
+        # Docker Desktop on Windows
+        echo "Starting Docker Desktop..."
+        powershell.exe -Command "Start-Process 'Docker Desktop'" 2>/dev/null
+        sleep 20
+      elif command -v snap > /dev/null 2>&1 && snap list | grep -q docker; then
+        # Snap Docker in WSL
+        echo "Starting Docker service..."
+        sudo snap start docker
+        sleep 5
+      elif command -v systemctl > /dev/null 2>&1 && systemctl list-unit-files | grep -q docker.service; then
+        # System Docker in WSL
+        echo "Starting Docker service..."
+        sudo systemctl start docker
+        sleep 3
+      else
+        echo "Docker not found. Please install Docker and try again."
+        exit 1
+      fi
+    elif [[ "$OSTYPE" == "darwin"* ]]; then
+      # macOS
+      echo "Starting Docker Desktop..."
+      open -a Docker
+      sleep 10
+    elif command -v systemctl > /dev/null 2>&1 && systemctl list-unit-files | grep -q docker.service; then
+      # Linux with systemd
+      echo "Starting Docker service..."
+      sudo systemctl start docker
+      sleep 3
+    else
+      echo "Please start Docker manually and try again."
+      exit 1
+    fi
+    
+    # Wait for Docker to be ready
+    echo "Waiting for Docker to be ready..."
+    for i in 1 2 3; do
+      if docker info > /dev/null 2>&1; then
+        DOCKER_CMD="docker"
+        break
+      elif sudo docker info > /dev/null 2>&1; then
+        DOCKER_CMD="sudo docker"
+        break
+      fi
+      sleep 10
+    done
+    
+    # Final check
+    if ! docker info > /dev/null 2>&1 && ! sudo docker info > /dev/null 2>&1; then
+      echo "Failed to start Docker. Please start it manually and try again."
+      exit 1
+    fi
+  fi
 fi
 
-# Default to port 3000 if not specified
-export PORT="${PORT:-3000}"
+# Check for port conflicts and kill processes if needed
+check_and_kill_port() {
+  local port=$1
+  if command -v lsof > /dev/null 2>&1; then
+    local pid=$(lsof -ti:$port 2>/dev/null)
+    if [ -n "$pid" ]; then
+      echo "Port $port is in use by process $pid. Killing it..."
+      kill -9 $pid 2>/dev/null || sudo kill -9 $pid 2>/dev/null
+      sleep 2
+    fi
+  elif command -v netstat > /dev/null 2>&1; then
+    if netstat -tuln | grep -q ":$port "; then
+      echo "Port $port is in use. Attempting to free it..."
+      # Try to find and kill the process
+      local pid=$(netstat -tulpn 2>/dev/null | grep ":$port " | awk '{print $7}' | cut -d/ -f1)
+      if [ -n "$pid" ] && [ "$pid" != "-" ]; then
+        kill -9 $pid 2>/dev/null || sudo kill -9 $pid 2>/dev/null
+        sleep 2
+      fi
+    fi
+  fi
+}
 
-# Let the debug gem allow remote connections,
-# but avoid loading until `debugger` is called
-export RUBY_DEBUG_OPEN="true"
-export RUBY_DEBUG_LAZY="true"
+# Check and free ports that Docker Compose will need
+echo "Checking for port conflicts..."
+check_and_kill_port 5432
+check_and_kill_port 3000
 
-exec foreman start -f Procfile.dev "$@"
+# Build and run
+echo "Starting Docker Compose..."
+if [ "$DOCKER_CMD" = "sudo docker" ]; then
+  exec sudo docker compose -f docker-compose.dev.yml up --build --force-recreate "$@"
+else
+  exec docker compose -f docker-compose.dev.yml up --build --force-recreate "$@"
+fi

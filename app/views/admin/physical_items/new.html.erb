@@ -1,0 +1,10 @@
+<div class="admin-section">
+  <div class="admin-header">
+    <h1>New Physical Item</h1>
+    <%= link_to 'Back to List', admin_physical_items_path, class: 'btn btn-outline' %>
+  </div>
+
+  <div class="admin-content">
+    <%= render 'form', physical_item: @physical_item %>
+  </div>
+</div>

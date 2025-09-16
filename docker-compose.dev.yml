@@ -1,0 +1,41 @@
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: siege_development
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://postgres:password@postgres:5432/siege_development
+      CACHE_DATABASE_URL: postgresql://postgres:password@postgres:5432/siege_development_cache
+      QUEUE_DATABASE_URL: postgresql://postgres:password@postgres:5432/siege_development_queue
+      CABLE_DATABASE_URL: postgresql://postgres:password@postgres:5432/siege_development_cable
+      RAILS_ENV: development
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/rails
+      - bundle_cache:/usr/local/bundle
+      - storage_data:/rails/storage
+    depends_on:
+      - postgres
+    command: sh -c "rm -f tmp/pids/server.pid && bin/rails server -b 0.0.0.0"
+
+
+
+volumes:
+  postgres_dev_data:
+  bundle_cache:
+  storage_data:

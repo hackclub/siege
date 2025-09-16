@@ -1,0 +1,115 @@
+<div class="admin-section">
+  <div class="admin-header">
+    <h1><%= @physical_item.name %></h1>
+    <div class="admin-actions">
+      <%= link_to 'Edit', edit_admin_physical_item_path(@physical_item), class: 'btn btn-primary' %>
+      <%= link_to 'Back to List', admin_physical_items_path, class: 'btn btn-outline' %>
+    </div>
+  </div>
+
+  <div class="admin-content">
+    <div class="admin-detail-grid">
+      <div class="admin-detail-section">
+        <h2>Image</h2>
+        <% if @physical_item.image.attached? %>
+          <%= image_tag @physical_item.image, class: 'physical-item-image', alt: @physical_item.name %>
+        <% else %>
+          <p>No image attached</p>
+        <% end %>
+      </div>
+
+      <div class="admin-detail-section">
+        <h2>Details</h2>
+        <div class="admin-detail-item">
+          <strong>Name:</strong>
+          <%= @physical_item.name %>
+        </div>
+        <div class="admin-detail-item">
+          <strong>Cost:</strong>
+          <%= @physical_item.cost %> 🪙
+        </div>
+        <div class="admin-detail-item">
+          <strong>Purchasable:</strong>
+          <% if @physical_item.purchasable? %>
+            <span class="badge badge-success">Yes</span>
+          <% else %>
+            <span class="badge badge-secondary">No</span>
+          <% end %>
+        </div>
+        <div class="admin-detail-item">
+          <strong>Created:</strong>
+          <%= @physical_item.created_at.strftime('%B %d, %Y at %I:%M %p') %>
+        </div>
+        <div class="admin-detail-item">
+          <strong>Last Updated:</strong>
+          <%= @physical_item.updated_at.strftime('%B %d, %Y at %I:%M %p') %>
+        </div>
+      </div>
+
+      <% if @physical_item.description.present? %>
+        <div class="admin-detail-section full-width">
+          <h2>Description</h2>
+          <p><%= simple_format(@physical_item.description) %></p>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>
+
+<style>
+  .admin-detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-top: 1rem;
+  }
+
+  .admin-detail-section {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 8px;
+  }
+
+  .admin-detail-section.full-width {
+    grid-column: 1 / -1;
+  }
+
+  .admin-detail-section h2 {
+    margin: 0 0 1rem 0;
+    color: #1f2937;
+    font-size: 1.125rem;
+    font-weight: 600;
+  }
+
+  .admin-detail-item {
+    margin-bottom: 0.75rem;
+  }
+
+  .admin-detail-item:last-child {
+    margin-bottom: 0;
+  }
+
+  .physical-item-image {
+    max-width: 200px;
+    max-height: 200px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  }
+
+  .badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+
+  .badge-success {
+    background-color: #10b981;
+    color: white;
+  }
+
+  .badge-secondary {
+    background-color: #6b7280;
+    color: white;
+  }
+</style>

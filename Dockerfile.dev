@@ -1,0 +1,39 @@
+# Development Dockerfile - optimized for fast rebuilds
+FROM ruby:3.4.5-slim
+
+# Install dependencies
+RUN apt-get update -qq && \
+    apt-get install --no-install-recommends -y \
+    build-essential \
+    curl \
+    git \
+    libjemalloc2 \
+    libvips \
+    postgresql-client \
+    libyaml-dev \
+    pkg-config \
+    && rm -rf /var/lib/apt/lists /var/cache/apt/archives
+
+# Rails app lives here
+WORKDIR /rails
+
+# Set development environment
+ENV RAILS_ENV="development" \
+    BUNDLE_WITHOUT="" \
+    BUNDLE_PATH="/usr/local/bundle"
+
+# Install gems
+COPY Gemfile Gemfile.lock ./
+RUN bundle install --jobs 4 --retry 3
+
+# Copy application code
+COPY . .
+
+# Precompile bootsnap code for faster boot times
+RUN bundle exec bootsnap precompile --gemfile app/ lib/
+
+# Expose port
+EXPOSE 3000
+
+# Default command for development
+CMD ["bin/rails", "server", "-b", "0.0.0.0"]

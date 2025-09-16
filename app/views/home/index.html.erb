@@ -1,0 +1,608 @@
+
+
+<% content_for :head do %>
+  <style>
+    /* Coin image styles */
+    .coin-icon {
+      display: inline;
+      vertical-align: baseline;
+      margin-left: 4px;
+    }
+    .coin-icon-large { width: 24px; height: 24px; }
+    .coin-icon-medium { width: 20px; height: 20px; }
+    .coin-icon-small { width: 16px; height: 16px; }
+
+    /* Home page styles */
+    .home-container {
+      width: 100%;
+      max-width: none;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .home-card {
+      background: rgba(255, 255, 255, 0.85);
+      border: 2px solid rgba(0, 0, 0, 0.15);
+      border-radius: 16px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.06);
+      overflow: hidden;
+    }
+    .home-card-body { padding: 16px 18px; }
+    .home-card-transparent { background: transparent; border: none; box-shadow: none; }
+    .home-card-body-reset { padding: 0; }
+    .home-progress-footer { margin-top: 16px; }
+
+    .home-header { text-align: center; }
+    .home-title {
+      font-family: "Jaini", "IM Fell English", serif;
+      font-weight: 700;
+      font-size: 5rem;
+      margin: 0 0 4px 0;
+      color: #3b2a1a;
+    }
+    .home-row { display: flex; align-items: center; gap: 8px; }
+    .home-row-sm { display: flex; align-items: center; gap: 6px; }
+
+    .home-card-title { font-size: 1.125rem; font-weight: 700; margin: 0; }
+    .home-full { width: 100%; }
+
+    /* Progress wave */
+    .home-wave { width: 100%; height: 220px; display: block; }
+    .home-wave-path { fill: none; stroke-dasharray: 20 14; stroke-linecap: round; stroke-width: 8; }
+    .home-wave-path.future { stroke: rgba(64,43,32,0.28); }
+    .home-wave-path.completed { stroke: rgba(64,43,32,0.95); }
+    .home-wave-marker { fill: #402b20; stroke: rgba(64,43,32,0.25); stroke-width: 3; }
+
+    .home-progress-standalone { padding: 6px 0; margin-bottom: 20px; }
+    .home-center { text-align: center; }
+    .home-progress-top { font-size: 2.4rem; font-weight: 700; color: #3b2a1a; }
+    .home-progress-bottom { font-size: 1.2rem; color: #3b2a1a; }
+
+    .home-list { margin-top: 28px; display: flex; flex-direction: column; gap: 12px; position: relative; padding-left: 0; }
+    .home-list-large { font-size: 1.25rem; gap: 16px; }
+    .home-list::before { content: none; }
+    .home-checkrow { position: relative; display: flex; align-items: center; gap: 12px; cursor: default; }
+    .home-checkrow::before { content: none; }
+    .home-checkrow-help { cursor: help; }
+    /* Custom checkbox to avoid filled background */
+    .home-checkbox {
+      width: 22px; height: 22px;
+      appearance: none; -webkit-appearance: none; -moz-appearance: none;
+      border: 2px solid rgba(64,43,32,0.85);
+      border-radius: 4px;
+      background: transparent;
+      position: relative;
+      outline: none;
+    }
+    .home-checkbox:checked::after {
+      content: "";
+      position: absolute;
+      left: 50%; top: 50%;
+      width: 6px; height: 12px;
+      border-right: 2px solid rgba(64,43,32,0.95);
+      border-bottom: 2px solid rgba(64,43,32,0.95);
+      transform: translate(-50%, -65%) rotate(45deg);
+    }
+    .home-checkbox:disabled { opacity: 0.9; }
+
+    .home-link-dotted { text-decoration: underline; text-decoration-style: dotted; color: inherit; }
+    .home-link-disabled { text-decoration: none; color: inherit; }
+    .home-muted { opacity: 0.55; }
+
+    /* Two-column area for checklist and leaderboard */
+    .home-two-col { display: flex; gap: 12px; align-items: stretch; position: relative; }
+    .home-col { flex: 1 1 0; min-width: 0; }
+    @media (max-width: 900px) { .home-two-col { flex-direction: column; } }
+
+    /* Centered vertical divider */
+    .home-two-col::after {
+      content: "";
+      position: absolute;
+      top: 0.25rem; /* tuck up under the titles */
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 2px;
+      background: repeating-linear-gradient(to bottom, rgba(64,43,32,0.45) 0 6px, transparent 6px 12px);
+      pointer-events: none;
+      opacity: 0.5;
+    }
+    @media (max-width: 900px) { .home-two-col::after { display: none; } }
+
+    /* Center checklist on wide screens */
+    @media (min-width: 901px) {
+      .home-two-col .home-col:first-child { display: flex; flex-direction: column; }
+      /* Keep the header centered */
+      .home-two-col .home-col:first-child .home-row.home-row-center { justify-content: center; }
+      /* Nudge only the checklist body toward the divider */
+      .home-two-col .home-col:first-child .home-list-center { margin-left: auto; margin-right: auto; }
+    }
+
+    /* Leaderboard styles */
+    .home-leader-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px; border-radius: 0; background: transparent; border-bottom: 1px dashed rgba(64,43,32,0.35); }
+    .home-rank { display: inline-flex; align-items: center; justify-content: center; width: auto; height: auto; border-radius: 0; background: transparent; font-weight: 700; }
+    .home-rank img {
+      height: 28px; /* match SVG proportionally */
+      width: auto;
+      aspect-ratio: 446 / 187.5; /* preserve proper castle proportions */
+      display: block;
+      object-fit: contain;
+    }
+    .home-user { display: flex; align-items: center; gap: 10px; color: #3b2a1a; }
+    .home-amount { font-weight: 700; color: #3b2a1a; }
+
+    .home-collapse { background: transparent; border-left: 0; border-radius: 0; padding: 8px 12px; }
+    /* Section titles with underline decoration */
+    .home-section-title { 
+      position: relative; 
+      display: inline-block;
+      font-family: "Jaini", "IM Fell English", serif;
+      font-size: 2.5rem; 
+      font-weight: 700;
+      text-align: center; 
+      margin: 0;
+      color: #3b2a1a;
+    }
+    .home-section-title::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      bottom: -12px;
+      transform: translateX(-50%);
+      width: clamp(160px, 25vw, 260px);
+      height: clamp(14px, 2.2vw, 24px);
+      background-image: url('<%= asset_path("underline-long.webp") %>');
+      background-size: 100% 100%;
+      background-repeat: no-repeat;
+      opacity: 0.9;
+    }
+
+    .home-row-center { justify-content: center; }
+
+    /* Center checklist block */
+    .home-list-center { margin-left: auto; margin-right: auto; max-width: 560px; }
+    .home-collapse > input { display: none; }
+    .home-collapse-title { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 1rem; color: #3b2a1a; }
+    .home-collapse-content { max-height: 0; overflow: hidden; transition: max-height 250ms ease; }
+    .home-collapse > input:checked ~ .home-collapse-content { max-height: 1000px; }
+
+    .home-info { font-size: 0.75rem; display: flex; align-items: center; gap: 8px; }
+    .home-button {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 6px 10px; border-radius: 10px; text-decoration: none;
+      font-size: 0.875rem; font-weight: 600;
+    }
+
+    /* Larger "This week" header */
+    .home-collapse-title.home-thisweek-title {
+      font-size: clamp(1.3rem, 3vw, 2rem);
+      line-height: 1.1;
+      justify-content: center;
+      text-align: center;
+      width: 100%;
+    }
+
+
+  </style>
+<% end %>
+
+<div class="home-container">
+  <div class="home-card-transparent">
+    <div class="home-card-body-reset">
+      <header class="home-header">
+        <h1 class="home-title">Siege week <%= current_week_number %></h1>
+      </header>
+    </div>
+  </div>
+
+  <% if current_user&.banned? %>
+    <section class="home-progress-standalone">
+      <div class="home-full">
+        <div class="home-center">
+          <span class="home-progress-top">You are banned from Siege</span>
+        </div>
+        <div class="home-center home-progress-footer">
+          <span class="home-progress-bottom">If you believe this is a mistake, please contact @Olive on Slack.</span>
+        </div>
+      </div>
+    </section>
+  <% elsif current_user&.out? %>
+    <section class="home-progress-standalone">
+      <div class="home-full">
+        <div class="home-center">
+          <span class="home-progress-top">Your siege has failed :(</span>
+        </div>
+        <div class="home-center home-progress-footer">
+          <span class="home-progress-bottom">Better luck next time!</span>
+        </div>
+      </div>
+    </section>
+  <% else %>
+    <% cache(["home","week_progress", current_user&.id, current_user&.meeple&.color, current_user&.meeple&.equipped_cosmetics&.pluck(:cosmetic_id), current_week_number], expires_in: 5.minutes) do %>
+      <section class="home-progress-standalone">
+        <div class="home-full">
+                          <% week_secs = @current_user&.week_seconds_time.to_f || 0 %>
+          <% siege_complete = week_secs >= 36000 %>
+          <% pillage_secs = Flipper.enabled?(:preparation_phase, current_user) ? week_secs : [week_secs - 36000, 0].max %>
+          <% pillage_hours = (pillage_secs / 3600).floor %>
+          <% pillage_minutes = ((pillage_secs % 3600) / 60).round %>
+          
+          <div class="home-center">
+            <% if Flipper.enabled?(:preparation_phase, current_user) %>
+              <span class="home-progress-top">you've been pillaging for <%= pillage_hours %>h <%= pillage_minutes %>m!</span>
+            <% elsif siege_complete %>
+              <span class="home-progress-top">you've been pillaging for <%= pillage_hours %>h <%= pillage_minutes %>m!</span>
+            <% else %>
+              <span class="home-progress-top">you're <%= ((week_secs / 36000) * 100).round(1) %>% of the way there!</span>
+            <% end %>
+          </div>
+        <% if Flipper.enabled?(:preparation_phase, current_user) %>
+          <% percent = 100 %>
+          <% pct = 100 %>
+          <% marker_x = 100 %>
+        <% else %>
+          <% percent = siege_complete ? 100 : [(week_secs / 36000 * 100), 100].min %>
+          <% pct = percent.to_f.clamp(0,100) %>
+          <% marker_x = pct %>
+        <% end %>
+        <% if Flipper.enabled?(:preparation_phase, current_user) %>
+          <!-- Preparation Phase: Meeple on castle with coins around -->
+          <svg class="home-wave" viewBox="0 0 600 130" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+            <g id="preparationGroup">
+							<image id="userMarker" href="<%= asset_path("meeple/meeple-#{current_user.meeple.color}.png") %>" x="290" y="50" width="40" height="40" />
+
+              <image id="centralCastle" href="<%= asset_path('castle.webp') %>" x="260" y="50" width="160" height="80" />
+              
+              
+              <!-- Coins scattered from 0° to 180° around the castle center -->
+              <% 
+                # Use user ID to create deterministic but seemingly random coin positions
+                user_seed = current_user.id.to_i
+                total_coins = (pillage_secs / 3600).floor
+                total_coins = [total_coins, 20].min # Cap at 20 coins to avoid overcrowding
+              %>
+              <% total_coins.times do |i| %>
+                <% 
+                  # Create deterministic but varied positions using user ID and coin index
+                  # Scatter coins from 0° to 180° around the castle center (top half)
+                  angle = 180 + (user_seed * 73 + i * 137) % 180
+                  radius = 35 + (user_seed * 137 + i * 73) % 25 # Slightly farther radius (35-60 pixels)
+                  x = 340 + radius * Math.cos(angle * Math::PI / 180)
+                  y = 90 + radius * Math.sin(angle * Math::PI / 180)
+                %>
+                <image class="coin" href="<%= asset_path('coin.png') %>" x="<%= x - 8 %>" y="<%= y - 8 %>" width="16" height="16" />
+              <% end %>
+            </g>
+          </svg>
+        <% else %>
+          <!-- Normal Phase: Meeple moving along track between castles -->
+          <svg class="home-wave" viewBox="0 0 600 300" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+            <defs>
+              <path id="wavePath" d="M557.5 93.3031C201.5 251 296 -65.5 2.5 22.4998" />
+              <clipPath id="completedClip" clipPathUnits="userSpaceOnUse">
+                <rect id="completedRect" x="0" y="0" width="0" height="0" />
+              </clipPath>
+            </defs>
+            <g id="waveGroup">
+              <use href="#wavePath" class="home-wave-path future" />
+              <g clip-path="url(#completedClip)">
+                <use href="#wavePath" class="home-wave-path completed" />
+              </g>
+              <!-- Castles at path ends -->
+              <!-- aspect ratio 446:187.5 (~2.3787:1) -->
+              <image id="castleStart" href="<%= asset_path('castle.webp') %>" x="0" y="0" width="200" height="84.1" preserveAspectRatio="xMidYMid meet" />
+              <image id="castleEnd" href="<%= asset_path('castle.webp') %>" x="0" y="0" width="340" height="142.9" preserveAspectRatio="xMidYMid meet" />
+              <!-- User marker image -->
+              <image id="userMarker" href="<%= asset_path("meeple/meeple-#{current_user.meeple.color}.png") %>" x="0" y="0" width="84" height="84" />
+            </g>
+          </svg>
+        <% end %>
+        <script>
+          (function() {
+            const svg = document.querySelector('.home-wave');
+            const isPreparationPhase = <%= Flipper.enabled?(:preparation_phase, current_user) %>;
+            
+            if (isPreparationPhase) {
+              // Preparation phase: fit viewBox around preparation group with minimal bottom padding
+              const preparationGroup = document.querySelector('#preparationGroup');
+              if (svg && preparationGroup && preparationGroup.getBBox) {
+                const pad = 12;
+                const bottomPad = 2; // Minimal bottom padding
+                const bb = preparationGroup.getBBox();
+                const x = bb.x - pad;
+                const y = bb.y - pad;
+                const w = bb.width + pad * 2;
+                const h = bb.height + pad + bottomPad; // Reduced bottom padding
+                svg.setAttribute('viewBox', `${x} ${y} ${w} ${h}`);
+              }
+              return; // Exit early for preparation phase
+            }
+            
+            // Normal phase: meeple moving along track
+            const path = document.querySelector('#wavePath');
+            const userImg = document.querySelector('#userMarker');
+            const castleStart = document.querySelector('#castleStart');
+            const castleEnd = document.querySelector('#castleEnd');
+            const group = document.querySelector('#waveGroup');
+            const completedRect = document.querySelector('#completedRect');
+            if (!path || !path.getTotalLength) return;
+            const pct = <%= pct %>;
+            try {
+              const total = path.getTotalLength();
+              // Path runs right->left; invert so 0% is left and 100% is right
+              const lenAtPct = total * (1 - (pct / 100));
+              const pt = path.getPointAtLength(lenAtPct);
+
+              // Position user image at marker, with feet centered on the point
+              if (userImg) {
+                const uw = parseFloat(userImg.getAttribute('width')) || 56;
+                const uh = parseFloat(userImg.getAttribute('height')) || 56;
+                
+                if (pct >= 100) {
+                  // When at 100%, center on the right castle
+                  const endPt = path.getPointAtLength(0);
+                  const cw2 = parseFloat(castleEnd.getAttribute('width')) || 340;
+                  const ch2 = parseFloat(castleEnd.getAttribute('height')) || 142.9;
+                  const castleX = endPt.x + 12;
+                  const castleY = endPt.y - ch2 / 2 - 36;
+                  const castleCenterX = castleX + cw2 / 2;
+                  const castleCenterY = castleY + ch2 / 2;
+                  
+                  // Position meeple with feet at the base of the castle
+                  const feetX = castleCenterX;
+                  const feetY = castleCenterY + 40;
+                  userImg.setAttribute('x', (feetX - uw / 2));
+                  userImg.setAttribute('y', (feetY - uh));
+                  
+                  // Reset rotation to 0 when at the end
+                  userImg.setAttribute('transform', `rotate(-8deg ${feetX} ${feetY})`);
+                } else {
+                  // Normal positioning along the path - feet positioned on the path point
+                  const feetX = pt.x;
+                  const feetY = pt.y;
+                  userImg.setAttribute('x', (feetX - uw / 2));
+                  userImg.setAttribute('y', (feetY - uh));
+                  
+                  // Calculate tangent angle at current position
+                  const delta = 2; // Small distance for tangent calculation
+                  const prevLen = Math.max(0, lenAtPct - delta);
+                  const nextLen = Math.min(total, lenAtPct + delta);
+                  const prevPt = path.getPointAtLength(prevLen);
+                  const nextPt = path.getPointAtLength(nextLen);
+                  
+                  // Calculate angle and apply rotation around meeple feet
+                  let angle = Math.atan2(nextPt.y - prevPt.y, nextPt.x - prevPt.x) * 180 / Math.PI;
+                  
+                  // Ensure meeple stays right-side up by limiting rotation range
+                  if (angle > 90) angle -= 180;
+                  if (angle < -90) angle += 180;
+                  
+                  // Apply 8 degree counter-clockwise adjustment
+                  angle -= 3;
+                  
+                  userImg.setAttribute('transform', `rotate(${angle} ${feetX} ${feetY})`);
+                }
+              }
+
+              // Position castles at start and end of path
+              if (castleStart) {
+                // Left end (start visually)
+                const startPt = path.getPointAtLength(total);
+                const cw = parseFloat(castleStart.getAttribute('width')) || 200;
+                const ch = parseFloat(castleStart.getAttribute('height')) || 84.1;
+                castleStart.setAttribute('x', (startPt.x - cw - 12));
+                castleStart.setAttribute('y', (startPt.y - ch / 2));
+              }
+                if (castleEnd) {
+                // Right end
+                const endPt = path.getPointAtLength(0);
+                const cw2 = parseFloat(castleEnd.getAttribute('width')) || 340;
+                const ch2 = parseFloat(castleEnd.getAttribute('height')) || 142.9;
+                  castleEnd.setAttribute('x', (endPt.x + 12));
+                  castleEnd.setAttribute('y', (endPt.y - ch2 / 2 - 36)); // lift more
+              }
+
+              // Fit the viewBox tightly around all content
+              if (svg && group && group.getBBox) {
+                const pad = 12;
+                const bb = group.getBBox();
+                const x = bb.x - pad;
+                const y = bb.y - pad;
+                const w = bb.width + pad * 2;
+                const h = bb.height + pad * 2;
+                svg.setAttribute('viewBox', `${x} ${y} ${w} ${h}`);
+              }
+
+              // Update completed clip rectangle to follow the path segment from start to current
+              if (completedRect && path && path.getTotalLength) {
+                const total = path.getTotalLength();
+                const lenAtPct2 = total * (1 - (pct / 100));
+                const curr = path.getPointAtLength(lenAtPct2);
+
+                const completedStroke = document.querySelector('.home-wave-path.completed');
+                let sw = 8;
+                try { sw = parseFloat(getComputedStyle(completedStroke).strokeWidth) || 8; } catch (e) {}
+                const strokePad = sw; // horizontal pad roughly equals stroke width
+
+                // Sample the path between the current position and the left end to capture extents
+                const samples = 48;
+                let minX = curr.x, maxX = curr.x, minY = curr.y, maxY = curr.y;
+                for (let i = 0; i <= samples; i++) {
+                  const t = lenAtPct2 + (i / samples) * (total - lenAtPct2);
+                  const p = path.getPointAtLength(t);
+                  if (p.x < minX) minX = p.x;
+                  if (p.x > maxX) maxX = p.x;
+                  if (p.y < minY) minY = p.y;
+                  if (p.y > maxY) maxY = p.y;
+                }
+
+                const rectX = Math.min(minX, curr.x) - strokePad;
+                const rectW = Math.max(0, (Math.max(maxX, curr.x) + strokePad * 0.25) - rectX);
+
+                const topPad = sw * 1.6;
+                const bottomPad = sw * 1.6;
+
+                completedRect.setAttribute('x', rectX);
+                completedRect.setAttribute('y', (minY - topPad));
+                completedRect.setAttribute('width', rectW);
+                completedRect.setAttribute('height', (maxY - minY) + topPad + bottomPad);
+                completedRect.setAttribute('rx', sw * 1.25);
+                completedRect.setAttribute('ry', sw * 1.25);
+              }
+            } catch (e) {}
+          })();
+        </script>
+        <div class="home-center home-progress-footer">
+          <span class="home-progress-bottom"><%= today_coding_message %></span>
+        </div>
+      </div>
+    </section>
+      <% end %>
+    <% end %>
+
+  <% unless current_user&.banned? %>
+  <div class="home-two-col">
+    <div class="home-col">
+      <div class="home-row home-row-center">
+        <h2 class="home-section-title">Your coffers: <%= @current_user&.coins || 0 %><img src="<%= asset_path('coin.png') %>" alt="coin" class="coin-icon coin-icon-large" /></h2>
+      </div>
+      <div class="home-list home-list-center home-list-large">
+        <% week = current_week_number %>
+        <% project_exists = current_user ? current_user.has_project_this_week?(Date.current) : false %>
+        <% expires = 5.minutes %>
+        <% cache(["home","week_row", current_user&.id, week], expires_in: expires) do %>
+          <div class="home-collapse">
+            <input type="checkbox" checked />
+            <div class="home-collapse-title home-thisweek-title">
+              This week
+            </div>
+            <div class="home-collapse-content">
+              <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                <label class="home-checkrow">
+                  <input type="checkbox" class="home-checkbox" <%= 'checked' if project_exists %> disabled />
+                  <span class="home-row-sm">
+                    <% if !project_exists %>
+                      <%= link_to "Create Project", new_project_path, class: "home-link-dotted" %>
+                    <% else %>
+                      <span class="home-link-disabled">Create Project</span>
+                    <% end %>
+                  </span>
+                </label>
+                <!-- DEBUG: week = <%= week %>, project_exists = <%= project_exists %> -->
+                <% week_secs = @current_user&.seconds_for_week(week).to_f || 0 %>
+                <% current_project = current_week_project %>
+                <% unless Flipper.enabled?(:preparation_phase, current_user) %>
+                  <label class="home-checkrow home-checkrow-help <%= 'home-muted' unless project_exists %>" title="These are the hours required to stay in Siege">
+                    <input type="checkbox" class="home-checkbox" <%= 'checked' if project_exists && week_secs >= 36000 %> disabled />
+                    <span class="home-row-sm">
+                      Siege! (
+                      <% if project_exists %>
+                        <% if current_project&.hackatime_projects&.any? %>
+                          <% if week_secs >= 36000 %>
+                            10h
+                          <% else %>
+                            <%= format_time_from_seconds(week_secs) %>
+                          <% end %>
+                        <% else %>
+                          0h
+                        <% end %>
+                      <% else %>
+                        0h
+                      <% end %>
+                      / 10h )
+                    </span>
+                  </label>
+                <% end %>
+                <label class="home-checkrow home-checkrow-help <%= 'home-muted' if Flipper.enabled?(:preparation_phase, current_user) ? false : (week_secs < 36000) %>" title="<%= Flipper.enabled?(:preparation_phase, current_user) ? 'All hours count towards coins in preparation phase' : 'These are bonus hours that go towards coins' %>">
+                  <% pillage_secs = Flipper.enabled?(:preparation_phase, current_user) ? week_secs : [week_secs - 36000, 0].max %>
+                  <input type="checkbox" class="home-checkbox" disabled />
+                  <span class="home-row-sm">
+                    Pillage (
+                    <% if Flipper.enabled?(:preparation_phase, current_user) || week_secs >= 36000 %>
+                      <%= format_time_from_seconds(pillage_secs) %>
+                    <% else %>
+                      0h
+                    <% end %>
+                    )
+                  </span>
+                </label>
+
+              </div>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </div>
+    <div class="home-col">
+      <div class="home-row home-row-center">
+        <h2 class="home-section-title">Leaderboard</h2>
+      </div>
+      <div class="home-list home-list-center">
+        <% leaderboard_users = get_leaderboard_users %>
+        <% leaderboard_users.each_with_index do |user, index| %>
+          <div class="home-leader-item">
+            <div class="home-user">
+              <span class="home-rank">
+                <% if index == 0 %>
+                  <img src="<%= asset_path('gold-castle.webp') %>" alt="" />
+                <% elsif index == 1 %>
+                  <img src="<%= asset_path('silver-castle.webp') %>" alt="" />
+                <% elsif index == 2 %>
+                  <img src="<%= asset_path('bronze-castle.webp') %>" alt="" />
+                <% else %>
+                  <img src="<%= asset_path('mini-castle.webp') %>" alt="" />
+                <% end %>
+              </span>
+              <%= user.name %>
+            </div>
+            <div class="home-amount"><%= user.current_week_readable_time %></div>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>
+<% end %>
+
+
+
+<script>
+// Function to update meeple image when color changes
+function updateHomeMeepleImage() {
+  <% if current_user&.meeple %>
+  fetch('/meeple/current_color', {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.color && data.asset_path) {
+      const userMarker = document.querySelector('#userMarker');
+      if (userMarker) {
+        userMarker.setAttribute('href', data.asset_path);
+      }
+    }
+  })
+  .catch(error => {
+    console.error('Error fetching meeple color:', error);
+  });
+  <% end %>
+}
+
+// Update meeple when page becomes visible (in case of color changes)
+document.addEventListener('visibilitychange', function() {
+  if (!document.hidden) {
+    updateHomeMeepleImage();
+  }
+});
+
+// Update meeple on Turbo navigation
+document.addEventListener('turbo:load', function() {
+  updateHomeMeepleImage();
+});
+</script>

@@ -1,0 +1,718 @@
+<% content_for :title, "Greg - #{@project.name}" %>
+
+<% content_for :head do %>
+  <style>
+    :root {
+      --greg-bg-primary: rgba(255, 255, 255, 0.95);
+      --greg-bg-secondary: rgba(255, 255, 255, 0.8);
+      --greg-border-color: rgba(64, 43, 32, 0.15);
+      --greg-border-secondary: rgba(64, 43, 32, 0.1);
+      --greg-text-primary: #402b20;
+      --greg-text-secondary: #6b5b4a;
+      --greg-text-muted: #9ca3af;
+      --greg-input-bg: white;
+      --greg-input-border: rgba(64, 43, 32, 0.3);
+    }
+
+    [data-greg-theme="dark"] {
+      --greg-bg-primary: rgba(30, 30, 30, 0.95);
+      --greg-bg-secondary: rgba(45, 45, 45, 0.9);
+      --greg-border-color: rgba(156, 163, 175, 0.3);
+      --greg-border-secondary: rgba(156, 163, 175, 0.2);
+      --greg-text-primary: #f3f4f6;
+      --greg-text-secondary: #d1d5db;
+      --greg-text-muted: #9ca3af;
+      --greg-input-bg: #374151;
+      --greg-input-border: rgba(156, 163, 175, 0.4);
+    }
+
+    .greg-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+      transition: color 0.3s ease;
+    }
+    .navigation-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+    }
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: #6366f1;
+      text-decoration: none;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+    .back-link:hover {
+      color: #4f46e5;
+      text-decoration: none;
+    }
+    .navigation-controls {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .nav-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1rem;
+      background: rgba(255, 255, 255, 0.95);
+      border: 2px solid #6366f1;
+      border-radius: 8px;
+      color: #6366f1;
+      text-decoration: none;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    .nav-button:hover {
+      background: #6366f1;
+      color: white;
+      text-decoration: none;
+    }
+    .nav-button:disabled,
+    .nav-button.disabled {
+      background: rgba(255, 255, 255, 0.5);
+      border-color: #d1d5db;
+      color: #9ca3af;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+    .nav-position {
+      font-size: 0.9rem;
+      color: #6b5b4a;
+      background: rgba(255, 255, 255, 0.8);
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      border: 1px solid rgba(64, 43, 32, 0.2);
+    }
+    .greg-project-header {
+      background: var(--greg-bg-primary);
+      border: 2px solid var(--greg-border-color);
+      border-radius: 16px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      transition: all 0.3s ease;
+    }
+    .greg-project-title {
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: var(--greg-text-primary);
+      margin: 0 0 1rem 0;
+      transition: color 0.3s ease;
+    }
+    .project-meta {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .meta-item {
+      background: var(--greg-bg-secondary);
+      border: 1px solid var(--greg-border-secondary);
+      border-radius: 8px;
+      padding: 1rem;
+      transition: all 0.3s ease;
+    }
+    .meta-label {
+      font-size: 0.8rem;
+      color: var(--greg-text-secondary);
+      margin-bottom: 0.25rem;
+      font-weight: 500;
+      transition: color 0.3s ease;
+    }
+    .meta-value {
+      font-size: 0.95rem;
+      color: var(--greg-text-primary);
+      font-weight: 600;
+      transition: color 0.3s ease;
+    }
+    .project-description {
+      background: var(--greg-bg-secondary);
+      border: 1px solid var(--greg-border-secondary);
+      border-radius: 8px;
+      padding: 1rem;
+      transition: all 0.3s ease;
+    }
+    .project-description-text {
+      color: var(--greg-text-primary);
+      line-height: 1.5;
+      transition: color 0.3s ease;
+    }
+    .badge {
+      padding: 0.25rem 0.75rem;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      display: inline-block;
+    }
+    .badge-status {
+      color: white;
+    }
+    .badge-submitted { background: #7c3aed; }
+    .badge-pending_voting { background: #1e40af; }
+    .badge-finished { background: #059669; }
+    .badge-fraud {
+      color: white;
+    }
+    .badge-unchecked { background: #fbbf24; color: #92400e; }
+    .badge-sus { background: #f59e0b; }
+    .badge-fraud { background: #dc2626; }
+    .badge-good { background: #059669; }
+    .greg-project-content {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 2rem;
+    }
+    .greg-main-content {
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+    .greg-sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+    .greg-section {
+      background: var(--greg-bg-primary);
+      border: 2px solid var(--greg-border-color);
+      border-radius: 16px;
+      padding: 2rem;
+      transition: all 0.3s ease;
+    }
+    .greg-section-title {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--greg-text-primary);
+      margin: 0 0 1rem 0;
+      transition: color 0.3s ease;
+    }
+    .greg-project-links {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .greg-project-link {
+      color: #6366f1;
+      text-decoration: none;
+      padding: 0.75rem 1.5rem;
+      border: 1px solid #6366f1;
+      border-radius: 8px;
+      transition: all 0.2s;
+      font-weight: 500;
+    }
+    .greg-project-link:hover {
+      background: #6366f1;
+      color: white;
+    }
+    .greg-project-link.external {
+      background: #059669;
+      border-color: #059669;
+      color: white;
+    }
+    .greg-project-link.external:hover {
+      background: #047857;
+      border-color: #047857;
+      color: white;
+    }
+    .hackatime-section {
+      margin-top: 1rem;
+    }
+    .hackatime-projects {
+      display: grid;
+      gap: 0.75rem;
+    }
+    .hackatime-project {
+      background: var(--greg-bg-secondary);
+      border: 1px solid var(--greg-border-secondary);
+      border-radius: 8px;
+      padding: 1rem;
+      transition: all 0.3s ease;
+    }
+    .hackatime-project-name {
+      font-weight: 600;
+      color: var(--greg-text-primary);
+      margin-bottom: 0.5rem;
+      transition: color 0.3s ease;
+    }
+    .hackatime-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 0.5rem;
+      font-size: 0.9rem;
+      color: var(--greg-text-secondary);
+      transition: color 0.3s ease;
+    }
+    .greg-fraud-editor {
+      background: rgba(254, 226, 226, 0.3);
+      border: 2px solid rgba(220, 38, 38, 0.2);
+    }
+    [data-greg-theme="dark"] .greg-fraud-editor {
+      background: rgba(127, 29, 29, 0.3);
+      border: 2px solid rgba(220, 38, 38, 0.4);
+    }
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+    .form-label {
+      display: block;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--greg-text-primary);
+      margin-bottom: 0.5rem;
+      transition: color 0.3s ease;
+    }
+    .form-input,
+    .form-select,
+    .form-textarea {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid var(--greg-input-border);
+      border-radius: 8px;
+      font-size: 0.9rem;
+      box-sizing: border-box;
+      background: var(--greg-input-bg);
+      color: var(--greg-text-primary);
+      transition: all 0.3s ease;
+    }
+    .form-textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+    .greg-btn {
+      padding: 0.75rem 1.5rem;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+      text-align: center;
+      transition: all 0.2s;
+    }
+    .greg-btn-primary {
+      background: #dc2626;
+      color: white;
+    }
+    .greg-btn-primary:hover {
+      background: #b91c1c;
+    }
+    .audit-logs {
+      margin-top: 1rem;
+    }
+    .audit-log {
+      background: var(--greg-bg-secondary);
+      border: 1px solid var(--greg-border-secondary);
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 0.75rem;
+      transition: all 0.3s ease;
+    }
+    .audit-log-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+    .audit-log-action {
+      font-weight: 600;
+      color: var(--greg-text-primary);
+      transition: color 0.3s ease;
+    }
+    .audit-log-time {
+      font-size: 0.8rem;
+      color: var(--greg-text-secondary);
+      transition: color 0.3s ease;
+    }
+    .audit-log-details {
+      font-size: 0.9rem;
+      color: var(--greg-text-secondary);
+      transition: color 0.3s ease;
+    }
+    .greg-empty-state {
+      text-align: center;
+      padding: 2rem;
+      color: var(--greg-text-secondary);
+      transition: color 0.3s ease;
+    }
+    @media (max-width: 768px) {
+      .navigation-header {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: flex-start;
+      }
+      .navigation-controls {
+        width: 100%;
+        justify-content: space-between;
+      }
+      .nav-button {
+        font-size: 0.8rem;
+        padding: 0.5rem 0.75rem;
+      }
+      .nav-position {
+        font-size: 0.8rem;
+        padding: 0.25rem 0.5rem;
+      }
+      .greg-project-content {
+        grid-template-columns: 1fr;
+      }
+      .project-meta {
+        grid-template-columns: 1fr;
+      }
+      .greg-project-links {
+        flex-direction: column;
+      }
+      .hackatime-stats {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+<% end %>
+
+<div class="greg-container">
+  <div class="navigation-header">
+    <%= link_to greg_path, class: "back-link" do %>
+      ← Back to Fraud Dashboard
+    <% end %>
+
+    <div class="navigation-controls">
+      <% if @navigation[:previous_project_id] %>
+        <%= link_to greg_project_path(@navigation[:previous_project_id], @navigation[:filter_params]), class: "nav-button" do %>
+          ← Previous
+        <% end %>
+      <% else %>
+        <span class="nav-button disabled">← Previous</span>
+      <% end %>
+
+      <% if @navigation[:current_position] && @navigation[:total_count] %>
+        <div class="nav-position" title="Use arrow keys (← →) or A/D keys to navigate. Press Escape to go back.">
+          <%= @navigation[:current_position] %> of <%= @navigation[:total_count] %>
+        </div>
+      <% end %>
+
+      <% if @navigation[:next_project_id] %>
+        <%= link_to greg_project_path(@navigation[:next_project_id], @navigation[:filter_params]), class: "nav-button" do %>
+          Next →
+        <% end %>
+      <% else %>
+        <span class="nav-button disabled">Next →</span>
+      <% end %>
+    </div>
+  </div>
+
+  <!-- Project Header -->
+  <div class="greg-project-header">
+    <h1 class="greg-project-title"><%= @project.name %></h1>
+
+    <div class="project-meta">
+      <div class="meta-item">
+        <div class="meta-label">Author</div>
+        <div class="meta-value"><%= @project.user.name %> (ID: <%= @project.user.id %>)</div>
+      </div>
+
+      <div class="meta-item">
+        <div class="meta-label">Week</div>
+        <div class="meta-value">Week <%= @week_number %></div>
+      </div>
+
+      <div class="meta-item">
+        <div class="meta-label">Status</div>
+        <div class="meta-value">
+          <span class="badge badge-status badge-<%= @project.status %>"><%= @project.status.humanize %></span>
+        </div>
+      </div>
+
+      <div class="meta-item">
+        <div class="meta-label">Fraud Status</div>
+        <div class="meta-value">
+          <span class="badge badge-fraud badge-<%= @project.fraud_status %>"><%= @project.fraud_status.humanize %></span>
+        </div>
+      </div>
+
+      <div class="meta-item">
+        <div class="meta-label">Created</div>
+        <div class="meta-value"><%= @project.created_at.strftime("%B %d, %Y at %I:%M %p") %></div>
+      </div>
+
+      <div class="meta-item">
+        <div class="meta-label">Last Updated</div>
+        <div class="meta-value"><%= @project.updated_at.strftime("%B %d, %Y at %I:%M %p") %></div>
+      </div>
+    </div>
+
+    <% if @project.description.present? %>
+      <div class="project-description">
+        <div class="meta-label">Description</div>
+        <div class="project-description-text"><%= @project.description %></div>
+      </div>
+    <% end %>
+  </div>
+
+  <!-- Project Content -->
+  <div class="greg-project-content">
+    <!-- Main Content -->
+    <div class="greg-main-content">
+      <!-- Project Links -->
+      <div class="greg-section">
+        <h2 class="greg-section-title">Project Links</h2>
+        <div class="greg-project-links">
+          <% if @project.repo_url.present? %>
+            <%= safe_project_link "Repository", @project.repo_url, target: "_blank", class: "greg-project-link" %>
+          <% end %>
+
+          <% if @project.demo_url.present? %>
+            <%= safe_project_link "Demo", @project.demo_url, target: "_blank", class: "greg-project-link" %>
+          <% end %>
+
+          <% if @project.user.slack_id.present? %>
+            <%= link_to "See Joe Profile", "https://dash.fraud.land/profile/#{@project.user.slack_id}", target: "_blank", class: "greg-project-link external" %>
+            <a href="#" id="billy-week-link" class="greg-project-link external" target="_blank">See Joe Week</a>
+          <% end %>
+        </div>
+      </div>
+
+      <!-- Hackatime Projects -->
+      <% if @project.hackatime_projects.present? && @time_range %>
+        <div class="greg-section">
+          <h2 class="greg-section-title">Hackatime Projects</h2>
+          <div style="font-size: 0.9rem; color: #6b5b4a; margin-bottom: 1rem;">
+            Time range: <%= @time_range[0] %> to <%= @time_range[1] %>
+          </div>
+
+          <div class="hackatime-projects">
+            <% @project.hackatime_projects.each do |project_name| %>
+              <% hackatime_project = @hackatime_data&.find { |p| p['name'] == project_name } %>
+              <div class="hackatime-project">
+                <div class="hackatime-project-name"><%= project_name %></div>
+
+                <% if hackatime_project %>
+                  <div class="hackatime-stats">
+                    <div><strong>Total Time:</strong> <%= (hackatime_project['total_seconds'] / 3600.0).round(1) %> hours</div>
+                  </div>
+                <% else %>
+                  <div style="color: #dc2626; font-size: 0.9rem;">No Hackatime data found</div>
+                <% end %>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+
+      <!-- Fraud Audit Logs -->
+      <div class="greg-section">
+        <h2 class="greg-section-title">Fraud Review History</h2>
+
+        <% if @fraud_audit_logs.any? %>
+          <div class="audit-logs">
+            <% @fraud_audit_logs.each do |log| %>
+              <div class="audit-log">
+                <div class="audit-log-header">
+                  <div class="audit-log-action"><%= log['action'] %></div>
+                  <div class="audit-log-time">
+                    <%= Time.parse(log['timestamp']).strftime("%B %d, %Y at %I:%M %p") rescue log['timestamp'] %>
+                  </div>
+                </div>
+
+                <div class="audit-log-details">
+                  <div><strong>Reviewer:</strong> <%= log['actor_name'] %> (ID: <%= log['actor_id'] %>)</div>
+
+                  <% if log.dig('details', 'old_fraud_status') && log.dig('details', 'new_fraud_status') %>
+                    <div><strong>Status Change:</strong> <%= log.dig('details', 'old_fraud_status').humanize %> → <%= log.dig('details', 'new_fraud_status').humanize %></div>
+                  <% end %>
+
+                  <% if log.dig('details', 'new_reasoning').present? %>
+                    <div><strong>Reasoning:</strong> <%= log.dig('details', 'new_reasoning') %></div>
+                  <% end %>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        <% else %>
+          <div class="greg-empty-state">
+            <p>No fraud reviews have been recorded for this project yet.</p>
+          </div>
+        <% end %>
+      </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="greg-sidebar">
+      <!-- Fraud Status Editor -->
+      <div class="greg-section greg-fraud-editor">
+        <h2 class="greg-section-title">Update Fraud Status</h2>
+
+        <form id="fraud-status-form">
+          <div class="form-group">
+            <label for="fraud_status" class="form-label">Fraud Status</label>
+            <select id="fraud_status" name="fraud_status" class="form-select">
+              <option value="unchecked" <%= 'selected' if @project.fraud_status == 'unchecked' %>>Unchecked</option>
+              <option value="sus" <%= 'selected' if @project.fraud_status == 'sus' %>>Suspicious</option>
+              <option value="fraud" <%= 'selected' if @project.fraud_status == 'fraud' %>>Confirmed Fraud</option>
+              <option value="good" <%= 'selected' if @project.fraud_status == 'good' %>>Good/Verified</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="fraud_reasoning" class="form-label">Fraud Reasoning</label>
+            <textarea id="fraud_reasoning" name="fraud_reasoning" class="form-textarea" placeholder="Explain your reasoning for this status change..."><%= @project.fraud_reasoning %></textarea>
+          </div>
+
+          <button type="submit" class="greg-btn greg-btn-primary">Save Changes</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.getElementById('fraud-status-form').addEventListener('submit', function(e) {
+  e.preventDefault();
+
+  const fraudStatus = document.getElementById('fraud_status').value;
+  const fraudReasoning = document.getElementById('fraud_reasoning').value;
+
+  if (!confirm(`Are you sure you want to update the fraud status to "${fraudStatus}"?`)) {
+    return;
+  }
+
+  fetch('<%= greg_update_fraud_status_path(@project) %>', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+    },
+    body: JSON.stringify({
+      fraud_status: fraudStatus,
+      fraud_reasoning: fraudReasoning
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      alert(data.message || 'Fraud status updated successfully');
+
+      // Preserve filter parameters when reloading
+      const currentUrl = new URL(window.location.href);
+      const filterParams = new URLSearchParams();
+
+      // Copy existing filter parameters
+      <% if @navigation[:filter_params] %>
+        <% @navigation[:filter_params].each do |key, value| %>
+          <% if value.present? %>
+            filterParams.set('<%= key %>', '<%= value %>');
+          <% end %>
+        <% end %>
+      <% end %>
+
+      if (filterParams.toString()) {
+        currentUrl.search = '?' + filterParams.toString();
+        window.location.href = currentUrl.toString();
+      } else {
+        location.reload();
+      }
+    } else {
+      alert('Error: ' + (data.error || 'Failed to update fraud status'));
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    alert('An error occurred while updating the fraud status');
+  });
+});
+
+// Add keyboard navigation
+document.addEventListener('keydown', function(e) {
+  // Only activate if not typing in an input/textarea
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+  if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+    // Previous project
+    const prevButton = document.querySelector('.navigation-controls a.nav-button:first-child');
+    if (prevButton && !prevButton.classList.contains('disabled')) {
+      window.location.href = prevButton.href;
+    }
+    e.preventDefault();
+  } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+    // Next project
+    const nextButton = document.querySelector('.navigation-controls a.nav-button:last-child');
+    if (nextButton && !nextButton.classList.contains('disabled')) {
+      window.location.href = nextButton.href;
+    }
+    e.preventDefault();
+  } else if (e.key === 'Escape') {
+    // Back to dashboard
+    const backButton = document.querySelector('.back-link');
+    if (backButton) {
+      window.location.href = backButton.href;
+    }
+    e.preventDefault();
+  }
+});
+
+// Initialize dark mode from localStorage
+(function() {
+  const savedTheme = localStorage.getItem('greg-dark-mode');
+  const container = document.querySelector('.greg-container');
+
+  if (savedTheme === 'dark') {
+    container.setAttribute('data-greg-theme', 'dark');
+  }
+})();
+
+// Setup Billy Week link
+(function() {
+  const billyLink = document.getElementById('billy-week-link');
+  if (!billyLink) return;
+
+  const slackId = '<%= @project.user.slack_id %>';
+  <% if @time_range && @time_range[0] && @time_range[1] %>
+    const weekStart = '<%= @time_range[0] %>';
+    const weekEnd = '<%= @time_range[1] %>';
+
+    // Format dates for Billy URL (YYYY-MM-DD)
+    const billyDateRange = weekStart + '-' + weekEnd;
+
+    // Fetch hackatime user ID
+    fetch(`https://hackatime.hackclub.com/api/v1/users/${slackId}/stats`)
+      .then(response => response.json())
+      .then(data => {
+        if (data.data && data.data.user_id) {
+          const hackamateId = data.data.user_id;
+          const billyUrl = `https://billy.3kh0.net/?u=${hackamateId}&d=${billyDateRange}`;
+          billyLink.href = billyUrl;
+        } else {
+          console.error('Hackatime user ID not found in API response');
+          billyLink.style.opacity = '0.5';
+          billyLink.style.cursor = 'not-allowed';
+          billyLink.onclick = function(e) {
+            e.preventDefault();
+            alert('Unable to fetch Hackatime user ID for this user');
+          };
+        }
+      })
+      .catch(error => {
+        console.error('Error fetching Hackatime data:', error);
+        billyLink.style.opacity = '0.5';
+        billyLink.style.cursor = 'not-allowed';
+        billyLink.onclick = function(e) {
+          e.preventDefault();
+          alert('Error fetching Hackatime data');
+        };
+      });
+  <% else %>
+    // No time range available
+    billyLink.style.opacity = '0.5';
+    billyLink.style.cursor = 'not-allowed';
+    billyLink.onclick = function(e) {
+      e.preventDefault();
+      alert('Week time range not available for this project');
+    };
+  <% end %>
+})();
+</script>

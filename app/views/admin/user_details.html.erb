@@ -1,0 +1,1340 @@
+<% content_for :title, "Admin - User Details" %>
+
+<% content_for :head do %>
+  <style>
+    /* Coin image styles */
+    .coin-icon {
+      display: inline;
+      vertical-align: baseline;
+      margin-left: 4px;
+    }
+    .coin-icon-large { width: 24px; height: 24px; }
+    .coin-icon-medium { width: 20px; height: 20px; }
+    .coin-icon-small { width: 16px; height: 16px; }
+
+    /* Toggle switch styles */
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 40px;
+      height: 20px;
+    }
+    
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: .4s;
+      border-radius: 20px;
+    }
+    
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 16px;
+      width: 16px;
+      left: 2px;
+      bottom: 2px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+    
+    input:checked + .toggle-slider {
+      background-color: #dc2626;
+    }
+    
+    input:checked + .toggle-slider:before {
+      transform: translateX(20px);
+    }
+
+    .admin-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: #6366f1;
+      text-decoration: none;
+      margin-bottom: 2rem;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+    .back-link:hover {
+      color: #4f46e5;
+      text-decoration: none;
+    }
+    .user-profile {
+      background: rgba(255, 255, 255, 0.95);
+      border: 2px solid rgba(64, 43, 32, 0.15);
+      border-radius: 16px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+    }
+    .profile-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 2rem;
+    }
+    .profile-title {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .user-name {
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: #402b20;
+      margin: 0;
+    }
+    .user-status {
+      display: inline-block;
+      padding: 0.5rem 1rem;
+      border-radius: 12px;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+    .status-out { background-color: #fee2e2; color: #dc2626; }
+    .status-working { background-color: #dbeafe; color: #2563eb; }
+    .status-completed { background-color: #d1fae5; color: #059669; }
+    .user-rank {
+      display: inline-block;
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-transform: capitalize;
+    }
+    .rank-user { background-color: #f3f4f6; color: #374151; }
+    .rank-viewer { background-color: #dbeafe; color: #1e40af; }
+    .rank-admin { background-color: #fed7aa; color: #ea580c; }
+    .rank-super_admin { background-color: #fecaca; color: #dc2626; }
+    .profile-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    .stat-card {
+      background: rgba(255, 255, 255, 0.8);
+      border: 1px solid rgba(64, 43, 32, 0.1);
+      border-radius: 12px;
+      padding: 1.5rem;
+      text-align: center;
+    }
+    .stat-label {
+      font-size: 0.9rem;
+      color: #6b5b4a;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+    }
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #402b20;
+    }
+    .progress-card {
+      background: rgba(255, 255, 255, 0.8);
+      border: 1px solid rgba(64, 43, 32, 0.1);
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    .progress-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #402b20;
+    }
+    .progress-percent {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #059669;
+    }
+    .progress-bar {
+      width: 100%;
+      height: 12px;
+      background-color: #f3f4f6;
+      border-radius: 6px;
+      overflow: hidden;
+      margin-bottom: 0.5rem;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #059669 0%, #10b981 100%);
+      transition: width 0.3s ease;
+    }
+    .progress-text {
+      font-size: 0.9rem;
+      color: #6b5b4a;
+    }
+    .meeple-section {
+      background: rgba(255, 255, 255, 0.8);
+      border: 1px solid rgba(64, 43, 32, 0.1);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    .meeple-header {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: #402b20;
+      margin-bottom: 1rem;
+    }
+    .meeple-details {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .meeple-image {
+      width: 64px;
+      height: 64px;
+    }
+    .meeple-info {
+      flex: 1;
+    }
+    .meeple-color {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #402b20;
+      text-transform: capitalize;
+    }
+    .meeple-meta {
+      font-size: 0.9rem;
+      color: #6b5b4a;
+      margin-top: 0.25rem;
+    }
+    .projects-section {
+      background: rgba(255, 255, 255, 0.95);
+      border: 2px solid rgba(64, 43, 32, 0.15);
+      border-radius: 16px;
+      padding: 2rem;
+    }
+    .section-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #402b20;
+      margin-bottom: 1.5rem;
+    }
+    .projects-grid {
+      display: grid;
+      gap: 1rem;
+    }
+    .project-card {
+      background: rgba(255, 255, 255, 0.8);
+      border: 1px solid rgba(64, 43, 32, 0.1);
+      border-radius: 12px;
+      padding: 1.5rem;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+    .project-card:hover {
+      border-color: rgba(64, 43, 32, 0.3);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      transform: translateY(-2px);
+    }
+    .project-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 0.75rem;
+    }
+    .project-title {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: #402b20;
+      margin: 0;
+    }
+    .project-week {
+      font-size: 0.8rem;
+      color: #6b5b4a;
+      background: rgba(64, 43, 32, 0.1);
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+    }
+    .project-status {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      margin-bottom: 0.5rem;
+    }
+    .status-building { background-color: #fef3c7; color: #92400e; }
+    .status-submitted { background-color: #f3e8ff; color: #7c3aed; }
+    .status-pending_voting { background-color: #dbeafe; color: #1e40af; }
+    .status-finished { background-color: #d1fae5; color: #065f46; }
+    .project-description {
+      color: #6b5b4a;
+      font-size: 0.9rem;
+      line-height: 1.5;
+      margin-bottom: 0.75rem;
+    }
+    .project-links {
+      display: flex;
+      gap: 0.75rem;
+      font-size: 0.8rem;
+    }
+    .project-link {
+      color: #6366f1;
+      text-decoration: none;
+      padding: 0.25rem 0.5rem;
+      border: 1px solid #6366f1;
+      border-radius: 4px;
+      transition: all 0.2s;
+    }
+    .project-link:hover {
+      background: #6366f1;
+      color: white;
+    }
+    .project-link.disabled {
+      color: #9ca3af;
+      border-color: #9ca3af;
+      cursor: not-allowed;
+    }
+    .project-link.disabled:hover {
+      background: transparent;
+      color: #9ca3af;
+    }
+    .user-details {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    .detail-item {
+      background: rgba(255, 255, 255, 0.8);
+      border: 1px solid rgba(64, 43, 32, 0.1);
+      border-radius: 8px;
+      padding: 1rem;
+    }
+    .detail-label {
+      font-size: 0.8rem;
+      color: #6b5b4a;
+      margin-bottom: 0.25rem;
+      font-weight: 500;
+    }
+    .detail-value {
+      font-size: 0.95rem;
+      color: #402b20;
+      font-weight: 600;
+    }
+  </style>
+<% end %>
+
+<div class="admin-container">
+  <%= link_to admin_users_path, class: "back-link" do %>
+    ← Back to All Users
+  <% end %>
+
+  <!-- User Profile Section -->
+  <div class="user-profile">
+    <div class="profile-header">
+      <div class="profile-title">
+        <h1 class="user-name"><%= @user.id %> - <%= @user.name %></h1>
+      </div>
+      <div style="display: flex; gap: 1rem; align-items: center;">
+        <span class="user-rank rank-<%= @user.rank %>"><%= @user.rank.humanize %></span>
+        <span class="user-status status-<%= @user.status %>"><%= @user.status.capitalize %></span>
+        <% if current_user.super_admin? && !@user.super_admin? && @user != current_user %>
+          <button onclick="showDeleteVerification('<%= @user.id %>', '<%= @user.name %>')" 
+                  class="submit-button" 
+                  style="background: #dc2626; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; font-size: 0.9rem; cursor: pointer;">
+            Delete User
+          </button>
+        <% end %>
+      </div>
+    </div>
+    
+    <!-- Admin Controls -->
+    <div style="margin-top: 1rem; padding: 1rem; background: rgba(255, 255, 255, 0.8); border: 1px solid rgba(64, 43, 32, 0.1); border-radius: 8px;">
+      <h3 style="font-size: 1rem; font-weight: 600; color: #402b20; margin-bottom: 0.75rem;">Admin Controls</h3>
+        
+        <!-- Out Status Toggle -->
+        <div style="margin-bottom: 1rem; padding: 0.75rem; background: rgba(255, 255, 255, 0.5); border: 1px solid rgba(64, 43, 32, 0.1); border-radius: 6px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <strong style="color: #402b20;">Out Status:</strong>
+              <span style="color: #6b5b4a; font-size: 0.9rem; margin-left: 0.5rem;">
+                <%= case @user.status
+      when 'banned' then 'User is banned'
+      when 'out' then 'User is marked as out (siege failed)'
+      when 'working' then 'User is active'
+      when 'new' then 'User is new (not through welcome)'
+      else @user.status.humanize
+    end %>
+              </span>
+            </div>
+            <select id="status-select" onchange="updateUserStatus(<%= @user.id %>, this.value)" style="background: white; border: 1px solid #ccc; padding: 4px; border-radius: 4px;">
+              <option value="working" <%= 'selected' if @user.status == 'working' %>>Working</option>
+              <option value="out" <%= 'selected' if @user.status == 'out' %>>Out</option>
+              <option value="banned" <%= 'selected' if @user.status == 'banned' %>>Banned</option>
+              <option value="new" <%= 'selected' if @user.status == 'new' %>>New</option>
+            </select>
+          </div>
+          <div style="font-size: 0.8rem; color: #6b5b4a; margin-top: 0.5rem;">
+            <strong>Working:</strong> User can participate normally<br>
+            <strong>Out:</strong> User sees "siege failed" but can still participate<br>
+            <strong>Banned:</strong> User cannot create/submit projects, vote, or use market<br>
+            <strong>New:</strong> User hasn't completed welcome flow
+          </div>
+        </div>
+        
+        <!-- Rank Management -->
+        <h4 style="font-size: 0.9rem; font-weight: 600; color: #402b20; margin-bottom: 0.5rem;">Rank Management</h4>
+        
+        <% 
+          # Determine available ranks based on current user's permissions
+          available_ranks = if current_user.super_admin?
+            [['User', 'user'], ['Viewer', 'viewer'], ['Admin', 'admin'], ['Super Admin', 'super_admin']]
+          elsif current_user.admin?
+            [['User', 'user'], ['Viewer', 'viewer']]
+          else
+            []
+          end
+        %>
+        
+        <% if available_ranks.any? %>
+          <%= form_with url: admin_update_rank_path(@user), method: :post, local: true, style: "display: flex; gap: 0.5rem; align-items: center;" do |form| %>
+            <%= form.select :rank, 
+                options_for_select(available_ranks, @user.rank),
+                { prompt: "Select new rank" },
+                { style: "padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem;" } %>
+            <%= form.submit "Update Rank", style: "padding: 0.5rem 1rem; background: #6366f1; color: white; border: none; border-radius: 4px; font-size: 0.9rem; cursor: pointer; transition: background 0.2s;" %>
+          <% end %>
+          
+          <div style="margin-top: 0.5rem; font-size: 0.8rem; color: #6b5b4a;">
+            <% if current_user.super_admin? %>
+              <strong>Super Admin:</strong> Can set any rank including other admins
+            <% elsif current_user.admin? %>
+              <strong>Admin:</strong> Can only promote users to Viewer level
+            <% end %>
+          </div>
+        <% else %>
+          <div style="font-size: 0.9rem; color: #6b5b4a;">
+            You don't have permission to modify user ranks.
+          </div>
+        <% end %>
+        
+        <!-- Fraud Team Management (Super Admin Only) -->
+        <% if current_user.super_admin? %>
+          <h4 style="font-size: 0.9rem; font-weight: 600; color: #402b20; margin: 1.5rem 0 0.5rem 0;">Fraud Team Access</h4>
+          
+          <div style="margin-bottom: 1rem; padding: 0.75rem; background: rgba(255, 255, 255, 0.5); border: 1px solid rgba(64, 43, 32, 0.1); border-radius: 6px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <strong style="color: #402b20;">Fraud Team Member:</strong>
+                <span style="color: #6b5b4a; font-size: 0.9rem; margin-left: 0.5rem;">
+                  <%= @user.on_fraud_team? ? 'Yes - Can access fraud dashboard' : 'No - Cannot access fraud dashboard' %>
+                </span>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" 
+                       <%= 'checked' if @user.on_fraud_team? %>
+                       onchange="toggleFraudTeam(<%= @user.id %>, this.checked)" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div style="font-size: 0.8rem; color: #6b5b4a; margin-top: 0.5rem;">
+              Fraud team members can access the Greg fraud checking dashboard to review projects for suspicious activity.
+            </div>
+          </div>
+        <% end %>
+        
+        <!-- Referral Management -->
+        <h4 style="font-size: 0.9rem; font-weight: 600; color: #402b20; margin: 1.5rem 0 0.5rem 0;">Referral Management</h4>
+        
+        <div style="margin-bottom: 1rem; padding: 0.75rem; background: rgba(255, 255, 255, 0.5); border: 1px solid rgba(64, 43, 32, 0.1); border-radius: 6px;">
+          <div style="margin-bottom: 0.5rem;">
+            <strong style="color: #402b20;">Current Referrer:</strong>
+            <% if @user.referrer.present? %>
+              <span style="color: #6b5b4a; font-size: 0.9rem; margin-left: 0.5rem;">
+                <%= @user.referrer.name %> (ID: <%= @user.referrer.id %>)
+              </span>
+            <% else %>
+              <span style="color: #6b5b4a; font-size: 0.9rem; margin-left: 0.5rem;">
+                No referrer set
+              </span>
+            <% end %>
+          </div>
+          
+          <%= form_with url: admin_set_referrer_path(@user), method: :post, local: true, style: "display: flex; gap: 0.5rem; align-items: center;" do |form| %>
+            <%= form.number_field :referrer_id, 
+                placeholder: "Enter referrer user ID", 
+                value: @user.referrer_id,
+                style: "padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; width: 200px;" %>
+            <%= form.submit "Set Referrer", style: "padding: 0.5rem 1rem; background: #6366f1; color: white; border: none; border-radius: 4px; font-size: 0.9rem; cursor: pointer; transition: background 0.2s;" %>
+          <% end %>
+          
+          <% if @user.referrer.present? %>
+            <%= form_with url: admin_clear_referrer_path(@user), method: :post, local: true, style: "display: inline-block; margin-left: 0.5rem;" do |form| %>
+              <%= form.submit "Clear Referrer", style: "padding: 0.5rem 1rem; background: #dc2626; color: white; border: none; border-radius: 4px; font-size: 0.9rem; cursor: pointer; transition: background 0.2s;" %>
+            <% end %>
+          <% end %>
+          
+          <div style="margin-top: 0.5rem; font-size: 0.8rem; color: #6b5b4a;">
+            <strong>Note:</strong> Enter the user ID of the person who referred this user. Leave empty to clear the referrer.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- User Details -->
+    <div class="user-details">
+      <div class="detail-item">
+        <div class="detail-label">Email</div>
+        <div class="detail-value"><%= @user.email || "Not provided" %></div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">Slack ID</div>
+        <div class="detail-value"><%= @user.slack_id %></div>
+      </div>
+      <% if @user.referrer.present? %>
+        <div class="detail-item">
+          <div class="detail-label">Referred by</div>
+          <div class="detail-value">
+            <%= link_to @user.referrer.name, admin_user_details_path(@user.referrer), class: "user-link" %>
+            (ID: <%= @user.referrer.id %>)
+          </div>
+        </div>
+      <% end %>
+      <div class="detail-item">
+        <div class="detail-label">Joined</div>
+        <div class="detail-value"><%= @user.created_at.strftime("%B %d, %Y") %></div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">Identity Verification</div>
+        <div class="detail-value">
+          <% if @user.idv_rec.present? %>
+            <span style="color: #059669; font-weight: 600;">✓ Verified</span>
+            <button onclick="clearVerification(<%= @user.id %>);" 
+                    style="background: #dc2626; color: white; border: none; border-radius: 4px; padding: 4px 8px; font-size: 0.8rem; cursor: pointer; margin-left: 8px;">
+              Clear Verification
+            </button>
+          <% else %>
+            <span style="color: #dc2626; font-weight: 600;">✗ Not Verified</span>
+          <% end %>
+        </div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">Hackatime Trust Status</div>
+        <div class="detail-value">
+          <% case @hackatime_trust_status[:status] %>
+          <% when 'trusted' %>
+            <span style="color: #059669; font-weight: 600;">✓ Trusted (Value: <%= @hackatime_trust_status[:value] %>)</span>
+          <% when 'neutral' %>
+            <span style="color: #2563eb; font-weight: 600;">○ Neutral (Value: <%= @hackatime_trust_status[:value] %>)</span>
+          <% when 'banned' %>
+            <span style="color: #dc2626; font-weight: 600;">✗ Banned (Value: <%= @hackatime_trust_status[:value] %>)</span>
+          <% else %>
+            <span style="color: #6b7280; font-weight: 600;">? Unknown</span>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="profile-stats">
+      <div class="stat-card">
+        <div class="stat-label">Total Coins</div>
+        <div class="stat-value"><%= @total_coins %><img src="<%= asset_path('coin.png') %>" alt="coin" class="coin-icon coin-icon-medium" /></div>
+        <!-- Add/Remove Coins Form -->
+        <div style="margin-top: 1rem;">
+          <%= form_with url: admin_add_coins_path(@user), method: :post, local: true, style: "display: flex; gap: 0.5rem; align-items: center;" do |form| %>
+            <%= form.number_field :coins, placeholder: "+/- Amount", required: true, style: "padding: 0.25rem 0.5rem; border: 1px solid #ccc; border-radius: 4px; width: 100px; font-size: 0.8rem;" %>
+            <%= form.submit "Update Coins", style: "padding: 0.25rem 0.75rem; background: #059669; color: white; border: none; border-radius: 4px; font-size: 0.8rem; cursor: pointer; transition: background 0.2s;" %>
+          <% end %>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Projects</div>
+        <div class="stat-value"><%= @project_count %></div>
+      </div>
+      <div class="progress-card">
+        <div class="progress-header">
+          <span class="progress-title">This Week</span>
+          <span class="progress-percent"><%= @current_week_progress %>%</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" style="width: <%= [@current_week_progress, 100].min %>%;"></div>
+        </div>
+        <div class="progress-text">
+          <%= @current_week_progress >= 100 ? "Siege Complete!" : "#{@current_week_readable} / 10h" %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Address Section -->
+  <% if @user.address %>
+    <div class="meeple-section">
+      <div class="meeple-header">Address Details</div>
+      <div style="background: rgba(255, 255, 255, 0.8); border: 1px solid rgba(64, 43, 32, 0.1); border-radius: 12px; padding: 1rem;">
+        
+        <!-- Address Display -->
+        <div id="address-display">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+            <div>
+              <div style="font-size: 0.8rem; color: #6b5b4a; margin-bottom: 0.25rem;"><strong>Name:</strong></div>
+              <div style="font-size: 0.9rem; color: #402b20;" id="name-display"><%= @user.address.first_name %> <%= @user.address.last_name %></div>
+            </div>
+            <div>
+              <div style="font-size: 0.8rem; color: #6b5b4a; margin-bottom: 0.25rem;"><strong>Birthday:</strong></div>
+              <div style="font-size: 0.9rem; color: #402b20;" id="birthday-display"><%= @user.address.birthday.strftime("%B %d, %Y") if @user.address.birthday %></div>
+            </div>
+          </div>
+          <% if @user.address.shipping_name.present? %>
+            <div style="margin-bottom: 1rem;">
+              <div style="font-size: 0.8rem; color: #6b5b4a; margin-bottom: 0.25rem;"><strong>Preferred Shipping Name:</strong></div>
+              <div style="font-size: 0.9rem; color: #402b20;" id="shipping-name-display"><%= @user.address.shipping_name %></div>
+            </div>
+          <% end %>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+            <div>
+              <div style="font-size: 0.8rem; color: #6b5b4a; margin-bottom: 0.25rem;"><strong>Address Line 1:</strong></div>
+              <div style="font-size: 0.9rem; color: #402b20;" id="line-one-display"><%= @user.address.line_one %></div>
+            </div>
+            <% if @user.address.line_two.present? %>
+              <div>
+                <div style="font-size: 0.8rem; color: #6b5b4a; margin-bottom: 0.25rem;"><strong>Address Line 2:</strong></div>
+                <div style="font-size: 0.9rem; color: #402b20;" id="line-two-display"><%= @user.address.line_two %></div>
+              </div>
+            <% end %>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+            <div>
+              <div style="font-size: 0.8rem; color: #6b5b4a; margin-bottom: 0.25rem;"><strong>City:</strong></div>
+              <div style="font-size: 0.9rem; color: #402b20;" id="city-display"><%= @user.address.city %></div>
+            </div>
+            <div>
+              <div style="font-size: 0.8rem; color: #6b5b4a; margin-bottom: 0.25rem;"><strong>State/Province:</strong></div>
+              <div style="font-size: 0.9rem; color: #402b20;" id="state-display"><%= @user.address.state %></div>
+            </div>
+            <div>
+              <div style="font-size: 0.8rem; color: #6b5b4a; margin-bottom: 0.25rem;"><strong>Postcode:</strong></div>
+              <div style="font-size: 0.9rem; color: #402b20;" id="postcode-display"><%= @user.address.postcode %></div>
+            </div>
+          </div>
+          <div>
+            <div style="font-size: 0.8rem; color: #6b5b4a; margin-bottom: 0.25rem;"><strong>Country:</strong></div>
+            <div style="font-size: 0.9rem; color: #402b20;" id="country-display"><%= @user.address.human_country %></div>
+          </div>
+          <button onclick="showAddressEditForm()" style="margin-top: 1rem; padding: 0.5rem 1rem; background: #059669; color: white; border: none; border-radius: 4px; font-size: 0.9rem; cursor: pointer;">Edit Address</button>
+        </div>
+
+        <!-- Address Edit Form (hidden by default) -->
+        <div id="address-edit-form" style="display: none;">
+          <%= form_with model: @user.address, url: admin_update_address_path(@user), method: :patch, local: true do |form| %>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+              <div>
+                <label style="font-size: 0.8rem; color: #6b5b4a; margin-bottom: 0.25rem; display: block;"><strong>First Name:</strong></label>
+                <%= form.text_field :first_name, style: "width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem;" %>
+              </div>
+              <div>
+                <label style="font-size: 0.8rem; color: #6b5b4a; margin-bottom: 0.25rem; display: block;"><strong>Last Name:</strong></label>
+                <%= form.text_field :last_name, style: "width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem;" %>
+              </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+              <div>
+                <label style="font-size: 0.8rem; color: #6b5b4a; margin-bottom: 0.25rem; display: block;"><strong>Birthday:</strong></label>
+                <%= form.date_field :birthday, style: "width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem;" %>
+              </div>
+              <div>
+                <label style="font-size: 0.8rem; color: #6b5b4a; margin-bottom: 0.25rem; display: block;"><strong>Preferred Shipping Name:</strong></label>
+                <%= form.text_field :shipping_name, style: "width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem;" %>
+              </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+              <div>
+                <label style="font-size: 0.8rem; color: #6b5b4a; margin-bottom: 0.25rem; display: block;"><strong>Address Line 1:</strong></label>
+                <%= form.text_field :line_one, style: "width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem;" %>
+              </div>
+              <div>
+                <label style="font-size: 0.8rem; color: #6b5b4a; margin-bottom: 0.25rem; display: block;"><strong>Address Line 2:</strong></label>
+                <%= form.text_field :line_two, style: "width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem;" %>
+              </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+              <div>
+                <label style="font-size: 0.8rem; color: #6b5b4a; margin-bottom: 0.25rem; display: block;"><strong>City:</strong></label>
+                <%= form.text_field :city, style: "width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem;" %>
+              </div>
+              <div>
+                <label style="font-size: 0.8rem; color: #6b5b4a; margin-bottom: 0.25rem; display: block;"><strong>State/Province:</strong></label>
+                <%= form.text_field :state, style: "width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem;" %>
+              </div>
+              <div>
+                <label style="font-size: 0.8rem; color: #6b5b4a; margin-bottom: 0.25rem; display: block;"><strong>Postcode:</strong></label>
+                <%= form.text_field :postcode, style: "width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem;" %>
+              </div>
+            </div>
+            <div style="margin-bottom: 1rem;">
+              <label style="font-size: 0.8rem; color: #6b5b4a; margin-bottom: 0.25rem; display: block;"><strong>Country:</strong></label>
+              <%= form.country_select :country, { selected: @user.address.country }, { style: "width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem;" } %>
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+              <%= form.submit "Save Address", style: "padding: 0.5rem 1rem; background: #059669; color: white; border: none; border-radius: 4px; font-size: 0.9rem; cursor: pointer;" %>
+              <button type="button" onclick="hideAddressEditForm()" style="padding: 0.5rem 1rem; background: #6b5b4a; color: white; border: none; border-radius: 4px; font-size: 0.9rem; cursor: pointer;">Cancel</button>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  <% end %>
+
+  <!-- Meeple Section -->
+  <% if @user.meeple %>
+    <div class="meeple-section">
+      <div class="meeple-header">Meeple Details</div>
+      <div class="meeple-details">
+        <img src="<%= asset_path("meeple/meeple-#{@user.meeple.color}.png") %>" alt="<%= @user.meeple.color %> meeple" class="meeple-image" />
+        <div class="meeple-info">
+          <div class="meeple-color"><%= @user.meeple.color %> Meeple</div>
+          <div class="meeple-meta">Created <%= @user.meeple.created_at.strftime("%B %d, %Y") %></div>
+          
+          <!-- Admin Meeple Color Picker -->
+          <div style="margin-top: 1rem;">
+            <div style="font-size: 0.9rem; color: #6b5b4a; margin-bottom: 0.5rem;">
+              <strong>Change Active Color:</strong>
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem;">
+              <% @user.meeple.unlocked_colors.each do |color| %>
+                <div class="admin-color-option <%= color %> <%= 'active' if @user.meeple.color == color %>" 
+                     data-color="<%= color %>" 
+                     onclick="adminUpdateMeepleColor('<%= color %>', <%= @user.id %>)"
+                     style="width: 30px; height: 30px; border: 2px solid <%= @user.meeple.color == color ? '#402b20' : 'transparent' %>; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: border-color 0.2s ease; background-color: <%= case color when 'blue' then '#3b82f6' when 'red' then '#ef4444' when 'pink' then '#ec4899' when 'green' then '#10b981' when 'orange' then '#f97316' when 'purple' then '#8b5cf6' when 'cyan' then '#06b6d4' when 'yellow' then '#eab308' end %>;">
+                  <img src="<%= image_path("meeple/meeple-#{color}.png") %>" alt="<%= color.capitalize %>" style="width: 18px; height: 18px; filter: brightness(0) invert(1);" />
+                </div>
+              <% end %>
+            </div>
+          </div>
+          
+          <!-- Admin Color Management -->
+          <div style="margin-top: 1rem;">
+            <div style="font-size: 0.9rem; color: #6b5b4a; margin-bottom: 0.5rem;">
+              <strong>Unlocked Colors:</strong> <%= @user.meeple.unlocked_colors.join(', ') %>
+            </div>
+            
+            <!-- Unlock Color Form -->
+            <% locked_colors = %w[blue red pink green orange purple cyan yellow] - @user.meeple.unlocked_colors %>
+            <% if locked_colors.any? %>
+              <%= form_with url: admin_unlock_color_path(@user), method: :post, local: true, style: "display: flex; gap: 0.5rem; align-items: center; margin-top: 0.5rem;" do |form| %>
+                <%= form.select :color, options_for_select(locked_colors.map { |c| [c.capitalize, c] }), { prompt: "Select color to unlock" }, { style: "padding: 0.25rem 0.5rem; border: 1px solid #ccc; border-radius: 4px; font-size: 0.8rem;" } %>
+                <%= form.submit "Unlock Color", style: "padding: 0.25rem 0.75rem; background: #10b981; color: white; border: none; border-radius: 4px; font-size: 0.8rem; cursor: pointer; transition: background 0.2s;" %>
+              <% end %>
+            <% else %>
+              <div style="font-size: 0.8rem; color: #10b981; margin-top: 0.5rem;">
+                All colors unlocked! 🎉
+              </div>
+            <% end %>
+            
+            <!-- Relock Color Form -->
+            <% relockable_colors = @user.meeple.unlocked_colors - [@user.meeple.color] %>
+            <% if relockable_colors.any? %>
+              <%= form_with url: admin_relock_color_path(@user), method: :post, local: true, style: "display: flex; gap: 0.5rem; align-items: center; margin-top: 0.5rem;" do |form| %>
+                <%= form.select :color, options_for_select(relockable_colors.map { |c| [c.capitalize, c] }), { prompt: "Select color to relock" }, { style: "padding: 0.25rem 0.5rem; border: 1px solid #ccc; border-radius: 4px; font-size: 0.8rem;" } %>
+                <%= form.submit "Relock Color", style: "padding: 0.25rem 0.75rem; background: #ef4444; color: white; border: none; border-radius: 4px; font-size: 0.8rem; cursor: pointer; transition: background 0.2s;" %>
+              <% end %>
+              <div style="font-size: 0.75rem; color: #6b5b4a; margin-top: 0.25rem;">
+                Note: Cannot relock current meeple color (<strong><%= @user.meeple.color.capitalize %></strong>)
+              </div>
+            <% else %>
+              <div style="font-size: 0.8rem; color: #6b5b4a; margin-top: 0.5rem;">
+                No colors available to relock (only current color unlocked or no extra colors)
+              </div>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+  <% end %>
+
+  <!-- Projects Section -->
+  <div class="projects-section">
+    <h2 class="section-title">User Projects (<%= @projects.count %>)</h2>
+    
+    <% if @projects.any? %>
+      <div class="projects-grid">
+        <% @projects.each do |project| %>
+          <div class="project-card" onclick="window.location.href='<%= project_path(project) %>'">
+            <div class="project-header">
+              <h3 class="project-title"><%= project.name %></h3>
+              <span class="project-week"><%= project.week_badge_text %></span>
+            </div>
+            
+            <span class="project-status status-<%= project.status %>">
+              <%= project.status.capitalize %>
+            </span>
+            
+            <div class="project-description">
+              <%= truncate(project.description, length: 150) %>
+            </div>
+            
+            <div class="project-links">
+              <% if project.repo_url.present? %>
+                <%= link_to "Repository", project.repo_url, target: "_blank", class: "project-link", onclick: "event.stopPropagation()" %>
+              <% else %>
+                <span class="project-link disabled">No Repository</span>
+              <% end %>
+              
+              <% if project.demo_url.present? %>
+                <%= link_to "Demo", project.demo_url, target: "_blank", class: "project-link", onclick: "event.stopPropagation()" %>
+              <% else %>
+                <span class="project-link disabled">No Demo</span>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    <% else %>
+      <div style="text-align: center; padding: 3rem; color: #6b5b4a;">
+        <h3>No projects yet</h3>
+        <p>This user hasn't created any projects.</p>
+      </div>
+    <% end %>
+  </div>
+
+  <!-- Ballots Section -->
+  <div class="meeple-section">
+    <div class="meeple-header">Voting Ballots</div>
+    <% if @ballots.any? %>
+      <div style="display: grid; gap: 1rem;">
+        <% @ballots.each do |ballot| %>
+          <div style="background: rgba(255, 255, 255, 0.8); border: 1px solid rgba(64, 43, 32, 0.1); border-radius: 12px; padding: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+              <div>
+                <h4 style="margin: 0; color: #402b20; font-size: 1.1rem;">Week <%= ballot.week %></h4>
+                <p style="margin: 0.25rem 0 0 0; color: #6b5b4a; font-size: 0.9rem;">
+                  Created: <%= ballot.created_at.strftime("%B %d, %Y at %I:%M %p") %>
+                </p>
+              </div>
+              <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <span style="padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.8rem; font-weight: 500; <%= ballot.voted? ? 'background: #d1fae5; color: #065f46;' : 'background: #fee2e2; color: #991b1b;' %>">
+                  <%= ballot.voted? ? 'Voted' : 'Pending' %>
+                </span>
+                <% if ballot.voted? %>
+                  <span style="padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.8rem; font-weight: 500; background: #dbeafe; color: #1e40af;">
+                    <%= ballot.updated_at.strftime("%B %d, %Y") %>
+                  </span>
+                <% end %>
+              </div>
+            </div>
+            
+            <% if ballot.reasoning.present? %>
+              <div style="margin-bottom: 1rem; padding: 1rem; background: #f8fafc; border-radius: 8px; border-left: 4px solid #059669;">
+                <div style="font-size: 0.8rem; color: #6b5b4a; margin-bottom: 0.5rem; font-weight: 600;">Voting Reasoning:</div>
+                <div style="color: #402b20; font-size: 0.9rem; line-height: 1.5;"><%= ballot.reasoning %></div>
+              </div>
+            <% end %>
+            
+            <% if ballot.votes.any? %>
+              <div style="margin-top: 1rem;">
+                <div style="font-size: 0.8rem; color: #6b5b4a; margin-bottom: 0.5rem; font-weight: 600;">Voted Projects (<%= ballot.votes.count %>):</div>
+                <div style="display: grid; gap: 0.75rem;">
+                  <% ballot.votes.includes(project: :user).each do |vote| %>
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: #f8fafc; border-radius: 6px; border: 1px solid #e2e8f0;">
+                      <div style="flex: 1;">
+                        <div style="font-weight: 600; color: #402b20; font-size: 0.9rem;"><%= vote.project.name %></div>
+                        <div style="color: #6b5b4a; font-size: 0.8rem;">by <%= vote.project.user.name %></div>
+                      </div>
+                      <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span style="padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 500; background: #fef3c7; color: #92400e;">
+                          <%= vote.star_count %> <%= vote.star_count == 1 ? 'star' : 'stars' %>
+                        </span>
+                        <span style="padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 500; <%= vote.voted? ? 'background: #d1fae5; color: #065f46;' : 'background: #fee2e2; color: #991b1b;' %>">
+                          <%= vote.voted? ? 'Voted' : 'Pending' %>
+                        </span>
+                      </div>
+                    </div>
+                  <% end %>
+                </div>
+              </div>
+            <% end %>
+            
+            <div style="margin-top: 1rem; display: flex; gap: 0.5rem;">
+              <%= link_to "View Details", admin_ballot_details_path(ballot), class: "project-link", style: "text-decoration: none; padding: 0.5rem 1rem; background: #059669; color: white; border-radius: 4px; font-size: 0.8rem; transition: background 0.2s;" %>
+              <%= link_to "Edit Ballot", edit_admin_ballot_path(ballot), class: "project-link", style: "text-decoration: none; padding: 0.5rem 1rem; background: #6b5b4a; color: white; border-radius: 4px; font-size: 0.8rem; transition: background 0.2s;" %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    <% else %>
+      <div style="text-align: center; padding: 3rem; color: #6b5b4a;">
+        <h3>No ballots yet</h3>
+        <p>This user hasn't participated in any voting yet.</p>
+      </div>
+    <% end %>
+  </div>
+
+  <!-- Shop Purchases Section -->
+  <div class="meeple-section">
+    <div class="meeple-header">Shop Purchases (<%= @shop_purchases.count %>)</div>
+    
+    <!-- Main Device Indicator -->
+    <div style="background: rgba(255, 255, 255, 0.7); border: 2px solid rgba(64, 43, 32, 0.2); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h3 style="margin: 0 0 0.5rem 0; color: #402b20; font-size: 1.1rem; font-weight: 600;">Main Device</h3>
+          <% if @user.main_device.present? %>
+            <p style="margin: 0; color: #059669; font-size: 1rem; font-weight: 500;">
+              <%= @user.main_device_name %>
+            </p>
+          <% else %>
+            <p style="margin: 0; color: #6b5b4a; font-size: 1rem; font-style: italic;">
+              No main device selected
+            </p>
+          <% end %>
+        </div>
+        <% if @user.main_device.present? %>
+          <div>
+            <%= link_to "Clear Main Device", admin_clear_main_device_path(@user), 
+                method: :post,
+                data: { 
+                  confirm: "Are you sure you want to clear this user's main device selection?",
+                  turbo_method: :post
+                },
+                style: "display: inline-block; padding: 0.5rem 1rem; background: #dc2626; color: white; text-decoration: none; border-radius: 6px; font-size: 0.9rem; font-weight: 500; transition: background 0.2s;" %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+    
+    <% if @shop_purchases.any? %>
+      <div style="display: grid; gap: 1.5rem;">
+        <!-- Unfulfilled Purchases -->
+        <% if @unfulfilled_purchases.any? %>
+          <div>
+            <h3 style="color: #dc2626; font-size: 1.1rem; margin-bottom: 1rem; font-weight: 600;">Unfulfilled Purchases (<%= @unfulfilled_purchases.count %>)</h3>
+            <div style="display: grid; gap: 1rem;">
+              <% @unfulfilled_purchases.each do |purchase| %>
+                <div style="background: rgba(254, 226, 226, 0.3); border: 1px solid rgba(220, 38, 38, 0.2); border-radius: 12px; padding: 1.5rem;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <div>
+                      <h4 style="margin: 0; color: #402b20; font-size: 1.1rem;"><%= purchase.item_name %></h4>
+                      <p style="margin: 0.25rem 0 0 0; color: #6b5b4a; font-size: 0.9rem;">
+                        Purchased: <%= purchase.purchased_at.strftime("%B %d, %Y at %I:%M %p") %>
+                      </p>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                      <span style="padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.8rem; font-weight: 500; background: #fef3c7; color: #92400e;">
+                        Unfulfilled
+                      </span>
+                      <span style="padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.8rem; font-weight: 500; background: #dbeafe; color: #1e40af;">
+                        <%= purchase.coins_spent %> 🪙
+                      </span>
+                    </div>
+                  </div>
+                  <div style="text-align: center;">
+                    <%= link_to "View Details", admin_shop_purchase_details_path(purchase), style: "display: inline-block; padding: 0.5rem 1rem; background: #402b20; color: white; text-decoration: none; border-radius: 6px; font-size: 0.9rem; font-weight: 500; transition: background 0.2s;" %>
+                  </div>
+                </div>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+
+        <!-- Fulfilled Purchases -->
+        <% if @fulfilled_purchases.any? %>
+          <div>
+            <h3 style="color: #059669; font-size: 1.1rem; margin-bottom: 1rem; font-weight: 600;">Fulfilled Purchases (<%= @fulfilled_purchases.count %>)</h3>
+            <div style="display: grid; gap: 1rem;">
+              <% @fulfilled_purchases.each do |purchase| %>
+                <div style="background: rgba(209, 250, 229, 0.3); border: 1px solid rgba(5, 150, 105, 0.2); border-radius: 12px; padding: 1.5rem;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <div>
+                      <h4 style="margin: 0; color: #402b20; font-size: 1.1rem;"><%= purchase.item_name %></h4>
+                      <p style="margin: 0.25rem 0 0 0; color: #6b5b4a; font-size: 0.9rem;">
+                        Purchased: <%= purchase.purchased_at.strftime("%B %d, %Y at %I:%M %p") %>
+                      </p>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                      <span style="padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.8rem; font-weight: 500; background: #d1fae5; color: #065f46;">
+                        Fulfilled
+                      </span>
+                      <span style="padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.8rem; font-weight: 500; background: #dbeafe; color: #1e40af;">
+                        <%= purchase.coins_spent %> 🪙
+                      </span>
+                    </div>
+                  </div>
+                  <div style="text-align: center;">
+                    <%= link_to "View Details", admin_shop_purchase_details_path(purchase), style: "display: inline-block; padding: 0.5rem 1rem; background: #402b20; color: white; text-decoration: none; border-radius: 6px; font-size: 0.9rem; font-weight: 500; transition: background 0.2s;" %>
+                  </div>
+                </div>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    <% else %>
+      <div style="text-align: center; padding: 3rem; color: #6b5b4a;">
+        <h3>No shop purchases yet</h3>
+        <p>This user hasn't made any purchases from the shop yet.</p>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<!-- Audit Logs Section (Super Admin Only) -->
+<% if current_user&.super_admin? %>
+  <div class="meeple-section">
+    <div class="meeple-header">Audit Logs (<%= @user.audit_logs.count %>)</div>
+    
+    <% if @user.audit_logs.any? %>
+      <div style="max-height: 600px; overflow-y: auto; border: 1px solid rgba(64, 43, 32, 0.1); border-radius: 8px;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+          <thead style="background: rgba(64, 43, 32, 0.05); position: sticky; top: 0;">
+            <tr>
+              <th style="text-align: left; padding: 0.75rem; border-bottom: 1px solid rgba(64, 43, 32, 0.1); font-weight: 600; color: #402b20;">Timestamp</th>
+              <th style="text-align: left; padding: 0.75rem; border-bottom: 1px solid rgba(64, 43, 32, 0.1); font-weight: 600; color: #402b20;">Action</th>
+              <th style="text-align: left; padding: 0.75rem; border-bottom: 1px solid rgba(64, 43, 32, 0.1); font-weight: 600; color: #402b20;">Actor</th>
+              <th style="text-align: left; padding: 0.75rem; border-bottom: 1px solid rgba(64, 43, 32, 0.1); font-weight: 600; color: #402b20;">Details</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @user.audit_logs.reverse.each do |log| %>
+              <tr style="border-bottom: 1px solid rgba(64, 43, 32, 0.05);">
+                <td style="padding: 0.75rem; vertical-align: top;">
+                  <span style="font-family: monospace; font-size: 0.8rem; color: #6b5b4a;">
+                    <%= Time.parse(log['timestamp']).strftime("%m/%d/%y %H:%M:%S") rescue log['timestamp'] %>
+                  </span>
+                </td>
+                <td style="padding: 0.75rem; vertical-align: top;">
+                  <span style="font-weight: 500; color: #402b20;"><%= log['action'] %></span>
+                </td>
+                <td style="padding: 0.75rem; vertical-align: top;">
+                  <% if log['actor_name'] %>
+                    <span style="color: #6b5b4a;">
+                      <%= log['actor_name'] %>
+                      <% if log['actor_id'] %>
+                        <span style="font-size: 0.8rem; color: #888;">(ID: <%= log['actor_id'] %>)</span>
+                      <% end %>
+                    </span>
+                  <% else %>
+                    <span style="color: #888; font-style: italic;">System</span>
+                  <% end %>
+                </td>
+                <td style="padding: 0.75rem; vertical-align: top;">
+                  <% if log['details'] && log['details'].any? %>
+                    <div style="font-size: 0.8rem; color: #6b5b4a;">
+                      <% log['details'].each do |key, value| %>
+                        <div style="margin-bottom: 0.25rem;">
+                          <strong><%= key.humanize %>:</strong> <%= value %>
+                        </div>
+                      <% end %>
+                    </div>
+                  <% else %>
+                    <span style="color: #888; font-style: italic;">-</span>
+                  <% end %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <div style="text-align: center; padding: 3rem; color: #6b5b4a;">
+        <h3>No audit logs yet</h3>
+        <p>No actions have been logged for this user yet.</p>
+      </div>
+    <% end %>
+  </div>
+<% end %>
+
+<script>
+function adminUpdateMeepleColor(color, userId) {
+  const meepleImage = document.querySelector('.meeple-image');
+  const colorText = document.querySelector('.meeple-color');
+  const colorOptions = document.querySelectorAll('.admin-color-option');
+  
+  // Fetch asset paths from server
+  fetch('/meeple/asset_paths', {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.asset_paths && data.asset_paths[color]) {
+      // Update UI immediately with proper asset path
+      meepleImage.src = data.asset_paths[color];
+    } else {
+      // Fallback to string replacement if color not found
+      meepleImage.src = meepleImage.src.replace(/meeple-\w+\.png/, `meeple-${color}.png`);
+    }
+  })
+  .catch(error => {
+    console.error('Error fetching asset paths:', error);
+    // Fallback to string replacement if fetch fails
+    meepleImage.src = meepleImage.src.replace(/meeple-\w+\.png/, `meeple-${color}.png`);
+  });
+  meepleImage.alt = `${color} meeple`;
+  colorText.textContent = `${color} Meeple`;
+  
+  colorOptions.forEach(option => {
+    if (option.dataset.color === color) {
+      option.style.borderColor = '#402b20';
+      option.classList.add('active');
+    } else {
+      option.style.borderColor = 'transparent';
+      option.classList.remove('active');
+    }
+  });
+  
+  // Send request to server
+  fetch(`/admin/users/${userId}/update_meeple_color`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+    },
+    body: JSON.stringify({ color: color })
+  }).then(response => {
+    if (!response.ok) {
+      console.error('Failed to update meeple color');
+      location.reload();
+    }
+  }).catch(error => {
+    console.error('Error updating meeple color:', error);
+    location.reload();
+  });
+}
+
+function showAddressEditForm() {
+  document.getElementById('address-display').style.display = 'none';
+  document.getElementById('address-edit-form').style.display = 'block';
+}
+
+function hideAddressEditForm() {
+  document.getElementById('address-display').style.display = 'block';
+  document.getElementById('address-edit-form').style.display = 'none';
+}
+
+function updateUserStatus(userId, newStatus) {
+  const statusMessages = {
+    'working': 'Are you sure you want to mark this user as working? They will be able to create and submit projects.',
+    'out': 'Are you sure you want to mark this user as out? They will see "your siege has failed" but can still participate.',
+    'banned': 'Are you sure you want to ban this user? They will not be able to create projects, submit projects, vote, or use the market.',
+    'new': 'Are you sure you want to mark this user as new? This means they haven\'t completed the welcome flow.'
+  };
+  
+  const actionMap = {
+    'working': 'set_active',
+    'out': 'set_out',
+    'banned': 'set_banned'
+  };
+  
+  const message = statusMessages[newStatus] || `Are you sure you want to change this user's status to ${newStatus}?`;
+  const action = actionMap[newStatus] || 'set_active';
+    
+  if (confirm(message)) {
+    fetch(`/admin/users/${userId}/${action}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        location.reload();
+      } else {
+        alert('Error updating user status: ' + (data.error || 'Unknown error'));
+        // Revert the toggle
+        event.target.checked = !isOut;
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('Error updating user status. Please try again.');
+      // Revert the toggle
+      event.target.checked = !isOut;
+    });
+  } else {
+    // Revert the toggle if user cancels
+    event.target.checked = !isOut;
+  }
+}
+
+function clearVerification(userId) {
+  if (confirm('Are you sure you want to clear this user\'s identity verification? They will need to verify again to submit projects.')) {
+    fetch(`/admin/users/${userId}/clear_verification`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        location.reload();
+      } else {
+        alert('Failed to clear verification: ' + (data.error || 'Unknown error'));
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('Failed to clear verification. Please try again.');
+    });
+  }
+}
+
+function toggleFraudTeam(userId, isOnTeam) {
+  const message = isOnTeam ? 
+    'Are you sure you want to add this user to the fraud team? They will be able to access the Greg fraud dashboard.' :
+    'Are you sure you want to remove this user from the fraud team? They will lose access to the Greg fraud dashboard.';
+    
+  if (confirm(message)) {
+    fetch(`/admin/users/${userId}/toggle_fraud_team`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+      },
+      body: JSON.stringify({ on_fraud_team: isOnTeam })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        location.reload();
+      } else {
+        alert('Error updating fraud team status: ' + (data.error || 'Unknown error'));
+        // Revert the toggle
+        event.target.checked = !isOnTeam;
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('Error updating fraud team status. Please try again.');
+      // Revert the toggle
+      event.target.checked = !isOnTeam;
+    });
+  } else {
+    // Revert the toggle if user cancels
+    event.target.checked = !isOnTeam;
+  }
+}
+
+function showDeleteVerification(userId, userName) {
+  const modal = document.getElementById('deleteVerificationModal');
+  const nameInput = document.getElementById('deleteUserNameInput');
+  const confirmButton = document.getElementById('deleteConfirmButton');
+  const cancelButton = document.getElementById('deleteCancelButton');
+  
+  // Reset the form
+  nameInput.value = '';
+  confirmButton.disabled = true;
+  confirmButton.style.opacity = '0.5';
+  
+  // Update the modal content
+  document.getElementById('deleteUserName').textContent = userName;
+  
+  // Show the modal
+  modal.style.display = 'block';
+  
+  // Focus on the input
+  nameInput.focus();
+  
+  // Enable/disable confirm button based on input
+  nameInput.addEventListener('input', function() {
+    const isValid = this.value.trim() === userName;
+    confirmButton.disabled = !isValid;
+    confirmButton.style.opacity = isValid ? '1' : '0.5';
+  });
+  
+  // Handle confirm button click
+  confirmButton.onclick = function() {
+    if (nameInput.value.trim() === userName) {
+      // Create and submit the delete form
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = `/admin/users/${userId}/delete`;
+      
+      // Add CSRF token
+      const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+      const csrfInput = document.createElement('input');
+      csrfInput.type = 'hidden';
+      csrfInput.name = 'authenticity_token';
+      csrfInput.value = csrfToken;
+      form.appendChild(csrfInput);
+      
+      // Add method override for DELETE
+      const methodInput = document.createElement('input');
+      methodInput.type = 'hidden';
+      methodInput.name = '_method';
+      methodInput.value = 'delete';
+      form.appendChild(methodInput);
+      
+      document.body.appendChild(form);
+      form.submit();
+    }
+  };
+  
+  // Handle cancel button click
+  cancelButton.onclick = function() {
+    modal.style.display = 'none';
+  };
+  
+  // Close modal when clicking outside
+  modal.onclick = function(event) {
+    if (event.target === modal) {
+      modal.style.display = 'none';
+    }
+  };
+  
+  // Close modal with Escape key
+  document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape' && modal.style.display === 'block') {
+      modal.style.display = 'none';
+    }
+  });
+}
+</script>
+
+<!-- Delete User Verification Modal -->
+<div id="deleteVerificationModal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);">
+  <div style="background-color: #fefefe; margin: 15% auto; padding: 2rem; border: 1px solid #888; border-radius: 8px; width: 90%; max-width: 500px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+    <h2 style="color: #dc2626; margin-top: 0; margin-bottom: 1rem;">Delete User</h2>
+    <p style="margin-bottom: 1rem; color: #374151;">This action cannot be undone. This will permanently delete the user and all associated data.</p>
+    <p style="margin-bottom: 1.5rem; color: #374151;">To confirm, please type the user's name: <strong id="deleteUserName"></strong></p>
+    
+    <div style="margin-bottom: 1.5rem;">
+      <input type="text" id="deleteUserNameInput" placeholder="Type the user's name here..." 
+             style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 4px; font-size: 1rem; box-sizing: border-box;">
+    </div>
+    
+    <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+      <button id="deleteCancelButton" 
+              style="padding: 0.75rem 1.5rem; border: 1px solid #d1d5db; background: white; color: #374151; border-radius: 4px; cursor: pointer; font-size: 1rem;">
+        Cancel
+      </button>
+      <button id="deleteConfirmButton" 
+              style="padding: 0.75rem 1.5rem; border: none; background: #dc2626; color: white; border-radius: 4px; cursor: pointer; font-size: 1rem; opacity: 0.5;" 
+              disabled>
+        Delete User
+      </button>
+    </div>
+  </div>
+</div>

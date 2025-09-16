@@ -1,0 +1,511 @@
+<% content_for :title, "Admin - Weekly Overview" %>
+
+<% content_for :head do %>
+  <style>
+    .admin-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    
+    .admin-header {
+      margin-bottom: 2rem;
+    }
+    
+    .admin-title {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      color: #402b20;
+    }
+    
+    .week-selector {
+      background: rgba(255, 255, 255, 0.9);
+      border: 2px solid rgba(64, 43, 32, 0.2);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    
+    .week-selector label {
+      font-weight: 600;
+      color: #402b20;
+      font-size: 1.1rem;
+      margin-right: 1rem;
+    }
+    
+    .week-selector select {
+      padding: 0.5rem 1rem;
+      border: 2px solid rgba(64, 43, 32, 0.3);
+      border-radius: 6px;
+      font-size: 1rem;
+      background: white;
+    }
+    
+    .users-grid {
+      display: grid;
+      gap: 1.5rem;
+      grid-template-columns: 1fr;
+    }
+    
+    /* Responsive grid - 2 columns max on medium+ screens */
+    @media (min-width: 768px) {
+      .users-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    
+    .user-card {
+      background: rgba(255, 255, 255, 0.95);
+      border: 2px solid rgba(64, 43, 32, 0.15);
+      border-radius: 16px;
+      padding: 1.5rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+    
+    .user-card:hover {
+      border-color: rgba(64, 43, 32, 0.3);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      transform: translateY(-2px);
+    }
+    
+    .user-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    
+    .user-name {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #402b20;
+      margin: 0;
+    }
+    
+    .user-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    
+    .stat-item {
+      text-align: center;
+    }
+    
+    .stat-label {
+      font-size: 0.9rem;
+      color: #6b5b4a;
+      margin-bottom: 0.25rem;
+    }
+    
+    .stat-value {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #402b20;
+    }
+    
+    .project-status {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    
+    .project-status.building { background-color: #dbeafe; color: #1e40af; }
+    .project-status.submitted { background-color: #d1fae5; color: #059669; }
+    .project-status.pending_voting { background-color: #fef3c7; color: #d97706; }
+    .project-status.finished { background-color: #e5e7eb; color: #374151; }
+    
+    .fraud-status {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      margin-left: 0.5rem;
+    }
+    
+    .fraud-status.unchecked { background-color: #f3f4f6; color: #6b7280; }
+    .fraud-status.sus { background-color: #fef3c7; color: #d97706; }
+    .fraud-status.fraud { background-color: #fee2e2; color: #dc2626; }
+    .fraud-status.good { background-color: #d1fae5; color: #059669; }
+    
+    .fraud-reasoning {
+      margin-top: 0.5rem;
+      padding: 0.5rem;
+      background-color: #f9fafb;
+      border-left: 3px solid #e5e7eb;
+      font-size: 0.85rem;
+      font-style: italic;
+      color: #6b7280;
+    }
+    
+    .no-project {
+      color: #6b5b4a;
+      font-style: italic;
+    }
+    
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: #6366f1;
+      text-decoration: none;
+      margin-bottom: 2rem;
+      font-weight: 500;
+    }
+    
+    .back-link:hover {
+      color: #4f46e5;
+      text-decoration: none;
+    }
+    
+    .fraud-link {
+      display: inline-block;
+      padding: 0.5rem 1rem;
+      background: #6366f1;
+      color: white;
+      text-decoration: none;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+    
+    .fraud-link:hover {
+      background: #4f46e5;
+      color: white;
+      text-decoration: none;
+      transform: translateY(-1px);
+    }
+    
+    .clear-filters {
+      background: #6b5b4a;
+      color: white;
+      text-decoration: none;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      display: inline-block;
+      transition: background 0.2s;
+    }
+    
+    .clear-filters:hover {
+      background: #5a4a3a;
+      color: white;
+      text-decoration: none;
+    }
+    
+    .hide-project-btn, .unhide-project-btn {
+      padding: 0.25rem 0.75rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      border: 1px solid #f59e0b;
+      background-color: transparent;
+      color: #f59e0b;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-right: 0.5rem;
+    }
+    .hide-project-btn:hover {
+      background-color: #f59e0b;
+      color: white;
+    }
+    .unhide-project-btn {
+      border-color: #10b981;
+      color: #10b981;
+    }
+    .unhide-project-btn:hover {
+      background-color: #10b981;
+      color: white;
+    }
+    
+    /* Pagination Styles */
+    .pagination-container {
+      margin-top: 2rem;
+      padding: 1.5rem;
+      background: rgba(255, 255, 255, 0.9);
+      border: 2px solid rgba(64, 43, 32, 0.2);
+      border-radius: 12px;
+      text-align: center;
+    }
+    
+    .pagination-info {
+      margin-bottom: 1rem;
+      font-size: 0.9rem;
+      color: #6b5b4a;
+    }
+    
+    .pagination-controls {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    
+    .pagination-link {
+      padding: 0.5rem 0.75rem;
+      background: #402b20;
+      color: white;
+      text-decoration: none;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    
+    .pagination-link:hover {
+      background: #2d1e16;
+      transform: translateY(-1px);
+    }
+    
+    .pagination-current {
+      padding: 0.5rem 0.75rem;
+      background: #059669;
+      color: white;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+    
+    .pagination-ellipsis {
+      padding: 0.5rem 0.5rem;
+      color: #6b5b4a;
+      font-weight: 500;
+    }
+  </style>
+<% end %>
+
+<div class="admin-container">
+  <%= link_to admin_path, class: "back-link" do %>
+    ← Back to Admin Dashboard
+  <% end %>
+
+  <div class="admin-header">
+    <h1 class="admin-title">Weekly Overview</h1>
+  </div>
+
+  <div class="week-selector">
+    <%= form_with url: admin_weekly_overview_path, method: :get, local: true do |form| %>
+      <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+        <%= form.label :week, "Select Week:" %>
+        <%= form.select :week, 
+            options_for_select(@available_weeks.map { |w| ["Week #{w}", w] }, @selected_week),
+            {},
+            { onchange: "this.form.submit();" } %>
+      </div>
+      
+      <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+        <%= form.label :user_status, "Filter by User Status:" %>
+        <%= form.select :user_status,
+            options_for_select([
+              ['All User Statuses', 'all'],
+              ['New', 'new'],
+              ['Working', 'working'],
+              ['Out', 'out'],
+              ['Banned', 'banned']
+            ], @user_status_filter),
+            {},
+            { onchange: "this.form.submit();" } %>
+      </div>
+      
+      <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-top: 1rem;">
+        <%= form.label :status, "Filter by Project Status:" %>
+        <%= form.select :status,
+            options_for_select([
+              ['All Statuses', 'all'],
+              ['Building', 'building'],
+              ['Submitted', 'submitted'],
+              ['Pending Voting', 'pending_voting'],
+              ['Finished', 'finished'],
+              ['No Project', 'no_project']
+            ], @status_filter),
+            {},
+            { onchange: "this.form.submit();" } %>
+      </div>
+      
+      <% if current_user&.can_access_fraud_dashboard? %>
+        <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-top: 1rem;">
+          <%= form.label :fraud_status, "Filter by Fraud Status:" %>
+          <%= form.select :fraud_status,
+              options_for_select([
+                ['All Fraud Statuses', ''],
+                ['Unchecked', 'unchecked'],
+                ['Suspicious', 'sus'],
+                ['Confirmed Fraud', 'fraud'],
+                ['Good/Verified', 'good']
+              ], @fraud_status_filter),
+              {},
+              { onchange: "this.form.submit();" } %>
+        </div>
+      <% end %>
+      
+      <div style="margin-top: 1rem;">
+        <% 
+          current_week = current_week_number
+          previous_week = current_week - 1
+          is_non_default_week = params[:week].present? && params[:week].to_i != previous_week
+          is_non_default_user_status = params[:user_status].present? && params[:user_status] != 'all'
+          is_non_default_status = params[:status].present? && params[:status] != 'pending_voting'
+          is_non_default_fraud = current_user&.can_access_fraud_dashboard? && params[:fraud_status].present? && params[:fraud_status] != 'good'
+        %>
+        <% if is_non_default_week || is_non_default_user_status || is_non_default_status || is_non_default_fraud %>
+          <%= link_to "Reset to Defaults", admin_weekly_overview_path, class: "clear-filters" %>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+
+  <!-- Users Count -->
+  <div style="margin-bottom: 1rem; font-size: 0.9rem; color: #6b5b4a;">
+    Showing <%= @user_data.count %> user<%= @user_data.count == 1 ? '' : 's' %>
+    <% if params[:user_status].present? && params[:user_status] != 'all' %>
+      with <%= params[:user_status] %> user status
+    <% end %>
+    <% if params[:status].present? && params[:status] != 'all' %>
+      <%= params[:user_status].present? && params[:user_status] != 'all' ? 'and' : 'with' %> <%= params[:status] == 'no_project' ? 'no project' : params[:status] %> project status
+    <% end %>
+    <% if params[:fraud_status].present? && params[:fraud_status] != '' %>
+      and <%= params[:fraud_status] %> fraud status
+    <% end %>
+    for week <%= @selected_week %>
+    <% if @total_pages > 1 %>
+      (Page <%= @current_page %> of <%= @total_pages %>)
+    <% end %>
+  </div>
+
+  <div class="users-grid">
+    <% if @user_data.any? %>
+      <% @user_data.each do |user_id, data| %>
+        <div class="user-card" onclick="window.location.href='<%= admin_weekly_overview_user_path(@selected_week, user_id) %>'">
+          <div class="user-header">
+            <h3 class="user-name">
+              <%= data[:user].name %>
+              <% if data[:user].display_name.present? && data[:user].display_name != data[:user].name %>
+                <span style="color: #666; font-weight: normal;">(<%= data[:user].display_name %>)</span>
+              <% end %>
+            </h3>
+            <% if data[:project] %>
+              <div>
+                <span class="project-status <%= data[:project].status %>">
+                  <%= data[:project].status.humanize %>
+                </span>
+                <% if data[:fraud_status] %>
+                  <span class="fraud-status <%= data[:fraud_status] %>">
+                    <%= data[:fraud_status] %>
+                  </span>
+                <% end %>
+              </div>
+            <% else %>
+              <span class="no-project">No Project</span>
+            <% end %>
+          </div>
+          
+          <% if data[:project] %>
+            <div class="project-info">
+              <strong>Project:</strong> <%= data[:project].name %>
+            </div>
+            <% if data[:fraud_reasoning].present? %>
+              <div class="fraud-reasoning">
+                <strong>Fraud Reasoning:</strong> <%= data[:fraud_reasoning] %>
+              </div>
+            <% end %>
+          <% end %>
+          
+          <div class="user-stats">
+            <div class="stat-item">
+              <div class="stat-label">Time Spent</div>
+              <div class="stat-value"><%= data[:time_readable] %></div>
+            </div>
+            
+            <% if data[:average_score] %>
+              <div class="stat-item">
+                <div class="stat-label">Average Score</div>
+                <div class="stat-value"><%= data[:average_score] %> / 5</div>
+              </div>
+            <% end %>
+            
+            <div class="stat-item">
+              <div class="stat-label">Balance</div>
+              <div class="stat-value"><%= data[:user].coins || 0 %> coins</div>
+            </div>
+            
+            <div class="stat-item">
+              <div class="stat-label">Slack ID</div>
+              <div class="stat-value"><%= data[:user].slack_id %></div>
+            </div>
+          </div>
+          
+          <% if data[:user].slack_id.present? %>
+            <div style="margin-top: 1rem; text-align: center;">
+              <a href="https://dash.fraud.land/profile/<%= data[:user].slack_id %>" target="_blank" class="fraud-link" onclick="event.stopPropagation();">
+                View Fraud.land Profile
+              </a>
+            </div>
+          <% end %>
+          
+          <% if current_user&.super_admin? && data[:project] %>
+            <div style="margin-top: 1rem; text-align: center;">
+              <% if data[:project].hidden? %>
+                <%= button_to "Unhide Project", admin_unhide_project_path(data[:project]),
+                    method: :patch,
+                    class: "unhide-project-btn",
+                    style: "margin-right: 0.5rem;",
+                    onclick: "event.stopPropagation();" %>
+              <% else %>
+                <%= button_to "Hide Project", admin_hide_project_path(data[:project]),
+                    method: :patch,
+                    class: "hide-project-btn",
+                    style: "margin-right: 0.5rem;",
+                    onclick: "event.stopPropagation();" %>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
+    <% else %>
+      <div style="text-align: center; padding: 3rem; color: #6b5b4a;">
+        <h3>No users found for week <%= @selected_week %></h3>
+        <p>Either no users are active this week or the week range is invalid.</p>
+      </div>
+    <% end %>
+    
+    <!-- Pagination -->
+    <% if @total_pages > 1 %>
+      <div class="pagination-container">
+        <div class="pagination-info">
+          Showing <%= (@current_page - 1) * @per_page + 1 %> to <%= [@current_page * @per_page, @total_users].min %> of <%= @total_users %> users
+        </div>
+        <div class="pagination-controls">
+          <% if @current_page > 1 %>
+            <%= link_to "← Previous", admin_weekly_overview_path(page: @current_page - 1, week: @selected_week, user_status: params[:user_status], status: params[:status], fraud_status: params[:fraud_status]), class: "pagination-link" %>
+          <% end %>
+          
+          <% @total_pages.times do |page_num| %>
+            <% page_num = page_num + 1 %>
+            <% if page_num == @current_page %>
+              <span class="pagination-current"><%= page_num %></span>
+            <% elsif page_num == 1 || page_num == @total_pages || (page_num >= @current_page - 2 && page_num <= @current_page + 2) %>
+              <%= link_to page_num, admin_weekly_overview_path(page: page_num, week: @selected_week, user_status: params[:user_status], status: params[:status], fraud_status: params[:fraud_status]), class: "pagination-link" %>
+            <% elsif page_num == @current_page - 3 || page_num == @current_page + 3 %>
+              <span class="pagination-ellipsis">...</span>
+            <% end %>
+          <% end %>
+          
+          <% if @current_page < @total_pages %>
+            <%= link_to "Next →", admin_weekly_overview_path(page: @current_page + 1, week: @selected_week, user_status: params[:user_status], status: params[:status], fraud_status: params[:fraud_status]), class: "pagination-link" %>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</div>

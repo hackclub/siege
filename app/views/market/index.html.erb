@@ -1,0 +1,3448 @@
+<% content_for :title, "Market" %>
+<% content_for :body_class, "market-page" %>
+
+<%= csrf_meta_tags %>
+
+<% content_for :head do %>
+  <style>
+    /* Only apply to this specific page */
+    body.market-page .app-main {
+      padding: 0 !important;
+      margin: 0 !important;
+      max-width: none !important;
+      width: 100% !important;
+    }
+    
+    body.market-page .app-container {
+      padding: 0 !important;
+      margin: 0 !important;
+    }
+  </style>
+<% end %>
+
+<style>
+  * { user-select: none; }
+  body { margin: 0; padding: 0; font-family: "Jaini", serif; overflow: hidden; }
+  
+  .market-container {
+    position: relative;
+    width: 100%;
+    height: 100vh;
+    overflow: hidden;
+  }
+  
+  canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+</style>
+
+<div class="market-container">
+  <canvas id="marketCanvas">Your browser does not support the HTML5 canvas tag.</canvas>
+</div>
+
+<script>
+// Wrap everything in an IIFE to prevent global scope pollution and handle Turbo navigation
+(function() {
+  // Prevent multiple executions and handle Turbo navigation properly
+  if (window.marketPageInitialized) {
+    console.log('Market page already initialized, skipping');
+    return; // Exit early to prevent re-execution
+  }
+
+  window.marketPageInitialized = true;
+  
+  let canvas, ctx;
+  let marketBg, marketFront, yellowMeeple;
+  let meepleImages = {};
+  let imagesLoaded = 0;
+  const totalImages = 3;
+  let mercenaryPrice = 35; // Default price, will be updated
+  let mercenaryCount = 0; // Current mercenary count for this week
+  let userInSupportedRegion = <%= @user_in_supported_region ? 'true' : 'false' %>;
+  let totalGrantAmount = 650; // Will be updated from server
+  
+  // Optimization: Position caching and render throttling
+  const positionCache = new Map();
+  const CACHE_KEY_SEPARATOR = '|';
+  let renderRequestId = null;
+  let mouseMoveTimeout = null;
+  const MOUSE_MOVE_DEBOUNCE = 16;
+  const affordabilityCache = new Map();
+  
+  // Canvas optimization: dirty region tracking
+  let needsFullRedraw = true;
+  let lastMouseX = -1;
+  let lastMouseY = -1;
+  
+  // Optimization: Standardized direction configuration
+  const DIRECTION_CONFIG = {
+    base_distance: {
+      circle: 300,
+      pill: {
+        horizontal: 300,
+        vertical: 300
+      }
+    },
+    multipliers: {
+      'left': [-1.5, 0],
+      'left2': [-1.5, -1],
+      'left3': [-1.5, -2],
+      'left4': [-1.5, -3],
+      'right': [1.5, 0],
+      'right2': [1.5, -1],
+      'right3': [1.5, -2],
+      'right4': [1.5, -3],
+      'up': [0, -1],
+      'up2': [0, -2],
+      'up3': [0, -3],
+      'up4': [0, -4],
+      'up5': [0, -5],
+      'rightright2': [2.5, -1],
+      'leftleft2': [-2.5, -1]
+    }
+  };
+  
+  // Optimization: Connection batching
+  const connectionBatches = {
+    purchased: [],
+    affordable: [],
+    unaffordable: []
+  };
+  
+  // Tech tree data structure - will be loaded from server
+  let techTreeData = {};
+
+  // Load tech tree data from server
+  async function loadTechTreeData() {
+    try {
+      const response = await fetch('/market/tech_tree_data', {
+        method: 'GET',
+        headers: {
+          'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      techTreeData = data;
+      console.log('Tech tree data loaded from server');
+      return true;
+    } catch (error) {
+      console.error('Failed to load tech tree data:', error);
+      return false;
+    }
+  }
+
+  // Sample shop items with actual image paths (keeping other category as-is)
+  const allShopItems = {
+    other: [
+      { id: 1, title: "Mercenary", price: 35, description: "This meeple will fight for you for an hour. Purchase to skip a required hour of sieging!", image: '<%= asset_path("meeple/mercenary.png") %>', maxPerWeek: 10, priceIncreases: true, oneTime: false },
+      { id: 2, title: "Unlock Orange Meeple", price: 50, description: "Not feeling your color? Try orange!", image: '<%= asset_path("meeple/meeple-orange.png") %>', oneTime: true },
+      { id: 3, title: "Random Sticker", price: 30, description: "Some random sticker from around hq. This will be sent with your next round of prizes.", image: '<%= asset_path("meeple/meeple-red.png") %>', oneTime: false }
+      <% @purchasable_cosmetics.each_with_index do |cosmetic, index| %>
+      ,{ id: <%= 100 + index %>, title: "<%= cosmetic.name %>", price: <%= cosmetic.cost %>, description: "<%= (cosmetic.description.present? ? cosmetic.description : 'A cosmetic item for your meeple!').html_safe %>", image: "<%= cosmetic.image.attached? ? rails_blob_path(cosmetic.image, only_path: false) : asset_path('meeple/meeple-red.png') %>", oneTime: true, isCosmetic: true }
+      <% end %>
+      <% @purchasable_physical_items.each_with_index do |physical_item, index| %>
+      ,{ id: <%= 200 + index %>, title: "<%= physical_item.name %>", price: <%= physical_item.cost %>, description: "<%= (physical_item.description.present? ? physical_item.description : 'A physical item that will be shipped to you!').html_safe %>", image: "<%= physical_item.image.attached? ? rails_blob_path(physical_item.image, only_path: false) : asset_path('meeple/meeple-red.png') %>", oneTime: false, isPhysicalItem: true }
+      <% end %>
+    ]
+  };
+  
+  // Function to get display price for shop items 
+  function getShopItemDisplayPrice(item) {
+    // For mercenaries, use dynamic pricing
+    if (item.title === 'Mercenary') {
+      return mercenaryPrice;
+    }
+    
+    // All other items already have 2.5x pricing built-in
+    return item.price;
+  }
+
+  // Function to get display price for tech tree items
+  function getTechTreeItemDisplayPrice(node) {
+    return node.price;
+  }
+  
+  // Filter out purchased one-time items
+  const purchasedOneTimeItems = <%= raw @purchased_one_time_items.to_json %>;
+  const shopItems = {};
+  
+  Object.keys(allShopItems).forEach(category => {
+    shopItems[category] = allShopItems[category].filter(item => {
+      // Keep item if it's not a one-time purchase or if it hasn't been purchased yet
+      return !item.oneTime || !purchasedOneTimeItems.includes(item.title);
+    });
+  });
+  
+  // Market state management
+  const marketState = {
+    dialogueVisible: true,
+    shopVisible: false,
+    itemDetailsVisible: false,
+    statusPopupVisible: false,
+    statusPopupType: null, // 'loading', 'success', 'error'
+    statusPopupMessage: '',
+    statusPopupFulfillment: null,
+    currentCategory: null,
+    currentItem: null,
+    dialogueText: "What are you looking for today?",
+    dialogueButtons: [
+      { text: "Device Upgrades", action: "device_upgrades" },
+      { text: "Other Stuff", action: "other" }
+    ],
+    mouseX: 0,
+    mouseY: 0,
+    userCoins: 0,
+    userPurchases: [],
+    // Tech tree specific state
+    techTreeVisible: false,
+    selectedBaseOption: null,
+    deviceSelectionVisible: false,
+    warningPopupVisible: false,
+    warningMessage: '',
+    warningCallback: null,
+    initialized: false,
+    viewportX: 0,
+    viewportY: 0,
+    zoom: 1,
+    isDragging: false,
+    dragStartX: 0,
+    dragStartY: 0,
+    dragStartViewportX: 0,
+    dragStartViewportY: 0
+  };
+  
+  // Initialize function that can be called multiple times safely
+  function initialize() {
+    canvas = document.getElementById('marketCanvas');
+    if (!canvas) {
+      console.error('Canvas element not found');
+      return false;
+    }
+    
+    ctx = canvas.getContext('2d');
+    if (!ctx) {
+      console.error('Failed to get 2D context from canvas');
+      return false;
+    }
+    
+    console.log('Market canvas initialized successfully');
+    return true;
+  }
+  
+  // Set canvas dimensions (optimized)
+  function resizeCanvas() {
+    if (!canvas || !ctx) return;
+    
+    // Set display size
+    const displayWidth = canvas.offsetWidth;
+    const displayHeight = canvas.offsetHeight;
+    
+    // Set actual canvas size to 1.5x for higher resolution
+    const scale = 1.5;
+    canvas.width = displayWidth * scale;
+    canvas.height = displayHeight * scale;
+    
+    // Scale the canvas back down using CSS
+    canvas.style.width = displayWidth + 'px';
+    canvas.style.height = displayHeight + 'px';
+    
+    // Scale the drawing context so everything draws at the higher resolution
+    ctx.scale(scale, scale);
+    
+    // Clear position cache when canvas resizes
+    clearPositionCache();
+    
+    throttledRender();
+  }
+  
+  // Load mercenary price and count
+  function loadMercenaryPrice() {
+    fetch('/market/mercenary_price', {
+      method: 'GET',
+      headers: {
+        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      mercenaryPrice = data.price || 35;
+      mercenaryCount = data.count || 0;
+    })
+    .catch(error => {
+      console.warn('Failed to load mercenary price:', error);
+      mercenaryPrice = 35; // Fallback to default
+      mercenaryCount = 0;
+    });
+  }
+
+  // Load user coin balance
+  function loadUserCoins() {
+    fetch('/market/user_coins', {
+      method: 'GET',
+      headers: {
+        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      marketState.userCoins = data.coins || 0;
+      clearAffordabilityCache(); // Clear when coins change
+    })
+    .catch(error => {
+      console.warn('Failed to load user coins:', error);
+      marketState.userCoins = 0;
+    });
+  }
+
+  // Load user purchases
+  function loadUserPurchases() {
+    return fetch('/market/user_purchases', {
+      method: 'GET',
+      headers: {
+        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      marketState.userPurchases = data.purchases || [];
+      // Update tech tree node states based on loaded purchases
+      updateTechTreeNodesFromPurchases();
+    })
+    .catch(error => {
+      console.warn('Failed to load user purchases:', error);
+      marketState.userPurchases = [];
+    });
+  }
+
+  // Load user region info and grant amount
+  function loadUserRegionInfo() {
+    return fetch('/market/user_region_info', {
+      method: 'GET',
+      headers: {
+        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      userInSupportedRegion = data.in_supported_region;
+      totalGrantAmount = data.total_grant_amount;
+      updateDialogueButtons();
+    })
+    .catch(error => {
+      console.warn('Failed to load user region info:', error);
+    });
+  }
+
+  // Update dialogue buttons based on region
+  function updateDialogueButtons() {
+    marketState.dialogueButtons = [
+      { text: "Device Upgrades", action: "device_upgrades" },
+      { text: "Other Stuff", action: "other" }
+    ];
+  }
+
+  // Optimization: Utility functions
+  function getCachedPosition(centerX, centerY, direction, category) {
+    const key = `${centerX}${CACHE_KEY_SEPARATOR}${centerY}${CACHE_KEY_SEPARATOR}${direction}${CACHE_KEY_SEPARATOR}${category}`;
+    return positionCache.get(key);
+  }
+
+  function setCachedPosition(centerX, centerY, direction, category, position) {
+    const key = `${centerX}${CACHE_KEY_SEPARATOR}${centerY}${CACHE_KEY_SEPARATOR}${direction}${CACHE_KEY_SEPARATOR}${category}`;
+    
+    // Limit cache size to prevent memory growth
+    if (positionCache.size > 1000) {
+      // Remove oldest entries (Map preserves insertion order)
+      const keysToDelete = Array.from(positionCache.keys()).slice(0, 500);
+      keysToDelete.forEach(key => positionCache.delete(key));
+    }
+    
+    positionCache.set(key, position);
+    return position;
+  }
+
+  function clearPositionCache() {
+    positionCache.clear();
+    needsFullRedraw = true;
+  }
+
+  function clearAffordabilityCache() {
+    affordabilityCache.clear();
+    needsFullRedraw = true;
+  }
+
+  function invalidateMarketState(reason) {
+    clearPositionCache();
+    clearAffordabilityCache();
+    throttledRender();
+  }
+
+  function throttledRender() {
+    if (renderRequestId) return;
+    
+    renderRequestId = requestAnimationFrame(async () => {
+    await drawMarket();
+    renderRequestId = null;
+    });
+  }
+
+  function isPointInTechTreeArea(x, y) {
+    const displayWidth = canvas.offsetWidth;
+    const displayHeight = canvas.offsetHeight;
+    const treeX = 50;
+    const treeY = 50;
+    const treeWidth = displayWidth - 100;
+    const treeHeight = displayHeight - 100;
+    
+    return x >= treeX && x <= treeX + treeWidth && 
+           y >= treeY && y <= treeY + treeHeight;
+  }
+
+  function batchConnection(startPos, endPos, type) {
+    connectionBatches[type].push({ startPos, endPos });
+  }
+
+  function drawConnectionBatches() {
+    // Draw all purchased connections at once
+    if (connectionBatches.purchased.length > 0) {
+      const mainDeviceColors = getMainDeviceColorScheme();
+      ctx.strokeStyle = mainDeviceColors.border;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      connectionBatches.purchased.forEach(({ startPos, endPos }) => {
+        ctx.moveTo(startPos.x, startPos.y);
+        ctx.lineTo(endPos.x, endPos.y);
+      });
+      ctx.stroke();
+    }
+    
+    // Draw affordable connections
+    if (connectionBatches.affordable.length > 0) {
+      ctx.strokeStyle = '#402b20';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      connectionBatches.affordable.forEach(({ startPos, endPos }) => {
+        ctx.moveTo(startPos.x, startPos.y);
+        ctx.lineTo(endPos.x, endPos.y);
+      });
+      ctx.stroke();
+    }
+    
+    // Draw unaffordable connections
+    if (connectionBatches.unaffordable.length > 0) {
+      ctx.strokeStyle = '#9ca3af';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      connectionBatches.unaffordable.forEach(({ startPos, endPos }) => {
+        ctx.moveTo(startPos.x, startPos.y);
+        ctx.lineTo(endPos.x, endPos.y);
+      });
+      ctx.stroke();
+    }
+    
+    // Clear batches
+    Object.keys(connectionBatches).forEach(key => {
+      connectionBatches[key] = [];
+    });
+  }
+
+  // Remove one-time item from shop display after purchase
+  function removeItemFromShop(itemTitle) {
+    Object.keys(shopItems).forEach(category => {
+      shopItems[category] = shopItems[category].filter(item => item.title !== itemTitle);
+    });
+  }
+  
+  // Update tech tree node state after purchase
+  function updateTechTreeNodeState(item) {
+    const treeData = techTreeData[marketState.currentCategory];
+    if (!treeData || !marketState.selectedBaseOption) return;
+    
+    const branches = treeData.branches[marketState.selectedBaseOption];
+    if (!branches) return;
+    
+    // Find and update the purchased node
+    Object.keys(branches).forEach(direction => {
+      const branch = branches[direction];
+      if (branch.id === item.id) {
+        if (branch.maxPurchases === null) {
+          // Infinite purchases (like grants) - increment count but never mark as purchased
+          branch.currentPurchases = (branch.currentPurchases || 0) + 1;
+        } else if (branch.maxPurchases && branch.maxPurchases > 1) {
+          // Increment purchase count for multi-purchase items
+          branch.currentPurchases = (branch.currentPurchases || 0) + 1;
+          
+          // If max purchases reached, mark as unavailable
+          if (branch.currentPurchases >= branch.maxPurchases) {
+            branch.purchased = true;
+          }
+        } else {
+          // Mark as purchased for one-time items
+          branch.purchased = true;
+        }
+      }
+    });
+  }
+
+  // Update tech tree node states based on loaded user purchases
+  function updateTechTreeNodesFromPurchases() {
+    // Reset all node states first
+    Object.keys(techTreeData).forEach(category => {
+      const treeData = techTreeData[category];
+      if (treeData.branches) {
+        Object.keys(treeData.branches).forEach(deviceId => {
+          const branches = treeData.branches[deviceId];
+          Object.keys(branches).forEach(direction => {
+            const branch = branches[direction];
+            branch.purchased = false;
+            branch.currentPurchases = 0;
+          });
+        });
+      }
+    });
+
+    // Update node states based on user purchases
+    marketState.userPurchases.forEach(purchase => {
+      if (purchase.quantity > 0) {
+        // Find the corresponding tech tree node
+        Object.keys(techTreeData).forEach(category => {
+          const treeData = techTreeData[category];
+          if (treeData.branches) {
+            Object.keys(treeData.branches).forEach(deviceId => {
+              const branches = treeData.branches[deviceId];
+              Object.keys(branches).forEach(direction => {
+                const branch = branches[direction];
+                if (branch.title === purchase.item_name) {
+                  if (branch.maxPurchases === null) {
+                    // Infinite purchases (like grants) - set count but never mark as purchased
+                    branch.currentPurchases = purchase.quantity;
+                  } else if (branch.maxPurchases && branch.maxPurchases > 1) {
+                    // Multi-purchase item
+                    branch.currentPurchases = purchase.quantity;
+                    if (branch.currentPurchases >= branch.maxPurchases) {
+                      branch.purchased = true;
+                    }
+                  } else {
+                    // One-time purchase item
+                    branch.purchased = true;
+                  }
+                }
+              });
+            });
+          }
+        });
+      }
+    });
+  }
+
+  // Load images
+  function loadImages() {
+    if (marketBg && marketFront && yellowMeeple) return; // Already loaded
+    
+    marketBg = new Image();
+    marketFront = new Image();
+    yellowMeeple = new Image();
+    
+    imagesLoaded = 0;
+    
+    function onImageLoad() {
+      imagesLoaded++;
+      if (imagesLoaded === totalImages) {
+        loadShopItemImages();
+        loadMercenaryPrice(); // Load mercenary price
+        loadUserCoins(); // Load user coin balance
+        loadUserPurchases(); // Load user purchases
+        loadUserRegionInfo(); // Load user region info and grant amount
+        throttledRender();
+      }
+    }
+    
+    marketBg.onload = onImageLoad;
+    marketFront.onload = onImageLoad;
+    yellowMeeple.onload = onImageLoad;
+    
+    // Load image sources
+    marketBg.src = '<%= asset_path('market-bg.webp') %>';
+    marketFront.src = '<%= asset_path('market-front.webp') %>';
+    yellowMeeple.src = '<%= asset_path('meeple/merchant.png') %>';
+  }
+  
+  // Load images for shop items
+  function loadShopItemImages() {
+    // Collect all unique image paths from filtered shop items
+    const imagePaths = new Set();
+    Object.values(shopItems).forEach(category => {
+      category.forEach(item => {
+        if (item.image) {
+          imagePaths.add(item.image);
+        }
+      });
+    });
+    
+    // Add cyan meeple for cosmetic base
+    imagePaths.add('<%= asset_path("meeple/meeple-cyan.png") %>');
+    imagePaths.add('<%= asset_path("meeple/meeple-yellow.png") %>');
+    
+    // Load each unique image
+    imagePaths.forEach(imagePath => {
+      if (!meepleImages[imagePath]) {
+        const img = new Image();
+        img.onload = function() {
+          meepleImages[imagePath] = img;
+          throttledRender(); // Redraw when new image loads
+        };
+        img.onerror = function() {
+          console.warn(`Failed to load image: ${imagePath}`);
+          console.error('Image load error details:', img);
+        };
+        img.src = imagePath;
+      }
+    });
+  }
+  
+  // Get image by path
+  function getItemImage(imagePath) {
+    return meepleImages[imagePath] || null;
+  }
+  
+  async function drawMarket() {
+    if (!canvas || !ctx || imagesLoaded < totalImages) return;
+    
+    // Get display dimensions (before scaling)
+    const displayWidth = canvas.offsetWidth;
+    const displayHeight = canvas.offsetHeight;
+    
+    // Clear canvas (optimized)
+    if (needsFullRedraw) {
+      ctx.clearRect(0, 0, displayWidth, displayHeight);
+      needsFullRedraw = false;
+    } else {
+      // For hover-only changes, still clear everything for now
+      // TODO: Implement dirty rectangle tracking for better performance
+      ctx.clearRect(0, 0, displayWidth, displayHeight);
+    }
+    
+    // Calculate background dimensions to maintain aspect ratio
+    const bgAspect = marketBg.width / marketBg.height;
+    const canvasAspect = displayWidth / displayHeight;
+    
+    let bgX, bgY, bgWidth, bgHeight;
+    
+    if (canvasAspect > bgAspect) {
+      bgHeight = displayHeight;
+      bgWidth = bgHeight * bgAspect;
+      bgX = (displayWidth - bgWidth) / 2;
+      bgY = 0;
+    } else {
+      bgWidth = displayWidth;
+      bgHeight = bgWidth / bgAspect;
+      bgX = 0;
+      bgY = (displayHeight - bgHeight) / 2;
+    }
+    
+    // Draw background
+    ctx.drawImage(marketBg, bgX, bgY, bgWidth, bgHeight);
+    
+    // Draw yellow meeple (bigger and centered)
+    const meepleSize = 450; // Increased from 120
+    const meepleX = (displayWidth - meepleSize) / 2;
+    const meepleY = (displayHeight - meepleSize) / 2 - 50; // Moved up 50px
+    ctx.drawImage(yellowMeeple, meepleX, meepleY, meepleSize, meepleSize);
+    
+    // Draw front layer (same dimensions as background)
+    ctx.drawImage(marketFront, bgX, bgY, bgWidth, bgHeight);
+    
+    // Draw UI elements
+    if (marketState.dialogueVisible) {
+      drawDialogueBox();
+    } else if (marketState.deviceSelectionVisible) {
+      drawDeviceSelection();
+    } else if (marketState.shopVisible) {
+      if (marketState.currentCategory === 'laptop' || marketState.currentCategory === 'tablet' || marketState.currentCategory === 'laptop_grant') {
+        await drawTechTreeInterface();
+      } else {
+      drawShopInterface();
+      }
+    }
+    
+    if (marketState.itemDetailsVisible) {
+      drawItemDetails();
+    }
+    
+    if (marketState.statusPopupVisible) {
+      drawStatusPopup();
+    }
+    
+    if (marketState.warningPopupVisible) {
+      drawWarningPopup();
+    }
+  }
+  
+  // Draw dialogue box similar to great hall
+  function drawDialogueBox() {
+    if (!canvas || !ctx) return;
+    
+    const displayWidth = canvas.offsetWidth;
+    const displayHeight = canvas.offsetHeight;
+    
+    const boxWidth = 600;
+    const boxHeight = 200;
+    const boxX = (displayWidth - boxWidth) / 2;
+    const boxY = 50; // Position at top of canvas with 50px margin
+    
+    // Draw background
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+    ctx.fillRect(boxX, boxY, boxWidth, boxHeight);
+    
+    // Draw border
+    ctx.strokeStyle = '#402b20';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(boxX, boxY, boxWidth, boxHeight);
+    
+    // Draw text
+    ctx.fillStyle = '#402b20';
+    ctx.font = '20px "IM Fell English", serif';
+    ctx.textAlign = 'center';
+    
+    // Wrap text
+    const words = marketState.dialogueText.split(' ');
+    const lineHeight = 30;
+    let currentLine = '';
+    let currentY = boxY + 50;
+    
+    for (let word of words) {
+      const testLine = currentLine + word + ' ';
+      const metrics = ctx.measureText(testLine);
+      
+      if (metrics.width > boxWidth - 40 && currentLine !== '') {
+        ctx.fillText(currentLine, displayWidth / 2, currentY);
+        currentLine = word + ' ';
+        currentY += lineHeight;
+      } else {
+        currentLine = testLine;
+      }
+    }
+    ctx.fillText(currentLine, displayWidth / 2, currentY);
+    
+    // Draw buttons
+    const buttonY = boxY + boxHeight - 50;
+    const buttonHeight = 40;
+    const buttonWidth = 140;
+    const spacing = 20;
+    
+    const totalButtonWidth = marketState.dialogueButtons.length * buttonWidth + (marketState.dialogueButtons.length - 1) * spacing;
+    let buttonX = (displayWidth - totalButtonWidth) / 2;
+    
+    marketState.dialogueButtons.forEach((button, index) => {
+      // Check if mouse is hovering over this button
+      const isHovered = marketState.mouseX >= buttonX && 
+                       marketState.mouseX <= buttonX + buttonWidth &&
+                       marketState.mouseY >= buttonY && 
+                       marketState.mouseY <= buttonY + buttonHeight;
+      
+      // Store button position for click detection
+      button.x = buttonX;
+      button.y = buttonY;
+      button.width = buttonWidth;
+      button.height = buttonHeight;
+      
+      
+      // Draw button
+      drawStandardButton(buttonX, buttonY, buttonWidth, buttonHeight, button.text, false, isHovered);
+      
+      buttonX += buttonWidth + spacing;
+    });
+  }
+  
+  // Draw device selection interface
+  function drawDeviceSelection() {
+    if (!canvas || !ctx) return;
+    
+    const displayWidth = canvas.offsetWidth;
+    const displayHeight = canvas.offsetHeight;
+    
+    const boxWidth = 600;
+    const boxHeight = 200;
+    const boxX = (displayWidth - boxWidth) / 2;
+    const boxY = 50;
+    
+    // Draw background
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+    ctx.fillRect(boxX, boxY, boxWidth, boxHeight);
+    
+    // Draw border
+    ctx.strokeStyle = '#402b20';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(boxX, boxY, boxWidth, boxHeight);
+    
+    // Draw text
+    ctx.fillStyle = '#402b20';
+    ctx.font = '20px "IM Fell English", serif';
+    ctx.textAlign = 'center';
+    ctx.fillText("Which device are you going for?", displayWidth / 2, boxY + 50);
+    
+    // Draw device selection buttons
+    const buttonY = boxY + boxHeight - 50;
+    const buttonHeight = 40;
+    const buttonWidth = 140;
+    const spacing = 20;
+    
+    const deviceButtons = [
+      { text: "Laptop", action: "laptop" },
+      { text: "Tablet", action: "tablet" }
+    ];
+    
+    const totalButtonWidth = deviceButtons.length * buttonWidth + (deviceButtons.length - 1) * spacing;
+    let buttonX = (displayWidth - totalButtonWidth) / 2;
+    
+    deviceButtons.forEach((button, index) => {
+      // Check if mouse is hovering over this button
+      const isHovered = marketState.mouseX >= buttonX && 
+                       marketState.mouseX <= buttonX + buttonWidth &&
+                       marketState.mouseY >= buttonY && 
+                       marketState.mouseY <= buttonY + buttonHeight;
+      
+      // Store button position for click detection
+      button.x = buttonX;
+      button.y = buttonY;
+      button.width = buttonWidth;
+      button.height = buttonHeight;
+      
+      // Draw button
+      drawStandardButton(buttonX, buttonY, buttonWidth, buttonHeight, button.text, false, isHovered);
+      
+      buttonX += buttonWidth + spacing;
+    });
+    
+    // Store buttons for click detection
+    marketState.deviceSelectionButtons = deviceButtons;
+  }
+  
+  // Draw tech tree interface
+  async function drawTechTreeInterface() {
+    if (!canvas || !ctx) return;
+    
+    // Load tech tree data if not already loaded
+    if (Object.keys(techTreeData).length === 0) {
+      const success = await loadTechTreeData();
+      if (!success) {
+        console.error('Failed to load tech tree data');
+        return;
+      }
+    }
+    
+    const displayWidth = canvas.offsetWidth;
+    const displayHeight = canvas.offsetHeight;
+    
+    // Tech tree container
+    const treeWidth = displayWidth - 100;
+    const treeHeight = displayHeight - 100;
+    const treeX = 50;
+    const treeY = 50;
+    
+    // Draw tech tree background
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+    ctx.fillRect(treeX, treeY, treeWidth, treeHeight);
+    
+    // Draw tech tree border
+    ctx.strokeStyle = '#402b20';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(treeX, treeY, treeWidth, treeHeight);
+    
+    // Draw back button
+    const backButtonWidth = 80;
+    const backButtonHeight = 40;
+    const backButtonX = treeX + 20;
+    const backButtonY = treeY + 20;
+    
+    const isBackHovered = marketState.mouseX >= backButtonX && 
+                         marketState.mouseX <= backButtonX + backButtonWidth &&
+                         marketState.mouseY >= backButtonY && 
+                         marketState.mouseY <= backButtonY + backButtonHeight;
+    
+    marketState.backButton = { x: backButtonX, y: backButtonY, width: backButtonWidth, height: backButtonHeight };
+    drawStandardButton(backButtonX, backButtonY, backButtonWidth, backButtonHeight, '← Back', false, isBackHovered);
+    
+    // Draw switch device button (for laptop/tablet/laptop_grant options)
+    if (marketState.currentCategory === 'laptop' || marketState.currentCategory === 'tablet' || marketState.currentCategory === 'laptop_grant') {
+      const switchButtonWidth = 120;
+      const switchButtonHeight = 40;
+      const switchButtonX = backButtonX + backButtonWidth + 10; // Position right next to back button
+      const switchButtonY = treeY + 20;
+      
+      // Determine what category to switch to
+      let switchToCategory;
+      if (marketState.currentCategory === 'tablet') {
+        // From tablet, switch to laptop (which will be laptop_grant for unsupported regions)
+        switchToCategory = 'laptop';
+      } else {
+        // From laptop or laptop_grant, switch to tablet
+        switchToCategory = 'tablet';
+      }
+      
+      const switchButtonText = `Switch to ${switchToCategory === 'laptop' ? 'Laptop' : 'Tablet'}`;
+      
+      const isSwitchHovered = marketState.mouseX >= switchButtonX && 
+                             marketState.mouseX <= switchButtonX + switchButtonWidth &&
+                             marketState.mouseY >= switchButtonY && 
+                             marketState.mouseY <= switchButtonY + switchButtonHeight;
+      
+      marketState.switchButton = { x: switchButtonX, y: switchButtonY, width: switchButtonWidth, height: switchButtonHeight, action: switchToCategory };
+      drawStandardButton(switchButtonX, switchButtonY, switchButtonWidth, switchButtonHeight, switchButtonText, false, isSwitchHovered);
+    } else {
+      marketState.switchButton = null; // Clear switch button for other categories
+    }
+    
+    // Draw category title
+    ctx.fillStyle = '#402b20';
+    ctx.font = '24px "IM Fell English", serif';
+    ctx.textAlign = 'center';
+    
+    let categoryTitle;
+    switch(marketState.currentCategory) {
+      case 'laptop':
+        categoryTitle = 'Laptop Upgrades';
+        break;
+      case 'laptop_grant':
+        categoryTitle = 'Laptop Grant Upgrades';
+        break;
+      case 'tablet':
+        categoryTitle = 'Tablet Upgrades';
+        break;
+      default:
+        categoryTitle = 'Unknown Shop';
+    }
+    
+    ctx.fillText(categoryTitle, displayWidth / 2, treeY + 60);
+    
+    // For laptop grant, draw the grant counter below the title only if it's their main device
+    if (marketState.currentCategory === 'laptop_grant' && marketState.selectedBaseOption === 'laptop_grant_base') {
+      ctx.fillStyle = '#8b4513';
+      ctx.font = 'bold 28px "IM Fell English", serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(`Total Grant: $${totalGrantAmount}`, displayWidth / 2, treeY + 105);
+    }
+    
+    // Draw coin balance in top right
+    ctx.fillStyle = '#8b4513';
+    ctx.font = 'bold 18px "IM Fell English", serif';
+    ctx.textAlign = 'right';
+    ctx.fillText(`${marketState.userCoins} 🪙`, treeX + treeWidth - 20, treeY + 40);
+    
+    // Get tech tree data
+    const treeData = techTreeData[marketState.currentCategory];
+    if (!treeData) {
+      console.log('No tree data found for category:', marketState.currentCategory);
+      return;
+    }
+
+    
+    // Calculate center position for the tree
+    const centerX = treeX + treeWidth / 2;
+    const centerY = treeY + treeHeight / 2;
+    
+    // Draw the tech tree with viewport transformation for dragging
+    drawTechTreeWithViewport(treeData, centerX, centerY, treeX, treeY, treeWidth, treeHeight);
+  }
+  
+  // Draw tech tree with viewport transformation
+  function drawTechTreeWithViewport(treeData, centerX, centerY, containerX, containerY, containerWidth, containerHeight) {
+    // Save current context state
+    ctx.save();
+    
+    // Create clipping region for the tech tree area, excluding header space
+    const headerHeight = 80; // Space for title and buttons
+    const clippedY = containerY + headerHeight;
+    const clippedHeight = containerHeight - headerHeight;
+    
+    ctx.beginPath();
+    ctx.rect(containerX, clippedY, containerWidth, clippedHeight);
+    ctx.clip();
+    
+    // Apply viewport transformation only to the tech tree content
+    ctx.translate(marketState.viewportX, marketState.viewportY);
+    ctx.scale(marketState.zoom, marketState.zoom);
+    
+    // Use the original center position since the context is already translated
+    const adjustedCenterX = centerX;
+    const adjustedCenterY = centerY;
+    
+    const initialNode = treeData.initialNode;
+    
+    // Draw initial node (base selection)
+    drawTechTreeNode(initialNode, adjustedCenterX, adjustedCenterY, true);
+    
+    // If a base option is selected, draw the branches
+    if (marketState.selectedBaseOption && treeData.branches[marketState.selectedBaseOption]) {
+      const branches = treeData.branches[marketState.selectedBaseOption];
+      
+      // Separate affordable and unaffordable branches
+      const affordableBranches = {};
+      const unaffordableBranches = {};
+      
+      Object.keys(branches).forEach(direction => {
+        const branch = branches[direction];
+        if (isNodeAffordable(branch)) {
+          affordableBranches[direction] = branch;
+        } else {
+          unaffordableBranches[direction] = branch;
+        }
+      });
+      
+      // Draw unaffordable connection lines first (behind)
+      if (Object.keys(unaffordableBranches).length > 0) {
+        drawTechTreeConnections(adjustedCenterX, adjustedCenterY, unaffordableBranches, branches);
+      }
+      
+      // Draw affordable connection lines (on top)
+      if (Object.keys(affordableBranches).length > 0) {
+        drawTechTreeConnections(adjustedCenterX, adjustedCenterY, affordableBranches, branches);
+      }
+      
+
+      
+      // Draw unaffordable branch nodes first (behind)
+      Object.keys(unaffordableBranches).forEach(direction => {
+        const branch = unaffordableBranches[direction];
+        const nodePos = getBranchNodePosition(adjustedCenterX, adjustedCenterY, direction);
+        drawTechTreeNode(branch, nodePos.x, nodePos.y, false);
+      });
+      
+      // Draw affordable branch nodes last (on top)
+      Object.keys(affordableBranches).forEach(direction => {
+        const branch = affordableBranches[direction];
+        const nodePos = getBranchNodePosition(adjustedCenterX, adjustedCenterY, direction);
+        drawTechTreeNode(branch, nodePos.x, nodePos.y, false);
+      });
+    }
+    
+    // Draw selection/hover effects last (on top of everything)
+    drawTechTreeNodeEffects(initialNode, adjustedCenterX, adjustedCenterY, true);
+    
+    if (marketState.selectedBaseOption && treeData.branches[marketState.selectedBaseOption]) {
+      const branches = treeData.branches[marketState.selectedBaseOption];
+      Object.keys(branches).forEach(direction => {
+        const branch = branches[direction];
+        const nodePos = getBranchNodePosition(adjustedCenterX, adjustedCenterY, direction);
+        drawTechTreeNodeEffects(branch, nodePos.x, nodePos.y, false);
+      });
+    }
+    
+    // Restore context state
+    ctx.restore();
+  }
+  
+  // Draw individual tech tree (without viewport transformation)
+  function drawTechTree(treeData, centerX, centerY, containerX, containerY, containerWidth, containerHeight) {
+    const initialNode = treeData.initialNode;
+    
+    // Draw initial node (base selection)
+    drawTechTreeNode(initialNode, centerX, centerY, true);
+    
+    // If a base option is selected, draw the branches
+    if (marketState.selectedBaseOption && treeData.branches[marketState.selectedBaseOption]) {
+      const branches = treeData.branches[marketState.selectedBaseOption];
+      
+      // Separate affordable and unaffordable branches
+      const affordableBranches = {};
+      const unaffordableBranches = {};
+      
+      Object.keys(branches).forEach(direction => {
+        const branch = branches[direction];
+        if (isNodeAffordable(branch)) {
+          affordableBranches[direction] = branch;
+        } else {
+          unaffordableBranches[direction] = branch;
+        }
+      });
+      
+      // Draw unaffordable connection lines first (behind)
+      if (Object.keys(unaffordableBranches).length > 0) {
+        drawTechTreeConnections(centerX, centerY, unaffordableBranches, branches);
+      }
+      
+      // Draw affordable connection lines (on top)
+      if (Object.keys(affordableBranches).length > 0) {
+        drawTechTreeConnections(centerX, centerY, affordableBranches, branches);
+      }
+      
+      // Draw unaffordable branch nodes first (behind)
+      Object.keys(unaffordableBranches).forEach(direction => {
+        const branch = unaffordableBranches[direction];
+        const nodePos = getBranchNodePosition(centerX, centerY, direction);
+        drawTechTreeNode(branch, nodePos.x, nodePos.y, false);
+      });
+      
+      // Draw affordable branch nodes last (on top)
+      Object.keys(affordableBranches).forEach(direction => {
+        const branch = affordableBranches[direction];
+        const nodePos = getBranchNodePosition(centerX, centerY, direction);
+        drawTechTreeNode(branch, nodePos.x, nodePos.y, false);
+      });
+    }
+    
+    // Draw selection/hover effects last (on top of everything)
+    drawTechTreeNodeEffects(initialNode, centerX, centerY, true);
+    
+    if (marketState.selectedBaseOption && treeData.branches[marketState.selectedBaseOption]) {
+      const branches = treeData.branches[marketState.selectedBaseOption];
+      Object.keys(branches).forEach(direction => {
+        const branch = branches[direction];
+        const nodePos = getBranchNodePosition(centerX, centerY, direction);
+        drawTechTreeNodeEffects(branch, nodePos.x, nodePos.y, false);
+      });
+    }
+  }
+  
+  // Draw selection/hover effects for nodes (called last to appear on top)
+  function drawTechTreeNodeEffects(node, x, y, isInitial = false) {
+    if (!node) return;
+    
+    const isAffordable = isNodeAffordable(node);
+    const isHovered = isAffordable && isNodeHovered(x, y, isInitial);
+    
+    // Set node properties based on type
+    let nodeWidth, nodeHeight, radius;
+    if (isInitial) {
+      if (node.shape === 'circle') {
+        radius = 150;
+        nodeWidth = nodeHeight = radius * 2;
+      } else if (node.shape === 'pill') {
+        nodeWidth = 450;
+        nodeHeight = 150;
+        radius = nodeHeight / 2;
+      }
+    } else {
+      nodeWidth = 300;
+      nodeHeight = 150;
+      radius = 75;
+    }
+    
+    if (isInitial && node.options) {
+      // Draw selection/hover effects for initial node options
+      node.options.forEach((option, index) => {
+        const optionWidth = nodeWidth / node.options.length;
+        const optionX = x - nodeWidth/2 + (index * optionWidth);
+        const optionY = y;
+        
+        const isHovered = isAffordable && isOptionHovered(optionX, optionY, optionWidth, nodeHeight, index, node.options.length);
+        const isSelected = marketState.selectedBaseOption === option.id;
+        
+        if (isHovered || isSelected) {
+          const sectionX = x - nodeWidth/2 + (index * optionWidth);
+          const sectionY = y - nodeHeight/2;
+          
+          // Draw background fill first
+          ctx.fillStyle = isSelected ? 'rgba(139, 69, 19, 0.15)' : 'rgba(139, 69, 19, 0.08)';
+          ctx.beginPath();
+          if (node.shape === 'circle') {
+            // Draw background with selective rounding based on position
+            if (index === 0) {
+              // Left option: round only left side
+              ctx.roundRect(sectionX, sectionY, optionWidth, nodeHeight, [radius, 0, 0, radius]);
+            } else {
+              // Right option: round only right side
+              ctx.roundRect(sectionX, sectionY, optionWidth, nodeHeight, [0, radius, radius, 0]);
+            }
+          } else {
+            // Pill shape: selective rounding based on position
+            if (index === 0) {
+              // Left option: round only left side
+              ctx.roundRect(sectionX, sectionY, optionWidth, nodeHeight, [radius, 0, 0, radius]);
+            } else if (index === node.options.length - 1) {
+              // Right option: round only right side
+              ctx.roundRect(sectionX, sectionY, optionWidth, nodeHeight, [0, radius, radius, 0]);
+            } else {
+              // Middle option: no rounding
+              ctx.roundRect(sectionX, sectionY, optionWidth, nodeHeight, [0, 0, 0, 0]);
+            }
+          }
+          ctx.fill();
+          
+          // Draw border
+          ctx.strokeStyle = '#8b4513';
+          ctx.lineWidth = isSelected ? 4 : 3;
+          ctx.beginPath();
+          if (node.shape === 'circle') {
+            // Draw border with selective rounding based on position
+            if (index === 0) {
+              // Left option: round only left side
+              ctx.roundRect(sectionX, sectionY, optionWidth, nodeHeight, [radius, 0, 0, radius]);
+            } else {
+              // Right option: round only right side
+              ctx.roundRect(sectionX, sectionY, optionWidth, nodeHeight, [0, radius, radius, 0]);
+            }
+          } else {
+            // Pill shape: selective rounding based on position
+            if (index === 0) {
+              // Left option: round only left side
+              ctx.roundRect(sectionX, sectionY, optionWidth, nodeHeight, [radius, 0, 0, radius]);
+            } else if (index === node.options.length - 1) {
+              // Right option: round only right side
+              ctx.roundRect(sectionX, sectionY, optionWidth, nodeHeight, [0, radius, radius, 0]);
+            } else {
+              // Middle option: no rounding
+              ctx.roundRect(sectionX, sectionY, optionWidth, nodeHeight, [0, 0, 0, 0]);
+            }
+          }
+          ctx.stroke();
+        }
+      });
+    } else {
+      // Draw hover effect for branch nodes
+      if (isHovered) {
+        ctx.strokeStyle = '#8b4513';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, 2 * Math.PI);
+        ctx.stroke();
+      }
+    }
+  }
+
+  // Helper function to draw multi-line text
+  function drawMultiLineText(ctx, text, x, y, maxWidth, lineHeight) {
+    const words = text.split(' ');
+    let line = '';
+    let currentY = y;
+    
+    for (let n = 0; n < words.length; n++) {
+      const testLine = line + words[n] + ' ';
+      const metrics = ctx.measureText(testLine);
+      const testWidth = metrics.width;
+      
+      if (testWidth > maxWidth && n > 0) {
+        ctx.fillText(line, x, currentY);
+        line = words[n] + ' ';
+        currentY += lineHeight;
+      } else {
+        line = testLine;
+      }
+    }
+    ctx.fillText(line, x, currentY);
+  }
+
+  // Helper function to calculate height needed for multi-line text
+  function calculateTextHeight(ctx, text, maxWidth, lineHeight) {
+    const words = text.split(' ');
+    let line = '';
+    let lineCount = 1;
+    
+    for (let n = 0; n < words.length; n++) {
+      const testLine = line + words[n] + ' ';
+      const metrics = ctx.measureText(testLine);
+      const testWidth = metrics.width;
+      
+      if (testWidth > maxWidth && n > 0) {
+        line = words[n] + ' ';
+        lineCount++;
+      } else {
+        line = testLine;
+      }
+    }
+    
+    return lineCount * lineHeight;
+  }
+
+  // Helper function to calculate height needed for multi-line text
+  function calculateTextHeight(ctx, text, maxWidth, lineHeight) {
+    const words = text.split(' ');
+    let line = '';
+    let lineCount = 1;
+    
+    for (let n = 0; n < words.length; n++) {
+      const testLine = line + words[n] + ' ';
+      const metrics = ctx.measureText(testLine);
+      const testWidth = metrics.width;
+      
+      if (testWidth > maxWidth && n > 0) {
+        line = words[n] + ' ';
+        lineCount++;
+      } else {
+        line = testLine;
+      }
+    }
+    
+    return lineCount * lineHeight;
+  }
+
+  // Draw a tech tree node
+  function drawTechTreeNode(node, x, y, isInitial = false) {
+    if (!node) return;
+    
+    const isAffordable = isNodeAffordable(node);
+    // Allow hover effects for purchased nodes too
+    const isHovered = (isAffordable || node.purchased) && isNodeHovered(x, y, isInitial);
+    
+
+    
+    // Set node properties based on type
+    let nodeWidth, nodeHeight, radius;
+    if (isInitial) {
+      if (node.shape === 'circle') {
+        radius = 150; // Increased from 120
+        nodeWidth = nodeHeight = radius * 2;
+      } else if (node.shape === 'pill') {
+        nodeWidth = 450; // Increased from 360
+        nodeHeight = 150; // Increased from 120
+        radius = nodeHeight / 2;
+      }
+    } else {
+      nodeWidth = 300; // Increased from 250
+      nodeHeight = 150; // Increased from 125
+      radius = 75; // Increased from 62
+    }
+    
+    // Draw node background and border (for non-initial nodes and laptop_grant base)
+    if (!isInitial || (isInitial && marketState.currentCategory === 'laptop_grant')) {
+      // Determine node state and colors
+      let nodeColor, borderColor;
+      if (node.purchased) {
+        // Special handling for laptop_grant base to match tablet style
+        if (isInitial && marketState.currentCategory === 'laptop_grant') {
+          const isSelected = marketState.selectedBaseOption === node.id;
+          if (isSelected) {
+            nodeColor = 'rgba(139, 69, 19, 0.15)'; // Same as tablet selected background
+          } else if (isHovered) {
+            nodeColor = 'rgba(139, 69, 19, 0.08)'; // Same as tablet hover background
+          } else {
+            nodeColor = 'rgba(64, 43, 32, 0.05)'; // Same as tablet base background
+          }
+          borderColor = '#402b20';
+        } else {
+          // Use the same color as the selected main option for purchased nodes
+          const mainDeviceColors = getMainDeviceColorScheme();
+          nodeColor = mainDeviceColors.background;
+          borderColor = mainDeviceColors.border;
+        }
+      } else if (node.maxPurchases && node.currentPurchases >= node.maxPurchases) {
+        nodeColor = 'rgba(107, 114, 128, 0.1)'; // Gray for maxed out
+        borderColor = '#6b7280';
+      } else if (!isAffordable) {
+        nodeColor = 'rgba(107, 114, 128, 0.02)'; // More grayed out for unaffordable
+        borderColor = '#9ca3af';
+      } else {
+        nodeColor = 'rgba(64, 43, 32, 0.05)';
+        borderColor = '#402b20';
+      }
+      
+      // Draw node background
+      ctx.fillStyle = nodeColor;
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, 2 * Math.PI);
+      ctx.fill();
+      
+      // Draw node border - use tablet-style effects for laptop_grant
+      if (isInitial && marketState.currentCategory === 'laptop_grant') {
+        // Use tablet branch node style for laptop grant base
+        const isSelected = marketState.selectedBaseOption === node.id;
+        ctx.strokeStyle = (isHovered || isSelected) ? '#8b4513' : '#402b20';
+        ctx.lineWidth = isSelected ? 4 : (isHovered ? 3 : 2);
+      } else {
+        ctx.strokeStyle = borderColor;
+        ctx.lineWidth = isHovered ? 4 : 2;
+      }
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, 2 * Math.PI);
+      ctx.stroke();
+    }
+    
+    // Draw node text
+    ctx.textAlign = 'center';
+    
+    if (isInitial && node.options) {
+      // Draw options for initial node side by side
+      const totalOptions = node.options.length;
+      const optionWidth = nodeWidth / totalOptions;
+      
+      // Draw the main node background first
+      ctx.fillStyle = 'rgba(64, 43, 32, 0.05)';
+      if (node.shape === 'circle') {
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, 2 * Math.PI);
+        ctx.fill();
+      } else {
+        ctx.beginPath();
+        ctx.roundRect(x - nodeWidth/2, y - nodeHeight/2, nodeWidth, nodeHeight, radius);
+        ctx.fill();
+      }
+      
+      // Draw the main node border
+      ctx.strokeStyle = '#402b20';
+      ctx.lineWidth = 2;
+      if (node.shape === 'circle') {
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, 2 * Math.PI);
+        ctx.stroke();
+      } else {
+        ctx.beginPath();
+        ctx.roundRect(x - nodeWidth/2, y - nodeHeight/2, nodeWidth, nodeHeight, radius);
+        ctx.stroke();
+      }
+      
+      if (node.options) {
+        node.options.forEach((option, index) => {
+          const optionX = x - nodeWidth/2 + (index * optionWidth) + optionWidth/2;
+        const optionY = y;
+        const isHovered = isOptionHovered(x, y, index, node.options.length, isInitial);
+        
+        // Draw separator line between options
+        if (index > 0) {
+          ctx.strokeStyle = '#402b20';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          if (node.shape === 'circle') {
+            const separatorX = x - nodeWidth/2 + (index * optionWidth);
+            ctx.moveTo(separatorX, y - radius);
+            ctx.lineTo(separatorX, y + radius);
+          } else {
+            const separatorX = x - nodeWidth/2 + (index * optionWidth);
+            ctx.moveTo(separatorX, y - nodeHeight/2);
+            ctx.lineTo(separatorX, y + nodeHeight/2);
+          }
+          ctx.stroke();
+        }
+        
+        
+        // Draw option text (with multi-line support)
+        ctx.font = 'bold 16px "IM Fell English", serif';
+        if (isHovered) {
+          ctx.fillStyle = '#8b4513';
+        } else {
+          ctx.fillStyle = '#402b20';
+        }
+        
+          drawMultiLineText(ctx, option.title, optionX, optionY + 5, optionWidth, 20);
+        });
+      }
+    } else {
+      // Draw title for branch nodes with text wrapping
+      // Set text color - change to highlight color when hovered
+      if (!isAffordable) {
+        ctx.fillStyle = '#9ca3af'; // Gray for unaffordable
+      } else if (isHovered) {
+        ctx.fillStyle = '#8b4513'; // Brown highlight for hover
+      } else {
+        ctx.fillStyle = '#402b20'; // Default dark brown
+      }
+      ctx.font = 'bold 18px "IM Fell English", serif'; // Increased from 14px
+      ctx.textAlign = 'center';
+      
+      // Use multi-line text with maximum width based on node size
+      const maxTextWidth = 130; // Slightly smaller than node diameter (150) for padding
+      const lineHeight = 18;
+      
+      // Special centering for laptop grant initial node
+      let titleStartY;
+      if (isInitial && marketState.currentCategory === 'laptop_grant') {
+        // Center the text vertically in the large circle
+        const titleHeight = calculateTextHeight(ctx, node.title, maxTextWidth, lineHeight);
+        titleStartY = y - (titleHeight / 2) + 10; // Center and adjust slightly
+      } else {
+        titleStartY = y - 20;
+      }
+      
+      // Calculate how much space the title takes
+      const titleHeight = calculateTextHeight(ctx, node.title, maxTextWidth, lineHeight);
+      
+      drawMultiLineText(ctx, node.title, x, titleStartY, maxTextWidth, lineHeight);
+      
+      // Draw price and purchase info if not initial node
+      if (!isInitial && node.price > 0) {
+        // Set price text color - change to highlight color when hovered
+        if (!isAffordable) {
+          ctx.fillStyle = '#9ca3af'; // Gray for unaffordable
+        } else if (isHovered) {
+          ctx.fillStyle = '#8b4513'; // Brown highlight for hover
+        } else {
+          ctx.fillStyle = '#6b5b4a'; // Slightly lighter brown for price
+        }
+        ctx.font = 'bold 14px "IM Fell English", serif'; // Increased from 12px
+        
+        // Position price below the title, accounting for title height
+        const priceY = titleStartY + titleHeight + 8;
+        
+        if (node.maxPurchases === null) {
+          // Show purchase count for infinite purchase items (like grants)
+          const current = node.currentPurchases || 0;
+          ctx.fillText(`${node.price} 🪙 (${current} purchased)`, x, priceY);
+          ctx.fillText(`${node.price} 🪙 (${current} purchased)`, x, priceY);
+        } else if (node.maxPurchases && node.maxPurchases > 1) {
+          // Show purchase count for multi-purchase items
+          const current = node.currentPurchases || 0;
+          const max = node.maxPurchases;
+          ctx.fillText(`${node.price} 🪙 (${current}/${max})`, x, priceY);
+          ctx.fillText(`${node.price} 🪙 (${current}/${max})`, x, priceY);
+        } else {
+          // Show just price for single purchase items
+          ctx.fillText(`${node.price} 🪙`, x, priceY);
+          ctx.fillText(`${node.price} 🪙`, x, priceY);
+        }
+      }
+    }
+    
+    // Store node position for click detection
+    node.x = x;
+    node.y = y;
+    node.width = nodeWidth;
+    node.height = nodeHeight;
+    node.radius = radius;
+    node.isInitial = isInitial;
+  }
+  
+  // Draw connections between nodes
+  function drawTechTreeConnections(centerX, centerY, branches, allBranches = null) {
+    const treeData = techTreeData[marketState.currentCategory];
+    const initialNode = treeData.initialNode;
+    const searchBranches = allBranches || branches; // Use allBranches for prerequisite search
+    
+    Object.keys(branches).forEach(direction => {
+      const branchPos = getBranchNodePosition(centerX, centerY, direction);
+      
+      
+      // Check if the target branch node is affordable or purchased
+      const branchNode = branches[direction];
+      const isBranchAffordable = isNodeAffordable(branchNode);
+      const isBranchPurchased = branchNode.purchased;
+      
+      // Set line color based on affordability and purchase status
+      if (isBranchPurchased) {
+        // Use the same color as the selected main option for purchased nodes
+        const mainDeviceColors = getMainDeviceColorScheme();
+        ctx.strokeStyle = mainDeviceColors.border;
+      } else {
+        ctx.strokeStyle = isBranchAffordable ? '#402b20' : '#9ca3af';
+      }
+      ctx.lineWidth = 2;
+      
+      // Calculate connection points - connect from prerequisite node if it exists
+      // Calculate connection points - connect from prerequisite node if it exists
+      let startX = centerX, startY = centerY;
+      let endX = branchPos.x, endY = branchPos.y;
+      
+      // If this node has prerequisites, find the prerequisite node and connect from it
+      let prerequisiteFound = false;
+      if (branchNode.requires) {
+        // Handle multiple prerequisites (comma-separated)
+        const prerequisites = branchNode.requires.split(',').map(p => p.trim());
+        
+        // Try to find the first prerequisite that exists in ALL branches, not just current subset
+        for (const prereqTitle of prerequisites) {
+          for (const [dir, node] of Object.entries(searchBranches)) {
+            if (node.title === prereqTitle) {
+              const prereqPos = getBranchNodePosition(centerX, centerY, dir);
+              startX = prereqPos.x;
+              startY = prereqPos.y;
+              prerequisiteFound = true;
+              break;
+            }
+          }
+          if (prerequisiteFound) break;
+        }
+        
+
+      }
+      
+      // Special handling for directional chains - connect from previous nodes if no prerequisite found
+      if (!prerequisiteFound) {
+        if (direction === 'left2' && branches['left']) {
+          const leftPos = getBranchNodePosition(centerX, centerY, 'left');
+          startX = leftPos.x;
+          startY = leftPos.y;
+          prerequisiteFound = true;
+        } else if (direction === 'left3' && branches['up2']) {
+          const up2Pos = getBranchNodePosition(centerX, centerY, 'up2');
+          startX = up2Pos.x;
+          startY = up2Pos.y;
+          prerequisiteFound = true;
+        } else if (direction === 'leftup' && branches['left']) {
+          const leftPos = getBranchNodePosition(centerX, centerY, 'left');
+          startX = leftPos.x;
+          startY = leftPos.y;
+          prerequisiteFound = true;
+        } else if (direction === 'right2' && branches['right']) {
+          const rightPos = getBranchNodePosition(centerX, centerY, 'right');
+          startX = rightPos.x;
+          startY = rightPos.y;
+          prerequisiteFound = true;
+
+        } else if (direction === 'left4' && branches['up2']) {
+          const up2Pos = getBranchNodePosition(centerX, centerY, 'up2');
+          startX = up2Pos.x;
+          startY = up2Pos.y;
+          prerequisiteFound = true;
+        } else if (direction === 'right4' && branches['up2']) {
+          const up2Pos = getBranchNodePosition(centerX, centerY, 'up2');
+          startX = up2Pos.x;
+          startY = up2Pos.y;
+          prerequisiteFound = true;
+        } else if (direction === 'right3' && branches['right2']) {
+          const right2Pos = getBranchNodePosition(centerX, centerY, 'right2');
+          startX = right2Pos.x;
+          startY = right2Pos.y;
+          prerequisiteFound = true;
+        }
+      }
+      
+      // Calculate edge-to-edge connection points
+      const branchRadius = 75;
+      
+      if (prerequisiteFound) {
+        // Node-to-node connection: calculate direction and adjust edges
+        const deltaX = endX - startX;
+        const deltaY = endY - startY;
+        const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+        
+        if (distance > 0) {
+          const dirX = deltaX / distance;
+          const dirY = deltaY / distance;
+          
+          // Adjust start point to edge of start node
+          startX = startX + dirX * branchRadius;
+          startY = startY + dirY * branchRadius;
+          
+          // Adjust end point to edge of end node
+          endX = endX - dirX * branchRadius;
+          endY = endY - dirY * branchRadius;
+        }
+      } else {
+        // Center-to-node connection: use initial node shape for start edge
+        let centerRadius, centerWidth, centerHeight;
+        if (initialNode.shape === 'circle') {
+          centerRadius = 150;
+          centerWidth = centerHeight = centerRadius * 2;
+        } else {
+          centerWidth = 450;
+          centerHeight = 150;
+          centerRadius = centerHeight / 2;
+        }
+        
+        // Calculate direction from center to end node
+        const deltaX = endX - startX;
+        const deltaY = endY - startY;
+        const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+        
+        if (distance > 0) {
+          const dirX = deltaX / distance;
+          const dirY = deltaY / distance;
+          
+          // Adjust start point based on initial node shape
+          if (initialNode.shape === 'circle') {
+            startX = startX + dirX * centerRadius;
+            startY = startY + dirY * centerRadius;
+          } else {
+            // For pill shape, calculate edge intersection
+            const absDirectionX = Math.abs(dirX);
+            const absDirectionY = Math.abs(dirY);
+            
+            if (absDirectionX > absDirectionY) {
+              // More horizontal - use left/right edges
+              startX = startX + Math.sign(dirX) * (centerWidth / 2);
+              startY = startY + dirY * (centerWidth / 2) / absDirectionX;
+            } else {
+              // More vertical - use top/bottom edges
+              startX = startX + dirX * (centerHeight / 2) / absDirectionY;
+              startY = startY + Math.sign(dirY) * (centerHeight / 2);
+            }
+          }
+          
+          // Adjust end point to edge of end node
+          endX = endX - dirX * branchRadius;
+          endY = endY - dirY * branchRadius;
+        }
+      }
+      
+      // Draw connection immediately (revert batching for now to debug connections)
+      ctx.beginPath();
+      ctx.moveTo(startX, startY);
+      ctx.lineTo(endX, endY);
+      ctx.stroke();
+    });
+  }
+  
+  // Get position for branch nodes
+  function getBranchNodePosition(centerX, centerY, direction) {
+    // Check cache first
+    const cached = getCachedPosition(centerX, centerY, direction, marketState.currentCategory);
+    if (cached) return cached;
+
+    const treeData = techTreeData[marketState.currentCategory];
+    const initialNode = treeData.initialNode;
+    
+    // Use consistent 300-unit base distance for uniform grid alignment
+    const distance = 300;
+    
+    // Get multipliers from config
+    const multiplier = DIRECTION_CONFIG.multipliers[direction];
+    if (!multiplier) {
+      console.warn(`Unknown direction: ${direction}`);
+      return { x: centerX, y: centerY };
+    }
+    
+    const position = {
+      x: centerX + (multiplier[0] * distance),
+      y: centerY + (multiplier[1] * distance)
+    };
+    
+    // Cache and return
+    return setCachedPosition(centerX, centerY, direction, marketState.currentCategory, position);
+  }
+  
+  // Check if node is hovered (optimized)
+  function isNodeHovered(x, y, isInitial) {
+    // Early exit if mouse is not in tree area
+    if (!isPointInTechTreeArea(marketState.mouseX, marketState.mouseY)) return false;
+    
+    const treeData = techTreeData[marketState.currentCategory];
+    if (!treeData) return false;
+    
+    // Transform mouse coordinates to account for viewport and zoom
+    const mouseX = (marketState.mouseX - marketState.viewportX) / marketState.zoom;
+    const mouseY = (marketState.mouseY - marketState.viewportY) / marketState.zoom;
+    
+    if (isInitial) {
+      const initialNode = treeData.initialNode;
+      if (initialNode.shape === 'circle') {
+        const distance = Math.sqrt((mouseX - x) ** 2 + (mouseY - y) ** 2);
+        return distance <= 150; // Updated to match new radius
+      } else {
+        return mouseX >= x - 225 && mouseX <= x + 225 && // Updated to match new width/2
+               mouseY >= y - 75 && mouseY <= y + 75; // Updated to match new height/2
+      }
+    } else {
+      const distance = Math.sqrt((mouseX - x) ** 2 + (mouseY - y) ** 2);
+      return distance <= 75; // Updated to match new radius
+    }
+  }
+  
+  // Check if option is hovered (for initial node)
+  function isOptionHovered(x, y, optionIndex, totalOptions, isInitial) {
+    if (!isInitial) return false;
+    
+    const treeData = techTreeData[marketState.currentCategory];
+    if (!treeData) return false;
+    
+    // Transform mouse coordinates to account for viewport and zoom
+    const mouseX = (marketState.mouseX - marketState.viewportX) / marketState.zoom;
+    const mouseY = (marketState.mouseY - marketState.viewportY) / marketState.zoom;
+    
+    const initialNode = treeData.initialNode;
+    let nodeWidth, nodeHeight, radius;
+    
+    if (initialNode.shape === 'circle') {
+      radius = 150;
+      nodeWidth = nodeHeight = radius * 2;
+    } else {
+      nodeWidth = 450;
+      nodeHeight = 150;
+      radius = nodeHeight / 2;
+    }
+    
+    // Calculate option area for side-by-side layout
+    const optionWidth = nodeWidth / totalOptions;
+    const optionX = x - nodeWidth/2 + (optionIndex * optionWidth);
+    const optionY = y - nodeHeight/2;
+    
+    return mouseX >= optionX && mouseX <= optionX + optionWidth &&
+           mouseY >= optionY && mouseY <= optionY + nodeHeight;
+  }
+  
+  // Draw shop interface with item grid
+  function drawShopInterface() {
+    if (!canvas || !ctx) return;
+    
+    const displayWidth = canvas.offsetWidth;
+    const displayHeight = canvas.offsetHeight;
+    
+    // Smaller shop panel
+    const shopWidth = 800;
+    const shopHeight = 600;
+    const shopX = (displayWidth - shopWidth) / 2;
+    const shopY = (displayHeight - shopHeight) / 2;
+    
+    // Draw shop background
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+    ctx.fillRect(shopX, shopY, shopWidth, shopHeight);
+    
+    // Draw shop border
+    ctx.strokeStyle = '#402b20';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(shopX, shopY, shopWidth, shopHeight);
+    
+    // Draw back button
+    const backButtonWidth = 80;
+    const backButtonHeight = 40;
+    const backButtonX = shopX + 20;
+    const backButtonY = shopY + 20;
+    
+    const isBackHovered = marketState.mouseX >= backButtonX && 
+                         marketState.mouseX <= backButtonX + backButtonWidth &&
+                         marketState.mouseY >= backButtonY && 
+                         marketState.mouseY <= backButtonY + backButtonHeight;
+    
+    marketState.backButton = { x: backButtonX, y: backButtonY, width: backButtonWidth, height: backButtonHeight };
+    drawStandardButton(backButtonX, backButtonY, backButtonWidth, backButtonHeight, '← Back', false, isBackHovered);
+    
+    // Draw category title
+    ctx.fillStyle = '#402b20';
+    ctx.font = '24px "IM Fell English", serif';
+    ctx.textAlign = 'center';
+    
+    // Hardcoded shop names
+    let categoryTitle;
+    switch(marketState.currentCategory) {
+      case 'other':
+        categoryTitle = 'Other Stuff';
+        break;
+      case 'laptop':
+        categoryTitle = 'Tech Forge';
+        break;
+      case 'laptop_grant':
+        categoryTitle = 'Laptop Grant Upgrades';
+        break;
+      case 'tablet':
+        categoryTitle = 'Digital Workshop';
+        break;
+      default:
+        categoryTitle = 'Unknown Shop';
+    }
+    
+    ctx.fillText(categoryTitle, displayWidth / 2, shopY + 60);
+    
+    // Draw coin balance in top right
+    ctx.fillStyle = '#8b4513';
+    ctx.font = 'bold 18px "IM Fell English", serif';
+    ctx.textAlign = 'right';
+    ctx.fillText(`${marketState.userCoins} 🪙`, shopX + shopWidth - 20, shopY + 40);
+    
+    // Draw item grid - 5 items per row, 2 rows max (10 items total)
+    const items = shopItems[marketState.currentCategory] || [];
+    const itemsPerRow = 5;
+    const itemSize = 120; // Adjusted to fit container
+    const itemSpacing = 20;
+    
+    // Calculate total width needed and center the grid
+    const totalGridWidth = itemsPerRow * itemSize + (itemsPerRow - 1) * itemSpacing;
+    const startX = shopX + (shopWidth - totalGridWidth) / 2;
+    const startY = shopY + 100;
+    
+    items.forEach((item, index) => {
+      const row = Math.floor(index / itemsPerRow);
+      const col = index % itemsPerRow;
+      const itemX = startX + col * (itemSize + itemSpacing);
+      const itemY = startY + row * (itemSize + itemSpacing);
+      
+      // Calculate image size and positioning for hover detection
+      let imageSize;
+      if (item.title === 'Mercenary' || item.title === 'Unlock Orange Meeple' || item.isCosmetic) {
+        imageSize = 200; // Mercenary, Orange Meeple, and Cosmetics all use the same size
+      } else {
+        imageSize = 80;
+      }
+      const imageX = itemX + (itemSize - imageSize) / 2;
+      const imageY = itemY + (itemSize - imageSize) / 2 - 35; // Move up 35px from center
+      
+      // Check if mouse is hovering over the container box (consistent for all items)
+      const isHovered = marketState.mouseX >= itemX && 
+                       marketState.mouseX <= itemX + itemSize &&
+                       marketState.mouseY >= itemY && 
+                       marketState.mouseY <= itemY + itemSize;
+      
+      // Store item position for click detection (use container bounds)
+      item.x = itemX;
+      item.y = itemY;
+      item.width = itemSize;
+      item.height = itemSize;
+      
+      // Draw item background
+      ctx.fillStyle = isHovered ? 'rgba(90, 58, 42, 0.1)' : 'rgba(64, 43, 32, 0.05)';
+      ctx.fillRect(itemX, itemY, itemSize, itemSize);
+      
+      // Draw item border
+      ctx.strokeStyle = isHovered ? '#8b4513' : '#402b20';
+      ctx.lineWidth = isHovered ? 2 : 1;
+      ctx.strokeRect(itemX, itemY, itemSize, itemSize);
+      
+      // Draw item image - use the already calculated centered positioning
+      
+      // For cosmetics, draw a meeple base first, then the cosmetic on top
+      if (item.isCosmetic) {
+        // Draw meeple base (use cyan meeple as base)
+        const meepleImage = getItemImage('<%= asset_path("meeple/meeple-cyan.png") %>');
+        if (meepleImage && meepleImage.complete) {
+          ctx.drawImage(meepleImage, imageX, imageY, imageSize, imageSize);
+        }
+        
+        // Draw cosmetic on top of meeple
+        const itemImage = getItemImage(item.image);
+        if (itemImage && itemImage.complete) {
+          ctx.drawImage(itemImage, imageX, imageY, imageSize, imageSize);
+        }
+      } else {
+        // Draw actual item image if available, otherwise colored rectangle
+        const itemImage = getItemImage(item.image);
+        if (itemImage && itemImage.complete) {
+          ctx.drawImage(itemImage, imageX, imageY, imageSize, imageSize);
+        } else {
+          // Fallback to colored rectangle
+          ctx.fillStyle = getMeepleColor(item.image);
+          ctx.fillRect(imageX, imageY, imageSize, imageSize);
+        }
+      }
+      
+      // Draw item title - positioned right below image
+      ctx.fillStyle = '#402b20';
+      ctx.font = '12px "IM Fell English", serif';
+      ctx.textAlign = 'center';
+      
+      // Add count display for mercenaries
+      let displayTitle = item.title;
+      if (item.title === 'Mercenary') {
+        displayTitle = `Mercenary (${mercenaryCount}/10)`;
+      }
+      
+      ctx.fillText(displayTitle, itemX + itemSize / 2, itemY + itemSize - 25);
+      
+      // Draw item price - positioned at bottom (with cached dynamic pricing for mercenaries)
+      ctx.fillStyle = '#8b4513';
+      ctx.font = 'bold 14px "IM Fell English", serif';
+      
+      ctx.fillText(`${getShopItemDisplayPrice(item)} 🪙`, itemX + itemSize / 2, itemY + itemSize - 5);
+    });
+  }
+  
+  // Draw item details popup
+  function drawItemDetails() {
+    if (!canvas || !ctx || !marketState.currentItem) return;
+    
+    const displayWidth = canvas.offsetWidth;
+    const displayHeight = canvas.offsetHeight;
+    
+    const item = marketState.currentItem;
+    const popupWidth = 400;
+    const popupHeight = 500;
+    const popupX = (displayWidth - popupWidth) / 2;
+    const popupY = (displayHeight - popupHeight) / 2;
+    
+    // Draw popup background
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.98)';
+    ctx.fillRect(popupX, popupY, popupWidth, popupHeight);
+    
+    // Draw popup border
+    ctx.strokeStyle = '#402b20';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(popupX, popupY, popupWidth, popupHeight);
+    
+    // Draw close button (X)
+    const closeButtonSize = 30;
+    const closeButtonX = popupX + popupWidth - closeButtonSize - 10;
+    const closeButtonY = popupY + 10;
+    
+    const isCloseHovered = marketState.mouseX >= closeButtonX && 
+                          marketState.mouseX <= closeButtonX + closeButtonSize &&
+                          marketState.mouseY >= closeButtonY && 
+                          marketState.mouseY <= closeButtonY + closeButtonSize;
+    
+    marketState.closeButton = { x: closeButtonX, y: closeButtonY, width: closeButtonSize, height: closeButtonSize };
+    
+    // Draw close button background
+    ctx.fillStyle = isCloseHovered ? '#ff4444' : '#ff6666';
+    ctx.fillRect(closeButtonX, closeButtonY, closeButtonSize, closeButtonSize);
+    
+    // Draw X
+    ctx.fillStyle = 'white';
+    ctx.font = 'bold 16px "IM Fell English", serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('×', closeButtonX + closeButtonSize / 2, closeButtonY + closeButtonSize / 2 + 4);
+    
+    // Draw item image - same logic as shop grid
+    let imageSize;
+    if (item.title === 'Mercenary' || item.title === 'Unlock Orange Meeple' || item.isCosmetic) {
+      imageSize = 300; // Mercenary, Orange Meeple, and Cosmetics all use the same size
+    } else {
+      imageSize = 120;
+    }
+    const imageX = popupX + (popupWidth - imageSize) / 2;
+    const imageY = popupY + (popupHeight - imageSize) / 2 - 100; // Center and move up 100px
+    
+    // For cosmetics, draw a meeple base first, then the cosmetic on top
+    if (item.isCosmetic) {
+      // Draw meeple base (use cyan meeple as base)
+      const meepleImage = getItemImage('<%= asset_path("meeple/meeple-cyan.png") %>');
+      if (meepleImage && meepleImage.complete) {
+        ctx.drawImage(meepleImage, imageX, imageY, imageSize, imageSize);
+      }
+      
+      // Draw cosmetic on top of meeple
+      const itemImage = getItemImage(item.image);
+      if (itemImage && itemImage.complete) {
+        ctx.drawImage(itemImage, imageX, imageY, imageSize, imageSize);
+      }
+    } else {
+      // Draw actual item image if available, otherwise colored rectangle
+      const itemImage = getItemImage(item.image);
+      if (itemImage && itemImage.complete) {
+        ctx.drawImage(itemImage, imageX, imageY, imageSize, imageSize);
+      } else {
+        // Fallback to colored rectangle
+        ctx.fillStyle = getMeepleColor(item.image);
+        ctx.fillRect(imageX, imageY, imageSize, imageSize);
+      }
+    }
+    
+    // Draw item title
+    ctx.fillStyle = '#402b20';
+    ctx.font = 'bold 20px "IM Fell English", serif';
+    ctx.textAlign = 'center';
+    
+    // Add count display for mercenaries
+    let displayTitle = item.title;
+    if (item.title === 'Mercenary') {
+      displayTitle = `Mercenary (${mercenaryCount}/10)`;
+    }
+    
+    ctx.fillText(displayTitle, popupX + popupWidth / 2, imageY + imageSize + 40);
+    
+    // Draw item price (with cached dynamic pricing for mercenaries)
+    ctx.fillStyle = '#8b4513';
+    ctx.font = 'bold 18px "IM Fell English", serif';
+    
+    ctx.fillText(`${getShopItemDisplayPrice(item)} 🪙`, popupX + popupWidth / 2, imageY + imageSize + 70);
+    
+    // Draw item description
+    ctx.fillStyle = '#402b20';
+    ctx.font = '14px "IM Fell English", serif';
+    ctx.textAlign = 'center';
+    
+    // Wrap description text
+    const words = item.description.split(' ');
+    const lineHeight = 20;
+    const maxWidth = popupWidth - 40;
+    let currentLine = '';
+    let currentY = imageY + imageSize + 100;
+    
+    for (let word of words) {
+      const testLine = currentLine + word + ' ';
+      const metrics = ctx.measureText(testLine);
+      
+      if (metrics.width > maxWidth && currentLine !== '') {
+        ctx.fillText(currentLine, popupX + popupWidth / 2, currentY);
+        currentLine = word + ' ';
+        currentY += lineHeight;
+      } else {
+        currentLine = testLine;
+      }
+    }
+    ctx.fillText(currentLine, popupX + popupWidth / 2, currentY);
+    
+    // Draw purchase button
+    const purchaseButtonWidth = 150;
+    const purchaseButtonHeight = 40;
+    const purchaseButtonX = popupX + (popupWidth - purchaseButtonWidth) / 2;
+    const purchaseButtonY = popupY + popupHeight - 60;
+    
+    // Check if user has enough coins
+    const itemPrice = item.title === 'Mercenary' ? mercenaryPrice : item.price;
+    const hasEnoughCoins = marketState.userCoins >= itemPrice;
+    
+    // Check if item is available for purchase
+    const isAvailable = !item.purchased && 
+                       (!item.maxPurchases || !item.currentPurchases || item.currentPurchases < item.maxPurchases);
+    
+
+    
+    // Check prerequisites
+    const meetsPrerequisites = hasPrerequisites(item);
+    
+    const isPurchaseHovered = hasEnoughCoins && isAvailable && meetsPrerequisites && marketState.mouseX >= purchaseButtonX && 
+                             marketState.mouseX <= purchaseButtonX + purchaseButtonWidth &&
+                             marketState.mouseY >= purchaseButtonY && 
+                             marketState.mouseY <= purchaseButtonY + purchaseButtonHeight;
+    
+    const isDisabled = !hasEnoughCoins || !isAvailable || !meetsPrerequisites;
+    let buttonText = 'Purchase';
+    if (!isAvailable) {
+      buttonText = item.purchased ? 'Purchased' : 'Maxed Out';
+    } else if (!meetsPrerequisites) {
+      buttonText = 'Prerequisites Required';
+    }
+    
+    marketState.purchaseButton = { x: purchaseButtonX, y: purchaseButtonY, width: purchaseButtonWidth, height: purchaseButtonHeight };
+    drawStandardButton(purchaseButtonX, purchaseButtonY, purchaseButtonWidth, purchaseButtonHeight, buttonText, false, isPurchaseHovered, isDisabled);
+  }
+  
+  // Draw status popup
+  function drawStatusPopup() {
+    if (!canvas || !ctx) return;
+    
+    const displayWidth = canvas.offsetWidth;
+    const displayHeight = canvas.offsetHeight;
+    
+    const popupWidth = 400;
+    const popupHeight = 200;
+    const popupX = (displayWidth - popupWidth) / 2;
+    const popupY = (displayHeight - popupHeight) / 2;
+    
+    // Draw popup background
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.98)';
+    ctx.fillRect(popupX, popupY, popupWidth, popupHeight);
+    
+    // Draw popup border
+    ctx.strokeStyle = '#402b20';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(popupX, popupY, popupWidth, popupHeight);
+    
+    // Draw status icon and message
+    ctx.textAlign = 'center';
+    
+    if (marketState.statusPopupType === 'loading') {
+      // Draw loading spinner
+      const centerX = popupX + popupWidth / 2;
+      const centerY = popupY + popupHeight / 2 - 20;
+      const radius = 20;
+      const time = Date.now() * 0.005;
+      
+      ctx.strokeStyle = '#8b4513';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius, time, time + Math.PI * 1.5);
+      ctx.stroke();
+      
+      // Draw loading text
+      ctx.fillStyle = '#402b20';
+      ctx.font = '18px "IM Fell English", serif';
+      ctx.fillText('Processing Purchase...', centerX, centerY + 50);
+    } else if (marketState.statusPopupType === 'success') {
+      // Draw success checkmark
+      const centerX = popupX + popupWidth / 2;
+      const centerY = popupY + 60;
+      
+      ctx.strokeStyle = '#8b4513';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(centerX - 15, centerY);
+      ctx.lineTo(centerX - 5, centerY + 10);
+      ctx.lineTo(centerX + 15, centerY - 10);
+      ctx.stroke();
+      
+      // Draw success text
+      ctx.fillStyle = '#8b4513';
+      ctx.font = 'bold 18px "IM Fell English", serif';
+      ctx.fillText('Purchase Successful!', centerX, centerY + 35);
+      
+      // Draw message
+      ctx.fillStyle = '#402b20';
+      ctx.font = '14px "IM Fell English", serif';
+      ctx.fillText(marketState.statusPopupMessage, centerX, centerY + 60);
+      
+      // Draw fulfillment notice if present
+      if (marketState.statusPopupFulfillment) {
+        ctx.fillStyle = '#8b4513';
+        ctx.font = 'italic 12px "IM Fell English", serif';
+        ctx.fillText(marketState.statusPopupFulfillment, centerX, centerY + 80);
+      }
+    } else if (marketState.statusPopupType === 'error') {
+      // Draw error X
+      const centerX = popupX + popupWidth / 2;
+      const centerY = popupY + 60;
+      
+      ctx.strokeStyle = '#8b4513';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(centerX - 15, centerY - 15);
+      ctx.lineTo(centerX + 15, centerY + 15);
+      ctx.moveTo(centerX + 15, centerY - 15);
+      ctx.lineTo(centerX - 15, centerY + 15);
+      ctx.stroke();
+      
+      // Draw error text
+      ctx.fillStyle = '#8b4513';
+      ctx.font = 'bold 18px "IM Fell English", serif';
+      ctx.fillText('Purchase Failed', centerX, centerY + 35);
+      
+      // Draw message
+      ctx.fillStyle = '#402b20';
+      ctx.font = '14px "IM Fell English", serif';
+      ctx.fillText(marketState.statusPopupMessage, centerX, centerY + 60);
+    }
+    
+    // Draw close button for success/error
+    if (marketState.statusPopupType === 'success' || marketState.statusPopupType === 'error') {
+      const closeButtonWidth = 100;
+      const closeButtonHeight = 35;
+      const closeButtonX = popupX + (popupWidth - closeButtonWidth) / 2;
+      const closeButtonY = popupY + popupHeight - 50;
+      
+      const isCloseHovered = marketState.mouseX >= closeButtonX && 
+                           marketState.mouseX <= closeButtonX + closeButtonWidth &&
+                           marketState.mouseY >= closeButtonY && 
+                           marketState.mouseY <= closeButtonY + closeButtonHeight;
+      
+      marketState.statusCloseButton = { x: closeButtonX, y: closeButtonY, width: closeButtonWidth, height: closeButtonHeight };
+      drawStandardButton(closeButtonX, closeButtonY, closeButtonWidth, closeButtonHeight, 'Close', false, isCloseHovered);
+    }
+  }
+
+  // Draw warning popup
+  function drawWarningPopup() {
+    if (!canvas || !ctx) return;
+    
+    const displayWidth = canvas.offsetWidth;
+    const displayHeight = canvas.offsetHeight;
+    
+    const popupWidth = 500;
+    const popupHeight = 250;
+    const popupX = (displayWidth - popupWidth) / 2;
+    const popupY = (displayHeight - popupHeight) / 2;
+    
+    // Draw popup background
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.98)';
+    ctx.fillRect(popupX, popupY, popupWidth, popupHeight);
+    
+    // Draw popup border
+    ctx.strokeStyle = '#8b4513';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(popupX, popupY, popupWidth, popupHeight);
+    
+    // Draw warning icon
+    ctx.textAlign = 'center';
+    const centerX = popupX + popupWidth / 2;
+    const centerY = popupY + 60;
+    
+    // Draw warning triangle
+    ctx.fillStyle = '#8b4513';
+    ctx.beginPath();
+    ctx.moveTo(centerX, centerY - 20);
+    ctx.lineTo(centerX - 15, centerY + 10);
+    ctx.lineTo(centerX + 15, centerY + 10);
+    ctx.closePath();
+    ctx.fill();
+    
+    // Draw exclamation mark
+    ctx.fillStyle = 'white';
+    ctx.font = 'bold 16px "IM Fell English", serif';
+    ctx.fillText('!', centerX, centerY + 5);
+    
+    // Draw warning title
+    ctx.fillStyle = '#8b4513';
+    ctx.font = 'bold 20px "IM Fell English", serif';
+    ctx.fillText('Warning', centerX, centerY + 40);
+    
+    // Draw warning message
+    ctx.fillStyle = '#402b20';
+    ctx.font = '16px "IM Fell English", serif';
+    drawMultiLineText(ctx, marketState.warningMessage, centerX, centerY + 70, popupWidth - 40, 20);
+    
+    // Draw buttons
+    const buttonWidth = 120;
+    const buttonHeight = 40;
+    const buttonSpacing = 20;
+    const totalButtonWidth = (buttonWidth * 2) + buttonSpacing;
+    const buttonStartX = popupX + (popupWidth - totalButtonWidth) / 2;
+    const buttonY = popupY + popupHeight - 60;
+    
+    // Cancel button
+    const cancelButtonX = buttonStartX;
+    const isCancelHovered = marketState.mouseX >= cancelButtonX && 
+                           marketState.mouseX <= cancelButtonX + buttonWidth &&
+                           marketState.mouseY >= buttonY && 
+                           marketState.mouseY <= buttonY + buttonHeight;
+    
+    marketState.warningCancelButton = { x: cancelButtonX, y: buttonY, width: buttonWidth, height: buttonHeight };
+    drawStandardButton(cancelButtonX, buttonY, buttonWidth, buttonHeight, 'Cancel', false, isCancelHovered);
+    
+    // OK button
+    const okButtonX = buttonStartX + buttonWidth + buttonSpacing;
+    const isOkHovered = marketState.mouseX >= okButtonX && 
+                       marketState.mouseX <= okButtonX + buttonWidth &&
+                       marketState.mouseY >= buttonY && 
+                       marketState.mouseY <= buttonY + buttonHeight;
+    
+    marketState.warningOkButton = { x: okButtonX, y: buttonY, width: buttonWidth, height: buttonHeight };
+    drawStandardButton(okButtonX, buttonY, buttonWidth, buttonHeight, 'OK', false, isOkHovered);
+  }
+
+  // Helper function to get fallback color for image paths
+  function getMeepleColor(imagePath) {
+    if (!imagePath) return '#666666'; // Default color if imagePath is undefined
+    if (imagePath.includes('meeple-red')) return '#ff4444';
+    if (imagePath.includes('meeple-yellow')) return '#ffdd44';
+    if (imagePath.includes('meeple-orange')) return '#ff8844';
+    return '#666666';
+  }
+
+  // Function to save main device selection to server
+  async function saveMainDeviceSelection(deviceId) {
+    try {
+      const response = await fetch('/market/set_main_device', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+        },
+        body: JSON.stringify({ device_id: deviceId })
+      });
+      
+      const result = await response.json();
+      if (result.success) {
+        console.log('Main device saved successfully');
+        return result;
+      } else {
+        console.error('Failed to save main device:', result.error);
+        throw new Error(result.error);
+      }
+    } catch (error) {
+      console.error('Error saving main device:', error);
+      throw error;
+    }
+  }
+
+  // Function to load current main device selection from server
+  async function loadMainDeviceSelection() {
+    try {
+      const response = await fetch('/market/get_main_device');
+      const result = await response.json();
+      
+      if (result.has_main_device) {
+        // Set selectedBaseOption if it matches the current category or if not in laptop_grant
+        if (marketState.currentCategory !== 'laptop_grant' || result.main_device === 'laptop_grant_base') {
+          marketState.selectedBaseOption = result.main_device;
+        }
+        console.log('Loaded main device:', result.main_device);
+      } else {
+        // Don't override selectedBaseOption for laptop_grant system
+        if (marketState.currentCategory !== 'laptop_grant') {
+          marketState.selectedBaseOption = null;
+        }
+      }
+      
+      // Also load user purchases to update tech tree node states
+      await loadUserPurchases();
+      
+      return result;
+    } catch (error) {
+      console.error('Error loading main device:', error);
+      marketState.selectedBaseOption = null;
+      return { has_main_device: false };
+    }
+  }
+
+  // Get device category from main device ID
+  function getDeviceCategoryFromMainDevice(mainDeviceId) {
+    // Special case for laptop grant
+    if (mainDeviceId === 'laptop_grant_base') {
+      return 'laptop_grant';
+    }
+    
+    // Check if the device is in laptop tech tree data
+    if (techTreeData.laptop?.initialNode?.options) {
+      const laptopOptions = techTreeData.laptop.initialNode.options.map(opt => opt.id);
+      if (laptopOptions.includes(mainDeviceId)) {
+        return 'laptop';
+      }
+    }
+    
+    // Check if the device is in tablet tech tree data
+    if (techTreeData.tablet?.initialNode?.options) {
+      const tabletOptions = techTreeData.tablet.initialNode.options.map(opt => opt.id);
+      if (tabletOptions.includes(mainDeviceId)) {
+        return 'tablet';
+      }
+    }
+    
+    return 'laptop'; // Default fallback
+  }
+
+  // Get the color scheme for the selected main device
+  function getMainDeviceColorScheme() {
+    if (!marketState.selectedBaseOption) {
+      return { background: 'rgba(64, 43, 32, 0.05)', border: '#402b20' };
+    }
+    
+    // Use the same color as the selected main option
+    return { background: 'rgba(139, 69, 19, 0.15)', border: '#8b4513' };
+  }
+
+  // Check if user has purchased device-specific upgrades for a given device
+  function hasDeviceSpecificUpgrades(deviceId) {
+    // Special case for laptop_grant_base - check for grant purchases
+    if (deviceId === 'laptop_grant_base') {
+      const grantItems = ['+$10 Grant', '+$50 Grant', '+$100 Grant'];
+      const hasGrantPurchases = grantItems.some(grantTitle => {
+        return marketState.userPurchases.some(purchase => 
+          purchase.item_name === grantTitle && purchase.quantity > 0
+        );
+      });
+
+      return hasGrantPurchases;
+    }
+    
+    const deviceSpecificItems = getDeviceSpecificItems(deviceId);
+    const hasUpgrades = deviceSpecificItems.some(item => {
+      return marketState.userPurchases.some(purchase => 
+        purchase.item_name === item.title && purchase.quantity > 0
+      );
+    });
+    return hasUpgrades;
+  }
+
+  // Get all device-specific items for a given device
+  function getDeviceSpecificItems(deviceId) {
+    const items = [];
+    
+    // Check both laptop and tablet tech tree data
+    Object.keys(techTreeData).forEach(category => {
+      const treeData = techTreeData[category];
+      if (treeData && treeData.branches && treeData.branches[deviceId]) {
+        const branches = treeData.branches[deviceId];
+        Object.values(branches).forEach(branch => {
+          if (branch.id && branch.title) {
+            items.push(branch);
+          }
+        });
+      }
+    });
+    
+    return items;
+  }
+
+  // Refund device-specific upgrades for a given device
+  async function refundDeviceSpecificUpgrades(deviceId) {
+    let totalRefund = 0;
+    
+    // Special case for laptop_grant_base - refund grant purchases
+    if (deviceId === 'laptop_grant_base') {
+      const grantItems = [
+        { title: '+$10 Grant', price: 75 },
+        { title: '+$50 Grant', price: 300 },
+        { title: '+$100 Grant', price: 500 }
+      ];
+      
+      for (const item of grantItems) {
+        const purchase = marketState.userPurchases.find(p => 
+          p.item_name === item.title && p.quantity > 0
+        );
+        
+        if (purchase) {
+          // Use the actual amount paid for this item, not the current price
+          const refundAmount = purchase.total_coins_spent || (item.price * purchase.quantity);
+        totalRefund += refundAmount;
+          
+          // Refund this item
+          try {
+            const response = await fetch('/market/refund_item', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+              },
+              body: JSON.stringify({
+                item_name: item.title,
+                refund_amount: refundAmount
+              })
+            });
+            
+            const result = await response.json();
+            if (result.success) {
+              // Update local state
+              marketState.userCoins += refundAmount;
+              // Remove purchase from local state
+              const index = marketState.userPurchases.findIndex(p => p.item_name === item.title);
+              if (index !== -1) {
+                marketState.userPurchases.splice(index, 1);
+              }
+            }
+          } catch (error) {
+            console.error('Error refunding grant item:', error);
+          }
+        }
+      }
+      
+      // Refresh grant total from server after refunds
+      if (totalRefund > 0) {
+        loadUserRegionInfo();
+      }
+      
+      return totalRefund;
+    }
+    
+    // Regular device refund logic
+    const deviceSpecificItems = getDeviceSpecificItems(deviceId);
+    
+    for (const item of deviceSpecificItems) {
+      // Find purchases of this item
+      const purchase = marketState.userPurchases.find(p => 
+        p.item_name === item.title && p.quantity > 0
+      );
+      
+      if (purchase) {
+        // Use the actual amount paid for this item, not the current price
+        const refundAmount = purchase.total_coins_spent || (item.price * purchase.quantity);
+        totalRefund += refundAmount;
+        
+        // Delete all purchases of this item (this would need to be implemented in the backend)
+        try {
+          const response = await fetch('/market/refund_item', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify({
+              item_name: purchase.item_name,
+              refund_amount: refundAmount
+            })
+          });
+          
+          if (!response.ok) {
+            console.error('Failed to refund item:', purchase.item_name);
+          }
+        } catch (error) {
+          console.error('Error refunding item:', error);
+        }
+      }
+    }
+    
+    // Update user coins
+    marketState.userCoins += totalRefund;
+    
+    // Reload user purchases to reflect the refunds
+    await loadUserPurchases();
+    
+    return totalRefund;
+  }
+
+  // Function to check if a node's prerequisites are met
+  function hasPrerequisites(node) {
+    if (!node.requires) return true; // No prerequisites required
+    
+    // Split comma-separated requirements and check each one
+    const requiredItems = node.requires.split(',').map(item => item.trim());
+    
+    return requiredItems.every(requiredItem => 
+      marketState.userPurchases.some(purchase => 
+        purchase.item_name === requiredItem && purchase.quantity > 0
+      )
+    );
+  }
+
+
+
+  // Helper function to find prerequisite node in current branches
+  function findPrerequisiteNode(branches, requiresTitle) {
+    for (const [direction, node] of Object.entries(branches)) {
+      if (node.title === requiresTitle) {
+        return { ...node, direction: direction };
+      }
+    }
+    return null;
+  }
+
+  // Calculate edge-to-edge connection between two nodes
+  function calculateEdgeConnection(startX, startY, endX, endY, nodeRadius, hasPrerequisite, initialNode) {
+    let adjustedStartX = startX;
+    let adjustedStartY = startY;
+    let adjustedEndX = endX;
+    let adjustedEndY = endY;
+
+    if (hasPrerequisite) {
+      // Node-to-node connection: calculate direction and adjust edges
+      const deltaX = endX - startX;
+      const deltaY = endY - startY;
+      const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+      
+      if (distance > 0) {
+        const dirX = deltaX / distance;
+        const dirY = deltaY / distance;
+        
+        // Adjust start point to edge of start node
+        adjustedStartX = startX + dirX * nodeRadius;
+        adjustedStartY = startY + dirY * nodeRadius;
+        
+        // Adjust end point to edge of end node
+        adjustedEndX = endX - dirX * nodeRadius;
+        adjustedEndY = endY - dirY * nodeRadius;
+      }
+    } else {
+      // Center-to-node connection: use initial node shape for start edge
+      let centerRadius, centerWidth, centerHeight;
+      if (initialNode.shape === 'circle') {
+        centerRadius = 150;
+        centerWidth = centerHeight = centerRadius * 2;
+      } else {
+        centerWidth = 450;
+        centerHeight = 150;
+        centerRadius = centerHeight / 2;
+      }
+
+      // Calculate direction from center to end node
+      const deltaX = endX - startX;
+      const deltaY = endY - startY;
+      const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+      
+      if (distance > 0) {
+        const dirX = deltaX / distance;
+        const dirY = deltaY / distance;
+        
+        // Adjust start point based on initial node shape
+        if (initialNode.shape === 'circle') {
+          adjustedStartX = startX + dirX * centerRadius;
+          adjustedStartY = startY + dirY * centerRadius;
+        } else {
+          // For pill shape, calculate edge intersection
+          const absDirectionX = Math.abs(dirX);
+          const absDirectionY = Math.abs(dirY);
+          
+          if (absDirectionX > absDirectionY) {
+            // More horizontal - use left/right edges
+            adjustedStartX = startX + Math.sign(dirX) * (centerWidth / 2);
+            adjustedStartY = startY + dirY * (centerWidth / 2) / absDirectionX;
+          } else {
+            // More vertical - use top/bottom edges
+            adjustedStartX = startX + dirX * (centerHeight / 2) / absDirectionY;
+            adjustedStartY = startY + Math.sign(dirY) * (centerHeight / 2);
+          }
+        }
+        
+        // Adjust end point to edge of end node
+        adjustedEndX = endX - dirX * nodeRadius;
+        adjustedEndY = endY - dirY * nodeRadius;
+      }
+    }
+
+    return { adjustedStartX, adjustedStartY, adjustedEndX, adjustedEndY };
+  }
+
+  // Function to check if a node is affordable (has coins and prerequisites)
+  function isNodeAffordable(node) {
+    if (!node.price || node.price === 0) return true; // Free items are always affordable
+    
+    // Use cache for expensive affordability calculations
+    const cacheKey = `${node.id || node.title}_${marketState.userCoins}`;
+    if (affordabilityCache.has(cacheKey)) {
+      return affordabilityCache.get(cacheKey);
+    }
+    
+    // Check if user has enough coins AND prerequisites are met
+    const hasCoins = marketState.userCoins >= node.price;
+    const meetsPrereqs = hasPrerequisites(node);
+    const result = hasCoins && meetsPrereqs;
+    
+    // Cache the result
+    affordabilityCache.set(cacheKey, result);
+    return result;
+  }
+
+  // Function to check if a node is clicked (regardless of affordability)
+  function isNodeClicked(x, y, isInitial) {
+    const treeData = techTreeData[marketState.currentCategory];
+    if (!treeData) return false;
+    
+    // Transform mouse coordinates to account for viewport and zoom
+    const mouseX = (marketState.mouseX - marketState.viewportX) / marketState.zoom;
+    const mouseY = (marketState.mouseY - marketState.viewportY) / marketState.zoom;
+    
+    if (isInitial) {
+      const initialNode = treeData.initialNode;
+      if (initialNode.shape === 'circle') {
+        const distance = Math.sqrt((mouseX - x) ** 2 + (mouseY - y) ** 2);
+        return distance <= 150; // Updated to match new radius
+      } else {
+        return mouseX >= x - 225 && mouseX <= x + 225 && // Updated to match new width/2
+               mouseY >= y - 75 && mouseY <= y + 75; // Updated to match new height/2
+      }
+    } else {
+      const distance = Math.sqrt((mouseX - x) ** 2 + (mouseY - y) ** 2);
+      return distance <= 75; // Updated to match new radius
+    }
+  }
+  
+  // Function to draw a standard button (copied from great hall)
+  function drawStandardButton(x, y, width, height, text, isBold = false, isHovered = false, isDisabled = false) {
+    // Draw button background with hover effect
+    if (isDisabled) {
+      ctx.fillStyle = '#666666';
+    } else {
+      ctx.fillStyle = isHovered ? '#5a3a2a' : '#402b20';
+    }
+    ctx.fillRect(x, y, width, height);
+    
+    // Draw button border for hover effect
+    if (isHovered && !isDisabled) {
+      ctx.strokeStyle = '#8b4513';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x, y, width, height);
+    }
+    
+    // Draw button text
+    ctx.fillStyle = isDisabled ? '#999999' : 'white';
+    ctx.font = `${isBold ? 'bold' : 'normal'} 14px "IM Fell English", serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText(text, x + width/2, y + height/2 + 4);
+    
+    return { x, y, width, height };
+  }
+  
+  // Handle button clicks
+  function handleButtonClick(x, y) {
+    // Handle status popup
+    if (marketState.statusPopupVisible) {
+      // Check close button
+      if (marketState.statusCloseButton && 
+          x >= marketState.statusCloseButton.x && x <= marketState.statusCloseButton.x + marketState.statusCloseButton.width &&
+          y >= marketState.statusCloseButton.y && y <= marketState.statusCloseButton.y + marketState.statusCloseButton.height) {
+        marketState.statusPopupVisible = false;
+        throttledRender();
+        return;
+      }
+      
+      // Block clicks to other elements when status popup is visible
+      return;
+    }
+    
+    // Handle warning popup
+    if (marketState.warningPopupVisible) {
+      // Check cancel button
+      if (marketState.warningCancelButton && 
+          x >= marketState.warningCancelButton.x && x <= marketState.warningCancelButton.x + marketState.warningCancelButton.width &&
+          y >= marketState.warningCancelButton.y && y <= marketState.warningCancelButton.y + marketState.warningCancelButton.height) {
+        marketState.warningPopupVisible = false;
+        throttledRender();
+        return;
+      }
+      
+      // Check OK button
+      if (marketState.warningOkButton && 
+          x >= marketState.warningOkButton.x && x <= marketState.warningOkButton.x + marketState.warningOkButton.width &&
+          y >= marketState.warningOkButton.y && y <= marketState.warningOkButton.y + marketState.warningOkButton.height) {
+        marketState.warningPopupVisible = false;
+        // Execute the callback function
+        if (marketState.warningCallback) {
+          marketState.warningCallback();
+        }
+        throttledRender();
+        return;
+      }
+      
+      // Block clicks to other elements when warning popup is visible
+      return;
+    }
+    
+    // Handle item details popup
+    if (marketState.itemDetailsVisible) {
+      // Check if click is within the popup area
+      const displayWidth = canvas.offsetWidth;
+      const displayHeight = canvas.offsetHeight;
+      const popupWidth = 400;
+      const popupHeight = 500;
+      const popupX = (displayWidth - popupWidth) / 2;
+      const popupY = (displayHeight - popupHeight) / 2;
+      
+      // If click is outside popup, ignore it (block clicks to shop behind)
+      if (x < popupX || x > popupX + popupWidth || y < popupY || y > popupY + popupHeight) {
+        return; // Block click from reaching shop interface
+      }
+      
+      // Check close button
+      if (marketState.closeButton && 
+          x >= marketState.closeButton.x && x <= marketState.closeButton.x + marketState.closeButton.width &&
+          y >= marketState.closeButton.y && y <= marketState.closeButton.y + marketState.closeButton.height) {
+        marketState.itemDetailsVisible = false;
+        throttledRender();
+        return;
+      }
+      
+      // Check purchase button
+      if (marketState.purchaseButton && 
+          x >= marketState.purchaseButton.x && x <= marketState.purchaseButton.x + marketState.purchaseButton.width &&
+          y >= marketState.purchaseButton.y && y <= marketState.purchaseButton.y + marketState.purchaseButton.height) {
+        // Check if user has enough coins and item is available before allowing purchase
+        const item = marketState.currentItem;
+        const itemPrice = item.title === 'Mercenary' ? mercenaryPrice : item.price;
+        const isAvailable = !item.purchased && 
+                           (!item.maxPurchases || !item.currentPurchases || item.currentPurchases < item.maxPurchases);
+        
+        if (marketState.userCoins >= itemPrice && isAvailable) {
+          purchaseItem(marketState.currentItem);
+        }
+        return;
+      }
+      
+      // If click is within popup but not on buttons, ignore it
+      return;
+    }
+    
+    // Handle shop interface
+    if (marketState.shopVisible) {
+      // Check back button
+      if (marketState.backButton && 
+          x >= marketState.backButton.x && x <= marketState.backButton.x + marketState.backButton.width &&
+          y >= marketState.backButton.y && y <= marketState.backButton.y + marketState.backButton.height) {
+        marketState.shopVisible = false;
+        marketState.dialogueVisible = true;
+        marketState.currentCategory = null;
+        marketState.selectedBaseOption = null; // Reset tech tree selection
+        throttledRender();
+        return;
+      }
+      
+      // Handle tech tree interactions
+      if (marketState.currentCategory === 'laptop' || marketState.currentCategory === 'tablet' || marketState.currentCategory === 'laptop_grant') {
+        handleTechTreeClick(x, y);
+        return;
+      }
+      
+      // Check item clicks for other categories
+      const items = shopItems[marketState.currentCategory] || [];
+      items.forEach(item => {
+        if (item.x && item.y && item.width && item.height) {
+          if (x >= item.x && x <= item.x + item.width &&
+              y >= item.y && y <= item.y + item.height) {
+            showItemDetails(item);
+            return;
+          }
+        }
+      });
+    }
+    
+    // Handle dialogue box
+    if (marketState.dialogueVisible) {
+      marketState.dialogueButtons.forEach(button => {
+        if (button.x && button.y && button.width && button.height) {
+          if (x >= button.x && x <= button.x + button.width &&
+              y >= button.y && y <= button.y + button.height) {
+            
+            console.log(`Button clicked: ${button.action}`);
+            
+            // Handle different button actions
+            switch(button.action) {
+              case 'device_upgrades':
+                // Ensure both main device selection and tech tree data are loaded
+                Promise.all([loadMainDeviceSelection(), loadTechTreeData()]).then(() => {
+                  // Check if user has a main device selected
+                  if (marketState.selectedBaseOption) {
+                    // User has a main device, go directly to that category
+                    const deviceCategory = getDeviceCategoryFromMainDevice(marketState.selectedBaseOption);
+                    
+                    console.log('Device upgrades - determined category:', {
+                      mainDevice: marketState.selectedBaseOption,
+                      determinedCategory: deviceCategory,
+                      techTreeDataLoaded: Object.keys(techTreeData).length > 0
+                    });
+                    
+                    marketState.dialogueVisible = false;
+                    marketState.shopVisible = true;
+                    
+                    // For unsupported regions, redirect laptop to laptop_grant
+                    if (!userInSupportedRegion && deviceCategory === 'laptop') {
+                      marketState.currentCategory = 'laptop_grant';
+                      // If user already has laptop_grant_base as main device, keep it selected
+                      if (marketState.selectedBaseOption !== 'laptop_grant_base') {
+                        marketState.selectedBaseOption = null; // User must click to select
+                      }
+                    } else {
+                      marketState.currentCategory = deviceCategory;
+                    }
+                    
+                    clearPositionCache(); // Clear cache when changing categories
+                    throttledRender();
+                  } else {
+                    // No main device selected, show device selection
+                    marketState.dialogueVisible = false;
+                    marketState.deviceSelectionVisible = true;
+                    throttledRender();
+                  }
+                });
+                break;
+              case 'laptop_grant':
+                marketState.dialogueVisible = false;
+                marketState.deviceSelectionVisible = false;
+                marketState.shopVisible = true;
+                marketState.currentCategory = 'laptop_grant';
+                marketState.selectedBaseOption = null; // User must click to select
+                throttledRender();
+                break;
+              case 'laptop':
+              case 'tablet':
+                marketState.dialogueVisible = false;
+                marketState.deviceSelectionVisible = false;
+                marketState.shopVisible = true;
+                marketState.currentCategory = button.action;
+                // Load the user's main device selection when switching to tech tree categories
+                loadMainDeviceSelection();
+                throttledRender();
+                break;
+              case 'other':
+                marketState.dialogueVisible = false;
+                marketState.deviceSelectionVisible = false;
+                marketState.shopVisible = true;
+                marketState.currentCategory = button.action;
+                throttledRender();
+                break;
+            }
+          }
+        }
+      });
+    }
+    
+    // Handle device selection buttons
+    if (marketState.deviceSelectionVisible && marketState.deviceSelectionButtons) {
+      marketState.deviceSelectionButtons.forEach(button => {
+        if (button.x && button.y && button.width && button.height) {
+          if (x >= button.x && x <= button.x + button.width &&
+              y >= button.y && y <= button.y + button.height) {
+            
+            console.log(`Device selection button clicked: ${button.action}`);
+            
+            marketState.deviceSelectionVisible = false;
+            marketState.shopVisible = true;
+            
+            // For unsupported regions, redirect laptop to laptop_grant
+            if (!userInSupportedRegion && button.action === 'laptop') {
+              marketState.currentCategory = 'laptop_grant';
+              // If user already has laptop_grant_base as main device, keep it selected
+              if (marketState.selectedBaseOption !== 'laptop_grant_base') {
+                marketState.selectedBaseOption = null; // User must click to select
+              }
+            } else {
+              marketState.currentCategory = button.action;
+            }
+            
+            loadMainDeviceSelection();
+            throttledRender();
+          }
+        }
+      });
+    }
+  }
+  
+  // Function to show item details (reusable for all categories)
+  function showItemDetails(item) {
+    marketState.currentItem = item;
+    marketState.itemDetailsVisible = true;
+    drawMarket();
+  }
+  
+  // Handle tech tree clicks
+  function handleTechTreeClick(x, y) {
+    const treeData = techTreeData[marketState.currentCategory];
+    if (!treeData) return;
+    
+    const displayWidth = canvas.offsetWidth;
+    const displayHeight = canvas.offsetHeight;
+    const treeWidth = displayWidth - 100;
+    const treeHeight = displayHeight - 100;
+    const centerX = 50 + treeWidth / 2;
+    const centerY = 50 + treeHeight / 2;
+    
+    // Check if clicking on initial node
+    const initialNode = treeData.initialNode;
+    if (isNodeClicked(centerX, centerY, true)) {
+      // Check if clicking on a specific option
+      if (initialNode.options) {
+        initialNode.options.forEach((option, index) => {
+          if (isOptionHovered(centerX, centerY, index, initialNode.options.length, true)) {
+            // Check if user is switching to a different device and has device-specific upgrades
+            console.log('Device switch check:', {
+              currentDevice: marketState.selectedBaseOption,
+              newDevice: option.id,
+              hasUpgrades: hasDeviceSpecificUpgrades(marketState.selectedBaseOption)
+            });
+            if (marketState.selectedBaseOption && 
+                marketState.selectedBaseOption !== option.id && 
+                hasDeviceSpecificUpgrades(marketState.selectedBaseOption)) {
+              
+              // Show warning popup for device switch
+              console.log('Showing warning popup for device option selection');
+              marketState.warningMessage = "Are you sure you want to switch your main device? Upgrades purchased for the previous main device will be refunded.";
+              marketState.warningCallback = async () => {
+                // Refund device-specific upgrades
+                const refundAmount = await refundDeviceSpecificUpgrades(marketState.selectedBaseOption);
+                console.log(`Refunded ${refundAmount} coins for device-specific upgrades`);
+                
+                // Select the new device option
+                marketState.selectedBaseOption = option.id;
+                console.log(`Selected base option: ${option.id}`);
+                
+                // Save the main device selection to the server
+                await saveMainDeviceSelection(option.id);
+                
+                throttledRender();
+              };
+              marketState.warningPopupVisible = true;
+              throttledRender();
+            } else {
+              // No device-specific upgrades or same device, select directly
+              marketState.selectedBaseOption = option.id;
+              console.log(`Selected base option: ${option.id}`);
+              
+              // Save the main device selection to the server
+              saveMainDeviceSelection(option.id);
+              
+              throttledRender();
+            }
+            return;
+          }
+        });
+      } else {
+        // Handle single initial node (like laptop_grant)
+        if (marketState.selectedBaseOption !== initialNode.id) {
+          // Check if user is switching from a different device and has device-specific upgrades
+          console.log('Device switch check:', {
+            currentDevice: marketState.selectedBaseOption,
+            newDevice: initialNode.id,
+            hasUpgrades: hasDeviceSpecificUpgrades(marketState.selectedBaseOption)
+          });
+          if (marketState.selectedBaseOption && 
+              marketState.selectedBaseOption !== initialNode.id && 
+              hasDeviceSpecificUpgrades(marketState.selectedBaseOption)) {
+            
+            // Show warning popup for device switch
+            console.log('Showing warning popup for laptop grant selection');
+            marketState.warningMessage = "Are you sure you want to switch to the laptop grant? Upgrades purchased for the previous main device will be refunded.";
+            marketState.warningCallback = async () => {
+              // Refund device-specific upgrades
+              const refundAmount = await refundDeviceSpecificUpgrades(marketState.selectedBaseOption);
+              console.log(`Refunded ${refundAmount} coins for device-specific upgrades`);
+              
+              // Select the laptop grant
+              marketState.selectedBaseOption = initialNode.id;
+              console.log(`Selected base option: ${initialNode.id}`);
+              
+              // Save the main device selection to the server
+              await saveMainDeviceSelection(initialNode.id);
+              
+              throttledRender();
+            };
+            marketState.warningPopupVisible = true;
+            throttledRender();
+          } else {
+            // No device-specific upgrades or same device, select directly
+            marketState.selectedBaseOption = initialNode.id;
+            console.log(`Selected base option: ${initialNode.id}`);
+            
+            // Save as main device for all categories including laptop_grant
+            saveMainDeviceSelection(initialNode.id);
+            
+            throttledRender();
+          }
+        }
+      }
+      return;
+    }
+    
+    // Check if clicking on branch nodes
+    if (marketState.selectedBaseOption && treeData.branches[marketState.selectedBaseOption]) {
+      const branches = treeData.branches[marketState.selectedBaseOption];
+      
+      Object.keys(branches).forEach(direction => {
+        const branch = branches[direction];
+        const nodePos = getBranchNodePosition(centerX, centerY, direction);
+        
+        if (isNodeClicked(nodePos.x, nodePos.y, false)) {
+          // Show item details for this branch (regardless of affordability)
+          showItemDetails(branch);
+          return;
+        }
+      });
+    }
+  }
+  
+  // Check if clicking on a node
+  function isClickingOnNode(x, y) {
+    const treeData = techTreeData[marketState.currentCategory];
+    if (!treeData) return false;
+    
+    const displayWidth = canvas.offsetWidth;
+    const displayHeight = canvas.offsetHeight;
+    const treeWidth = displayWidth - 100;
+    const treeHeight = displayHeight - 100;
+    const treeX = 50;
+    const treeY = 50;
+    
+    // Check if click is within the tech tree area, excluding header space
+    const headerHeight = 80; // Space for title and buttons
+    const clippedY = treeY + headerHeight;
+    const clippedHeight = treeHeight - headerHeight;
+    
+    if (x < treeX || x > treeX + treeWidth || y < clippedY || y > clippedY + clippedHeight) {
+      return false;
+    }
+    
+    const centerX = 50 + treeWidth / 2;
+    const centerY = 50 + treeHeight / 2;
+    
+    // Check initial node
+    if (isNodeHovered(centerX, centerY, true)) {
+      return true;
+    }
+    
+    // Check branch nodes
+    if (marketState.selectedBaseOption && treeData.branches[marketState.selectedBaseOption]) {
+      const branches = treeData.branches[marketState.selectedBaseOption];
+      
+      for (let direction of Object.keys(branches)) {
+        const nodePos = getBranchNodePosition(centerX, centerY, direction);
+        if (isNodeHovered(nodePos.x, nodePos.y, false)) {
+          return true;
+        }
+      }
+    }
+    
+    return false;
+  }
+  
+  // Check if clicking on a button
+  function isClickingOnButton(x, y) {
+    // Check back button
+    if (marketState.backButton && 
+        x >= marketState.backButton.x && x <= marketState.backButton.x + marketState.backButton.width &&
+        y >= marketState.backButton.y && y <= marketState.backButton.y + marketState.backButton.height) {
+      return true;
+    }
+    
+    return false;
+  }
+  
+  // Function to get dynamic pricing for items
+  function getItemPrice(item) {
+    if (item.title === 'Mercenary') {
+      // Fetch current mercenary price from server
+      return fetch('/market/mercenary_price', {
+        method: 'GET',
+        headers: {
+          'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        }
+      })
+      .then(response => response.json())
+      .then(data => data.price || item.price)
+      .catch(() => item.price);
+    }
+    return Promise.resolve(item.price);
+  }
+
+  // Function to generate custom success message based on item type
+  function generateSuccessMessage(item, price, responseData = {}) {
+    if (item.oneTime) {
+      // One-time purchase (like color unlocks)
+      return `Successfully unlocked ${item.title} for ${price} coins!`;
+    } else if (item.title === 'Mercenary') {
+      // Mercenary - show remaining purchases
+      const remaining = responseData.remaining_mercenaries || 0;
+      return `You can buy up to ${remaining} more Mercenaries this week.`;
+    } else if (item.title === 'Random Sticker' || item.isPhysicalItem) {
+      // Non-instant fulfillment item (Random Sticker or Physical Items) - return both messages
+      return {
+        main: `Successfully purchased ${item.title} for ${price} coins!`,
+        fulfillment: `This item will be fulfilled with your next round of prizes.`
+      };
+    } else if (item.maxPurchases && item.maxPurchases > 1) {
+      // Tech tree items with multiple purchases (like RAM)
+      const remaining = item.maxPurchases - (item.currentPurchases || 0);
+      return `You can buy up to ${remaining} more ${item.title} upgrades.`;
+    } else {
+      // Default message for other items
+      return `Successfully purchased ${item.title} for ${price} coins!`;
+    }
+  }
+
+  // Function to purchase an item
+  function purchaseItem(item) {
+    // Get the current price (use display price which includes regional pricing)
+    const currentPrice = getShopItemDisplayPrice(item);
+    
+    console.log('Purchase attempt:', {
+      itemTitle: item.title,
+      itemPrice: item.price,
+      currentPrice: currentPrice,
+      userCoins: marketState.userCoins,
+      affordable: marketState.userCoins >= currentPrice
+    });
+    
+    // Show loading popup
+    marketState.statusPopupVisible = true;
+    marketState.statusPopupType = 'loading';
+    marketState.statusPopupMessage = '';
+    marketState.itemDetailsVisible = false;
+    drawMarket();
+    
+    // Make a request to purchase the item
+    fetch('/market/purchase', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+      },
+      body: JSON.stringify({
+        item_name: item.title,
+        coins_spent: currentPrice
+      })
+    })
+    .then(response => response.json())
+    .then(data => {
+      console.log('Purchase response:', data);
+      
+      if (data.success) {
+        // Show success popup with custom message based on item type
+        marketState.statusPopupType = 'success';
+        const messageResult = generateSuccessMessage(item, currentPrice, data);
+        
+        if (typeof messageResult === 'object') {
+          // Handle Random Sticker with fulfillment notice
+          marketState.statusPopupMessage = messageResult.main;
+          marketState.statusPopupFulfillment = messageResult.fulfillment;
+        } else {
+          // Handle regular messages
+          marketState.statusPopupMessage = messageResult;
+          marketState.statusPopupFulfillment = null;
+        }
+        
+        // Refresh mercenary price and user coins if a mercenary was purchased
+        if (item.title === 'Mercenary') {
+          loadMercenaryPrice();
+        }
+        
+        // Refresh grant total if a grant item was purchased
+        if (item.title.includes('Grant')) {
+          loadUserRegionInfo();
+        }
+        
+        loadUserCoins();
+        
+        // Remove one-time items from display after purchase
+        if (item.oneTime) {
+          removeItemFromShop(item.title);
+        }
+        
+        // Reload user purchases to update the client-side purchase data and tech tree node states
+        loadUserPurchases();
+        
+        // If it's a laptop grant purchase, update the grant amount
+        if (item.title === '+$10 Grant' || item.title === '+$50 Grant' || item.title === '+$100 Grant') {
+          loadUserRegionInfo(); // This will update totalGrantAmount
+        }
+        
+        throttledRender();
+      } else {
+        // Show error popup
+        marketState.statusPopupType = 'error';
+        marketState.statusPopupMessage = data.error || 'Purchase failed. Please try again.';
+        throttledRender();
+      }
+    })
+    .catch(error => {
+      console.error('Purchase error:', error);
+      // Show error popup with better messaging
+      marketState.statusPopupType = 'error';
+      if (error.message && error.message.includes('NetworkError')) {
+        marketState.statusPopupMessage = 'Network error. Please check your connection and try again.';
+      } else {
+        marketState.statusPopupMessage = 'Purchase failed. Please try again.';
+      }
+      marketState.statusPopupFulfillment = null;
+      throttledRender();
+    });
+  }
+  
+  // Main initialization function
+  function setupMarket() {
+    if (!initialize()) {
+      console.error('Failed to initialize market canvas');
+      return;
+    }
+    
+    // Always ensure images are loaded and canvas is resized
+    loadImages();
+    resizeCanvas();
+    
+    // Always reattach event listeners to ensure they work after tab switches
+    // The initialized flag is just for preventing duplicate initialization calls
+    if (marketState.initialized) {
+      console.log('Market already initialized, reattaching event listeners');
+    } else {
+      marketState.initialized = true;
+    }
+    
+    // Load the user's current main device selection
+    loadMainDeviceSelection().then(() => {
+      // Main device loaded successfully
+    }).catch(error => {
+      console.warn('Failed to load main device selection:', error);
+    });
+    
+    // Remove existing event listeners to prevent duplicates
+    canvas.removeEventListener('mousemove', handleMouseMove);
+    canvas.removeEventListener('mousemove', optimizedHandleMouseMove);
+    canvas.removeEventListener('mousedown', handleMouseDown);
+    canvas.removeEventListener('mouseup', handleMouseUp);
+    canvas.removeEventListener('wheel', handleWheel);
+    canvas.removeEventListener('click', handleClick);
+    window.removeEventListener('resize', resizeCanvas);
+    
+    // Handle window resize
+    window.addEventListener('resize', resizeCanvas);
+    
+    // Handle mouse events (use optimized handlers)
+    canvas.addEventListener('mousemove', optimizedHandleMouseMove);
+    canvas.addEventListener('mousedown', handleMouseDown);
+    canvas.addEventListener('mouseup', handleMouseUp);
+    canvas.addEventListener('wheel', handleWheel);
+    canvas.addEventListener('click', handleClick);
+    
+    console.log('Market page setup complete');
+  }
+  
+  // Define event handler functions (optimized)
+  function handleMouseMove(event) {
+    const rect = canvas.getBoundingClientRect();
+    const newMouseX = event.clientX - rect.left;
+    const newMouseY = event.clientY - rect.top;
+    
+    // Skip if mouse hasn't moved significantly (reduce unnecessary renders)
+    if (Math.abs(newMouseX - lastMouseX) < 2 && Math.abs(newMouseY - lastMouseY) < 2 && !marketState.isDragging) {
+      return;
+    }
+    
+    marketState.mouseX = newMouseX;
+    marketState.mouseY = newMouseY;
+    lastMouseX = newMouseX;
+    lastMouseY = newMouseY;
+    
+    // Handle dragging
+    if (marketState.isDragging) {
+      const deltaX = marketState.mouseX - marketState.dragStartX;
+      const deltaY = marketState.mouseY - marketState.dragStartY;
+      
+      marketState.viewportX = marketState.dragStartViewportX + deltaX;
+      marketState.viewportY = marketState.dragStartViewportY + deltaY;
+      clearPositionCache(); // Clear cache when viewport changes
+      needsFullRedraw = true;
+    }
+    
+    // Use throttled rendering instead of direct redraw
+    throttledRender();
+  }
+  
+  function optimizedHandleMouseMove(event) {
+    if (mouseMoveTimeout) clearTimeout(mouseMoveTimeout);
+    
+    mouseMoveTimeout = setTimeout(() => {
+      handleMouseMove(event);
+    }, MOUSE_MOVE_DEBOUNCE);
+  }
+  
+  function handleMouseDown(event) {
+    const rect = canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    
+    // Only enable dragging when in tech tree view
+    if (marketState.shopVisible && (marketState.currentCategory === 'laptop' || marketState.currentCategory === 'tablet' || marketState.currentCategory === 'laptop_grant')) {
+      // Check if clicking on the tech tree area (not on nodes or buttons)
+      if (!isClickingOnNode(x, y) && !isClickingOnButton(x, y)) {
+        marketState.isDragging = true;
+        marketState.dragStartX = x;
+        marketState.dragStartY = y;
+        marketState.dragStartViewportX = marketState.viewportX;
+        marketState.dragStartViewportY = marketState.viewportY;
+        canvas.style.cursor = 'grabbing';
+      }
+    }
+  }
+  
+  function handleMouseUp(event) {
+    if (marketState.isDragging) {
+      marketState.isDragging = false;
+      canvas.style.cursor = 'default';
+    }
+  }
+  
+  function handleWheel(event) {
+    // Disable zoom for now to fix the main functionality
+    // TODO: Re-enable zoom once basic functionality is working
+  }
+  
+  function handleClick(event) {
+      const rect = canvas.getBoundingClientRect();
+      // Use unscaled coordinates for all interactions (dialogue and shop items)
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+    
+    // Handle switch button in tech tree first
+    if (marketState.switchButton && 
+        x >= marketState.switchButton.x && x <= marketState.switchButton.x + marketState.switchButton.width &&
+        y >= marketState.switchButton.y && y <= marketState.switchButton.y + marketState.switchButton.height) {
+      
+      console.log(`Switch button clicked: ${marketState.switchButton.action}`);
+      console.log('Current selected base option:', marketState.selectedBaseOption);
+      
+      // Just switch categories for browsing - no device selection changes yet
+      console.log('Switching category for browsing (no device commitment)');
+      
+      // For unsupported regions, redirect laptop to laptop_grant
+      if (!userInSupportedRegion && marketState.switchButton.action === 'laptop') {
+        marketState.currentCategory = 'laptop_grant';
+      } else {
+        marketState.currentCategory = marketState.switchButton.action;
+      }
+      
+      // Don't change selectedBaseOption - keep current main device but browse different category
+      // User can explore other categories without committing to device changes
+      
+      throttledRender();
+      
+      return;
+    }
+    
+    handleButtonClick(x, y);
+  }
+  
+  // Initial setup
+  setupMarket();
+  
+  // Handle Turbo navigation
+  document.addEventListener('turbo:load', function() {
+    if (document.body.classList.contains('market-page')) {
+      console.log('Market page loaded via Turbo');
+      // Small delay to ensure DOM is ready
+      setTimeout(setupMarket, 10);
+    }
+  });
+  
+  // Handle Turbo before-cache to clean up
+  document.addEventListener('turbo:before-cache', function() {
+    if (window.resizeTimeout) {
+      clearTimeout(window.resizeTimeout);
+    }
+    if (window.renderRequestId) {
+      cancelAnimationFrame(window.renderRequestId);
+    }
+    // Clean up event listeners and reset state
+    if (canvas) {
+      canvas.removeEventListener('mousemove', optimizedHandleMouseMove);
+      canvas.removeEventListener('mousedown', handleMouseDown);
+      canvas.removeEventListener('mouseup', handleMouseUp);
+      canvas.removeEventListener('wheel', handleWheel);
+      canvas.removeEventListener('click', handleClick);
+    }
+    if (window.removeEventListener) {
+      window.removeEventListener('resize', resizeCanvas);
+    }
+    marketState.initialized = false;
+    clearPositionCache();
+    clearAffordabilityCache();
+  });
+  
+  console.log('Market page loaded with dialogue system and proper layout integration');
+})();
+</script>

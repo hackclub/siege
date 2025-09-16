@@ -1,0 +1,35 @@
+#!/usr/bin/env sh
+
+# Local development script without Docker
+echo "Starting local development environment..."
+
+# Check if PostgreSQL is running locally
+if ! pg_isready -h localhost -p 5432 > /dev/null 2>&1; then
+  echo "PostgreSQL is not running on localhost:5432"
+  echo "Please start PostgreSQL or use Docker with bin/dev"
+  exit 1
+fi
+
+# Set environment variables for local development
+export DATABASE_URL="postgresql://localhost:5432/siege_development"
+export CACHE_DATABASE_URL="postgresql://localhost:5432/siege_development_cache" 
+export QUEUE_DATABASE_URL="postgresql://localhost:5432/siege_development_queue"
+export CABLE_DATABASE_URL="postgresql://localhost:5432/siege_development_cable"
+export RAILS_ENV="development"
+
+# Load .env file if it exists
+if [ -f .env ]; then
+  export $(cat .env | grep -v '^#' | xargs)
+fi
+
+# Install gems
+echo "Installing gems..."
+bundle install
+
+# Setup database if needed
+echo "Setting up database..."
+bundle exec rails db:prepare
+
+# Start Rails server
+echo "Starting Rails server on http://localhost:3000"
+bundle exec rails server

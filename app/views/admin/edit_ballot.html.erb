@@ -1,0 +1,226 @@
+<% content_for :title, "Admin - Edit Ballot" %>
+
+<% content_for :head do %>
+  <style>
+    .admin-container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    
+    .admin-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    
+    .admin-title {
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: #402b20;
+      margin: 0;
+    }
+    
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.5rem;
+      background: rgba(255, 255, 255, 0.95);
+      border: 2px solid rgba(64, 43, 32, 0.2);
+      border-radius: 8px;
+      text-decoration: none;
+      color: #402b20;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    
+    .back-link:hover {
+      border-color: rgba(64, 43, 32, 0.4);
+      transform: translateY(-1px);
+      text-decoration: none;
+      color: #402b20;
+    }
+    
+    .edit-form {
+      background: rgba(255, 255, 255, 0.95);
+      border: 2px solid rgba(64, 43, 32, 0.15);
+      border-radius: 12px;
+      padding: 2rem;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    }
+    
+    .form-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #402b20;
+      margin-bottom: 1.5rem;
+    }
+    
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+    
+    .form-label {
+      display: block;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #402b20;
+      margin-bottom: 0.5rem;
+    }
+    
+    .form-input, .form-select, .form-textarea {
+      width: 100%;
+      padding: 0.75rem;
+      border: 2px solid rgba(64, 43, 32, 0.2);
+      border-radius: 6px;
+      font-size: 1rem;
+      background: white;
+      transition: border-color 0.2s;
+    }
+    
+    .form-input:focus, .form-select:focus, .form-textarea:focus {
+      outline: none;
+      border-color: rgba(64, 43, 32, 0.4);
+    }
+    
+    .form-textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
+    
+    .form-checkbox {
+      margin-right: 0.5rem;
+      transform: scale(1.2);
+    }
+    
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .form-actions {
+      display: flex;
+      gap: 1rem;
+      margin-top: 2rem;
+      flex-wrap: wrap;
+    }
+    
+    .submit-button {
+      padding: 0.75rem 1.5rem;
+      background: #402b20;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    
+    .submit-button:hover {
+      background: #2d1f17;
+    }
+    
+    .cancel-button {
+      padding: 0.75rem 1.5rem;
+      background: transparent;
+      color: #6b5b4a;
+      border: 2px solid rgba(64, 43, 32, 0.2);
+      border-radius: 6px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+    
+    .cancel-button:hover {
+      background: rgba(64, 43, 32, 0.05);
+      text-decoration: none;
+      color: #6b5b4a;
+    }
+    
+    .ballot-info {
+      background: rgba(64, 43, 32, 0.05);
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    
+    .ballot-info-item {
+      margin-bottom: 0.5rem;
+      font-size: 0.9rem;
+    }
+    
+    .ballot-info-label {
+      font-weight: 600;
+      color: #402b20;
+    }
+    
+    .ballot-info-value {
+      color: #6b5b4a;
+    }
+    
+    @media (max-width: 768px) {
+      .admin-header {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      
+      .form-actions {
+        flex-direction: column;
+      }
+    }
+  </style>
+<% end %>
+
+<div class="admin-container">
+  <div class="admin-header">
+    <h1 class="admin-title">Edit Ballot</h1>
+    <%= link_to admin_ballot_details_path(@ballot), class: "back-link" do %>
+      ← Back to Ballot Details
+    <% end %>
+  </div>
+  
+  <div class="edit-form">
+    <h2 class="form-title">Week <%= @ballot.week %> Ballot - <%= @ballot.user.name %></h2>
+    
+    <div class="ballot-info">
+      <div class="ballot-info-item">
+        <span class="ballot-info-label">Voter:</span>
+        <span class="ballot-info-value"><%= @ballot.user.name %></span>
+      </div>
+      <div class="ballot-info-item">
+        <span class="ballot-info-label">Created:</span>
+        <span class="ballot-info-value"><%= @ballot.created_at.strftime("%B %d, %Y at %I:%M %p") %></span>
+      </div>
+      
+    </div>
+    
+    <%= form_with model: @ballot, url: admin_ballot_path(@ballot), method: :patch, local: true do |form| %>
+      <div class="form-group">
+        <%= form.label :week, "Week Number", class: "form-label" %>
+        <%= form.number_field :week, class: "form-input", min: 0 %>
+      </div>
+      
+      <div class="form-group">
+        <div class="checkbox-group">
+          <%= form.check_box :voted, class: "form-checkbox" %>
+          <%= form.label :voted, "Has been voted on", class: "form-label" %>
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <%= form.label :reasoning, "Voter's Reasoning", class: "form-label" %>
+        <%= form.text_area :reasoning, class: "form-textarea", placeholder: "Enter the voter's reasoning for their votes..." %>
+      </div>
+      
+      <div class="form-actions">
+        <%= form.submit "Update Ballot", class: "submit-button" %>
+        <%= link_to "Cancel", admin_ballot_details_path(@ballot), class: "cancel-button" %>
+      </div>
+    <% end %>
+  </div>
+</div>

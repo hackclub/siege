@@ -1,0 +1,331 @@
+<% content_for :title, "Admin - Purchase Details" %>
+
+<% content_for :head do %>
+  <style>
+    .admin-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    
+    .admin-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    
+    .admin-title {
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: #402b20;
+      margin: 0;
+    }
+    
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.5rem;
+      background: rgba(255, 255, 255, 0.95);
+      border: 2px solid rgba(64, 43, 32, 0.2);
+      border-radius: 8px;
+      text-decoration: none;
+      color: #402b20;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    
+    .back-link:hover {
+      border-color: rgba(64, 43, 32, 0.4);
+      transform: translateY(-1px);
+      text-decoration: none;
+      color: #402b20;
+    }
+    
+    /* Purchase Info */
+    .purchase-info-section {
+      background: rgba(255, 255, 255, 0.95);
+      border: 2px solid rgba(64, 43, 32, 0.15);
+      border-radius: 12px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    }
+    
+    .purchase-info-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #402b20;
+      margin-bottom: 1.5rem;
+    }
+    
+    .purchase-info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 2rem;
+    }
+    
+    .purchase-detail-group {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    
+    .purchase-detail-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    
+    .purchase-detail-label {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #6b5b4a;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .purchase-detail-value {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #402b20;
+    }
+    
+    .purchase-status-badge {
+      display: inline-block;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    
+    .purchase-status-badge.fulfilled {
+      background: #d1fae5;
+      color: #065f46;
+    }
+    
+    .purchase-status-badge.unfulfilled {
+      background: #fef3c7;
+      color: #92400e;
+    }
+    
+    /* User Info */
+    .user-info-section {
+      background: rgba(255, 255, 255, 0.95);
+      border: 2px solid rgba(64, 43, 32, 0.15);
+      border-radius: 12px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    }
+    
+    .user-info-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #402b20;
+      margin-bottom: 1.5rem;
+    }
+    
+    .user-link {
+      color: #059669;
+      text-decoration: none;
+      font-weight: 600;
+    }
+    
+    .user-link:hover {
+      text-decoration: underline;
+    }
+    
+    .address-details {
+      margin-top: 1rem;
+      padding: 1.5rem;
+      background: rgba(64, 43, 32, 0.05);
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 0.9rem;
+      line-height: 1.6;
+    }
+    
+    /* Actions */
+    .actions-section {
+      background: rgba(255, 255, 255, 0.95);
+      border: 2px solid rgba(64, 43, 32, 0.15);
+      border-radius: 12px;
+      padding: 2rem;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    }
+    
+    .actions-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #402b20;
+      margin-bottom: 1.5rem;
+    }
+    
+    .action-buttons {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    
+    .btn {
+      display: inline-block;
+      padding: 0.75rem 1.5rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-align: center;
+      text-decoration: none;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .btn-primary {
+      background: #059669;
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background: #047857;
+      text-decoration: none;
+      color: white;
+    }
+    
+    .btn-secondary {
+      background: #6b5b4a;
+      color: white;
+    }
+    
+    .btn-secondary:hover {
+      background: #5a4a3a;
+      text-decoration: none;
+      color: white;
+    }
+    
+    @media (max-width: 768px) {
+      .admin-header {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      
+      .purchase-info-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .action-buttons {
+        flex-direction: column;
+      }
+    }
+  </style>
+<% end %>
+
+<div class="admin-container">
+  <div class="admin-header">
+    <h1 class="admin-title">Purchase Details</h1>
+    <%= link_to admin_shop_purchases_path, class: "back-link" do %>
+      ← Back to Purchases
+    <% end %>
+  </div>
+  
+  <!-- Purchase Information -->
+  <div class="purchase-info-section">
+    <h2 class="purchase-info-title">Purchase Information</h2>
+    <div class="purchase-info-grid">
+      <div class="purchase-detail-group">
+        <div class="purchase-detail-item">
+          <span class="purchase-detail-label">Item Name</span>
+          <span class="purchase-detail-value"><%= @purchase.item_name %></span>
+        </div>
+        
+        <div class="purchase-detail-item">
+          <span class="purchase-detail-label">Price</span>
+          <span class="purchase-detail-value"><%= @purchase.coins_spent %> 🪙</span>
+        </div>
+        
+        <div class="purchase-detail-item">
+          <span class="purchase-detail-label">Purchased At</span>
+          <span class="purchase-detail-value"><%= @purchase.purchased_at.strftime("%B %d, %Y at %I:%M %p") %></span>
+        </div>
+      </div>
+      
+      <div class="purchase-detail-group">
+        <div class="purchase-detail-item">
+          <span class="purchase-detail-label">Status</span>
+          <span class="purchase-status-badge <%= @purchase.fulfilled? ? 'fulfilled' : 'unfulfilled' %>">
+            <%= @purchase.fulfilled? ? 'Fulfilled' : 'Unfulfilled' %>
+          </span>
+        </div>
+        
+        <div class="purchase-detail-item">
+          <span class="purchase-detail-label">Purchase ID</span>
+          <span class="purchase-detail-value">#<%= @purchase.id %></span>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- User Information -->
+  <div class="user-info-section">
+    <h2 class="user-info-title">Customer Information</h2>
+    <div class="purchase-detail-group">
+      <div class="purchase-detail-item">
+        <span class="purchase-detail-label">Customer</span>
+        <span class="purchase-detail-value">
+          <%= link_to @purchase.user.name, admin_user_details_path(@purchase.user), class: "user-link" %>
+        </span>
+      </div>
+      
+      <div class="purchase-detail-item">
+        <span class="purchase-detail-label">Email</span>
+        <span class="purchase-detail-value"><%= @purchase.user.email %></span>
+      </div>
+      
+      <% if @purchase.user.address %>
+        <div class="purchase-detail-item">
+          <span class="purchase-detail-label">Shipping Address</span>
+          <div class="address-details">
+            <%= @purchase.user.address.shipping_name.present? ? @purchase.user.address.shipping_name : "#{@purchase.user.address.first_name} #{@purchase.user.address.last_name}" %><br>
+            <%= @purchase.user.address.line_one %><br>
+            <% if @purchase.user.address.line_two.present? %>
+              <%= @purchase.user.address.line_two %><br>
+            <% end %>
+            <%= @purchase.user.address.city %>, <%= @purchase.user.address.state %> <%= @purchase.user.address.postcode %><br>
+            <%= @purchase.user.address.human_country %>
+          </div>
+        </div>
+      <% else %>
+        <div class="purchase-detail-item">
+          <span class="purchase-detail-label">Shipping Address</span>
+          <span class="purchase-detail-value" style="color: #dc2626;">No address on file</span>
+        </div>
+      <% end %>
+    </div>
+  </div>
+  
+  <!-- Actions -->
+  <div class="actions-section">
+    <h2 class="actions-title">Actions</h2>
+    <div class="action-buttons">
+      <% if @purchase.fulfilled? %>
+        <%= button_to "Mark as Unfulfilled", admin_update_purchase_fulfillment_path(@purchase), 
+            method: :patch, 
+            params: { fulfilled: false },
+            class: "btn btn-secondary",
+            data: { confirm: "Mark this purchase as unfulfilled?" } %>
+      <% else %>
+        <%= button_to "Mark as Fulfilled", admin_update_purchase_fulfillment_path(@purchase), 
+            method: :patch, 
+            params: { fulfilled: true },
+            class: "btn btn-primary",
+            data: { confirm: "Mark this purchase as fulfilled?" } %>
+      <% end %>
+      
+      <%= link_to "View Customer Details", admin_user_details_path(@purchase.user), class: "btn btn-primary" %>
+    </div>
+  </div>
+</div>

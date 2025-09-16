@@ -1,0 +1,76 @@
+
+<% cache(project) do %>
+  <% clickable = local_assigns[:clickable].nil? ? true : local_assigns[:clickable] %>
+  <article id="<%= dom_id project %>" class="project-card <%= 'is-static' unless clickable %>">
+    <% if clickable %>
+      <a href="<%= project_path(project) %>" class="project-card-overlay" aria-label="View <%= project.name %>"></a>
+    <% end %>
+    
+    <div class="project-header">
+      <h3 class="project-title"><%= project.name %></h3>
+      <span class="project-badge"><%= project.week_badge_text %></span>
+    </div>
+
+    <p class="project-description"><%= project.description %></p>
+
+    <div class="project-links">
+      <% repo_url = project.repo_url.presence %>
+      <%= link_to (repo_url || "#"), target: "_blank", rel: "noopener noreferrer", class: "project-link #{'is-disabled' unless repo_url}" do %>
+        <%= lucide_icon("github", class: "icon-sm") %>
+        <span><%= display_url_or_placeholder(project.repo_url, "No repo URL") %></span>
+      <% end %>
+
+      <% demo_url = project.demo_url.presence %>
+      <%= link_to (demo_url || "#"), target: "_blank", rel: "noopener noreferrer", class: "project-link #{'is-disabled' unless demo_url}" do %>
+        <%= lucide_icon("external-link", class: "icon-sm") %>
+        <span><%= display_url_or_placeholder(project.demo_url, "No demo URL") %></span>
+      <% end %>
+    </div>
+
+    <% if project.hackatime_projects.present? %>
+      <div class="project-time">
+        Time spent: <%= project.week_time %>
+      </div>
+      <div class="project-tags">
+        <% Array(project.hackatime_projects).each do |hp_name| %>
+          <div class="project-tag">
+            <%= lucide_icon('clock', class: 'icon-xs') %>
+            <span><%= hp_name %></span>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+
+    <div class="project-footer">
+      <div class="project-updated">
+        <time datetime="<%= project.updated_at.to_date.iso8601 %>">Updated: <%= project.updated_at.strftime('%-d %b %Y') %></time>
+      </div>
+      <div class="project-status-indicator">
+        <% case project.status %>
+        <% when 'building' %>
+          Still building
+        <% when 'submitted' %>
+          Submitted for review
+        <% when 'pending_voting' %>
+          Waiting for votes
+        <% when 'finished' %>
+          <% average_score = @vote_averages&.dig(project.id) %>
+          <% if can_access_admin? && (average_score || project.coin_value&.positive?) %>
+            Avg. Score: <%= average_score || 'N/A' %>, Value: <%= project.coin_value || 0 %><%= image_tag 'coin.png', style: 'width: 16px; height: 16px; vertical-align: middle; margin-left: 4px;' %>
+          <% elsif project.coin_value&.positive? %>
+            Value: <%= project.coin_value %><%= image_tag 'coin.png', style: 'width: 16px; height: 16px; vertical-align: middle; margin-left: 4px;' %>
+          <% else %>
+            Finished
+          <% end %>
+        <% end %>
+      </div>
+    </div>
+
+    <% if project.finished? && project.reviewer_feedback.present? && (project.user == current_user || can_access_admin?) %>
+      <div class="reviewer-feedback-indicator" style="margin-top: 0.5rem; padding: 0.5rem; background-color: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.2); border-radius: 4px; font-size: 0.75rem; color: #6366f1; text-align: center;">
+        <%= lucide_icon("message-circle", class: "icon-xs") %>
+        Has reviewer feedback
+      </div>
+    <% end %>
+  </article>
+<% end %>

@@ -1,0 +1,98 @@
+<% content_for :title, "Great Hall" %>
+
+<% content_for :head do %>
+  <style>
+    .great-hall-container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    
+    .fallback-message {
+      background: rgba(255, 255, 255, 0.95);
+      border: 2px solid rgba(64, 43, 32, 0.15);
+      border-radius: 12px;
+      padding: 3rem;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    }
+    
+    .fallback-title {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+    }
+    
+    .fallback-text {
+      font-size: 1.1rem;
+      line-height: 1.6;
+    }
+    
+    .verification-section {
+      text-align: center;
+      margin-top: 2rem;
+    }
+    
+    .verification-button {
+      font-size: 1.1rem;
+      padding: 1rem 2rem;
+    }
+  </style>
+<% end %>
+
+<div class="great-hall-container">
+  <h1 class="fallback-title">Great Hall</h1>
+  
+  <% if @fallback_message %>
+    <div class="fallback-text"><%= @fallback_message %></div>
+  <% end %>
+  
+  <% if @verification_required %>
+    <div class="verification-section">
+      <button onclick="startVotingVerification()" class="submit-button verification-button">
+        Verify Identity
+      </button>
+    </div>
+  <% end %>
+</div>
+
+<script>
+function startVotingVerification() {
+  showModalAlert('Starting identity verification... Please complete the verification in the popup window.', 'Verification Required');
+  
+  const authorizer = new SubmitAuthorizer();
+  
+  authorizer.authorize()
+    .then(result => {
+      // Store the idv_rec on the server
+      return fetch('/store_idv_rec', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+        },
+        body: JSON.stringify({ idv_rec: result.idvRec })
+      });
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        showModalAlert('Identity verification completed successfully! You can now vote.', 'Success');
+        // Redirect back to great hall to start voting
+        setTimeout(() => {
+          window.location.href = '/great-hall';
+        }, 2000);
+      } else {
+        throw new Error(data.error || 'Failed to store verification');
+      }
+    })
+    .catch(error => {
+      console.error('Verification error:', error);
+      if (error.message === 'Authorization cancelled by user') {
+        showModalAlert('Identity verification was cancelled. You must complete verification to vote.', 'Verification Cancelled');
+      } else {
+        showModalAlert('Identity verification failed. Please try again or contact @Olive on slack.', 'Error');
+      }
+    });
+}
+</script>

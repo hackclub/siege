@@ -1,0 +1,273 @@
+<%= render "shared/form_field_styles" %>
+<% content_for :head do %>
+  <style>
+    .fieldset-legend {
+      display: inline-flex;
+      align-items: baseline;
+      gap: 0.5rem;
+    }
+
+    .underline-field {
+      margin-bottom: .8rem;
+    }
+
+    .underline-field::after {
+      bottom: 15%;
+      height: clamp(28px, 3vw, 52px);
+    }
+
+    .textarea-field { padding-bottom: clamp(28px, 2vw, 48px); }
+    .textarea-field::after { bottom: 0; }
+
+    .help-text { font-size: 0.875rem; opacity: 0.7; margin-bottom: 0.5rem; }
+    .legend-meta { font-size: 0.875rem; opacity: 0.7; }
+
+    .project-hackatime-grid { display: grid; grid-template-columns: 1fr; gap: 0.5rem; }
+    @media (min-width: 640px) { .project-hackatime-grid { grid-template-columns: 1fr 1fr; } }
+
+    .project-hackatime-item { position: relative; display: flex; align-items: flex-start; gap: 0.75rem; border: 3px solid rgba(64, 43, 32, 0.75); }
+    .project-hackatime-checkbox { position: absolute; inset: 0; opacity: 0; }
+    .project-hackatime-outline { position: absolute; inset: -2px; border: 3px solid rgba(64, 43, 32, 0.55); pointer-events: none; opacity: 1; transition: inset 0.15s ease-in-out; }
+    .project-hackatime-content { display: flex; flex-direction: column; gap: 0.125rem; padding: 0.75rem; width: 100%; transition: background-color 0.15s ease-in-out; }
+    .project-hackatime-item:hover .project-hackatime-outline { inset: 2px; }
+    .project-hackatime-checkbox:checked + .project-hackatime-outline { inset: 4px; }
+    .project-hackatime-checkbox:checked ~ .project-hackatime-content { background-color: rgba(0,0,0,0.06); }
+    .project-hackatime-name { font-weight: 600; }
+    .project-hackatime-duration { font-size: 0.75rem; opacity: 0.6; }
+
+    .label { font-size: 0.875rem; opacity: 0.7; margin-top: 0.25rem; }
+    .project-submit { margin-top: 1.5rem; }
+  </style>
+<% end %>
+
+<%= form_with(model: project) do |form| %>
+  <%= hidden_field_tag :remove_screenshot, false, id: 'remove_screenshot_field' %>
+  <fieldset class="fieldset">
+    <legend class="fieldset-legend">Project Name</legend>
+    <div class="underline-field">
+      <%= form.text_field :name, placeholder: "Frobnicator", required: true, class: "text-input validator" %>
+    </div>
+  </fieldset>
+
+  <fieldset class="fieldset">
+    <legend class="fieldset-legend">Description</legend>
+    <div class="underline-field textarea-field">
+      <%= form.text_area :description, placeholder: "Describe your project...", required: true, maxlength: 500, rows: 3, class: "textarea-input validator" %>
+    </div>
+  </fieldset>
+
+  <fieldset class="fieldset">
+    <legend class="fieldset-legend">Repository URL <span class="legend-meta">(Optional)</span></legend>
+    <p class="help-text">
+      Supports GitHub, GitLab, Bitbucket, Codeberg, SourceForge, and Azure DevOps repositories.
+    </p>
+    <div class="underline-field">
+      <%= form.url_field :repo_url, placeholder: "https://github.com/orpheus/frobnicator", class: "text-input validator" %>
+    </div>
+  </fieldset>
+
+  <fieldset class="fieldset">
+    <legend class="fieldset-legend">Demo URL <span class="legend-meta">(Optional)</span></legend>
+    <div class="underline-field">
+      <%= form.url_field :demo_url, placeholder: "https://frobnicator.com", class: "text-input validator" %>
+    </div>
+  </fieldset>
+
+  <fieldset class="fieldset">
+    <legend class="fieldset-legend">Screenshot <span class="legend-meta">(Optional)</span></legend>
+    <div class="underline-field">
+      <%= form.file_field :screenshot, accept: "image/*", class: "text-input", onchange: "handleScreenshotUpload(this)" %>
+    </div>
+    
+    <% if project.screenshot.attached? %>
+      <div id="current-screenshot-display" style="margin-top: 1rem; padding: 1rem; border: 1px solid rgba(64, 43, 32, 0.2); border-radius: 8px; background: rgba(255, 255, 255, 0.5);">
+        <% begin %>
+          <% if project.screenshot_valid? %>
+            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem;">
+              <img src="<%= url_for(project.screenshot) %>" alt="Current screenshot" style="max-width: 100px; max-height: 100px; border-radius: 4px;">
+              <div>
+                <strong>Current screenshot:</strong> <%= project.screenshot.filename %>
+                <br>
+                <small style="opacity: 0.7;">Upload a new file to replace this screenshot</small>
+              </div>
+            </div>
+          <% else %>
+            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem;">
+              <div style="width: 100px; height: 100px; background: #f3f4f6; border: 2px dashed #dc2626; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #dc2626; font-size: 0.75rem; text-align: center;">
+                Missing<br>File
+              </div>
+              <div>
+                <strong style="color: #dc2626;">Screenshot file is missing!</strong>
+                <br>
+                <small style="opacity: 0.7;">Please upload a new screenshot to replace the corrupted file</small>
+              </div>
+            </div>
+          <% end %>
+        <% rescue => e %>
+          <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem;">
+            <div style="width: 100px; height: 100px; background: #f3f4f6; border: 2px dashed #dc2626; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #dc2626; font-size: 0.75rem; text-align: center;">
+              Error
+            </div>
+            <div>
+              <strong style="color: #dc2626;">Screenshot error!</strong>
+              <br>
+              <small style="opacity: 0.7;">Please upload a new screenshot</small>
+            </div>
+          </div>
+        <% end %>
+        <button type="button" onclick="removeScreenshot()" style="background: #dc2626; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; font-size: 0.875rem;">
+          Remove Screenshot
+        </button>
+      </div>
+    <% end %>
+  </fieldset>
+
+  <% if current_user&.slack_id %>
+    <div style="margin-top: 2rem;"></div>
+    <% 
+      # Calculate the effective time range and time override
+      if project.persisted?
+        # For existing projects, use their effective time range and actual override
+        time_range = project.effective_time_range
+        time_override_days = project.time_override_days
+      else
+        # For new projects, calculate what would be set
+        temp_project = current_user.projects.build(created_at: Time.current)
+        temp_project.set_time_override_from_flipper
+        time_range = temp_project.effective_time_range
+        time_override_days = temp_project.time_override_days
+      end
+      
+      # Extract start and end dates with fallback
+      week_start, week_end = time_range if time_range&.all?(&:present?)
+      week_start ||= Date.today.beginning_of_week.strftime('%Y-%m-%d')
+      week_end ||= Date.today.end_of_week.strftime('%Y-%m-%d')
+      
+      # Debug logging for form rendering
+      Rails.logger.info "[FORM DEBUG] User slack_id: #{current_user&.slack_id}"
+      Rails.logger.info "[FORM DEBUG] Week start: #{week_start}, Week end: #{week_end}"
+      Rails.logger.info "[FORM DEBUG] Time range: #{time_range.inspect}"
+      
+      # Format the date range for display
+      date_range_text = format_date_range(week_start, week_end)
+      
+      # Use project owner's hackatime projects if admin is editing someone else's project
+      target_user = (can_access_admin? && project.persisted? && project.user && project.user != current_user) ? project.user : current_user
+      Rails.logger.info "[FORM DEBUG] Target user: #{target_user&.name} (#{target_user&.slack_id})"
+      projects_list = hackatime_projects_for_user(target_user, week_start, week_end) 
+    %>
+
+    <fieldset class="fieldset">
+      <legend class="fieldset-legend">
+        Hackatime Projects 
+        <span class="legend-meta">(Optional, but recommended)</span>
+      </legend>
+      <p class="help-text">
+        Select the Hackatime project(s) associated with this Siege project.
+        <% if date_range_text %>
+          Showing projects from <strong><%= date_range_text %></strong>.
+        <% end %>
+        This helps your progress tracking show the right time.
+      </p>
+
+      <!-- Hidden field to ensure empty array is sent when no checkboxes are selected -->
+      <%= hidden_field_tag 'project[hackatime_projects][]', '', id: nil %>
+      
+      <div class="project-hackatime-grid">
+        <% selected = Array(project.hackatime_projects).map(&:to_s) %>
+        <% projects_list.each do |hp| %>
+          <% name = hp['name'].to_s %>
+          <% duration = hp['text'] || hp['digital'] || '' %>
+          <label class="project-hackatime-item">
+            <%= check_box_tag 'project[hackatime_projects][]', name, selected.include?(name), class: 'project-hackatime-checkbox' %>
+            <span class="project-hackatime-outline" aria-hidden="true"></span>
+            <div class="project-hackatime-content">
+              <span class="project-hackatime-name"><%= name %></span>
+              <% if duration.present? %>
+                <span class="project-hackatime-duration"><%= duration %></span>
+              <% end %>
+            </div>
+          </label>
+        <% end %>
+      </div>
+
+      <% if projects_list.blank? %>
+        <div>
+          <span>
+            No Hackatime projects found for 
+            <% if date_range_text %>
+              <%= date_range_text.downcase %> 
+            <% else %>
+              this period 
+            <% end %>
+            yet. They'll appear after you track time.
+          </span>
+        </div>
+      <% end %>
+
+    </fieldset>
+  <% end %>
+
+  <% submit_label = project.persisted? ? "Save" : "Create" %>
+  <button type="submit" class="submit-button project-submit"><%= submit_label %></button>
+<% end %>
+
+<script>
+function removeScreenshot() {
+  if (confirm('Are you sure you want to remove the screenshot? This action cannot be undone.')) {
+    document.getElementById('remove_screenshot_field').value = 'true';
+    // Clear the file input
+    const fileInput = document.querySelector('input[type="file"]');
+    if (fileInput) {
+      fileInput.value = '';
+    }
+    // Hide the current screenshot display
+    const screenshotDisplay = document.getElementById('current-screenshot-display');
+    if (screenshotDisplay) {
+      screenshotDisplay.style.display = 'none';
+    }
+  }
+}
+
+function handleScreenshotUpload(input) {
+  const file = input.files[0];
+  if (file) {
+    // Create a preview URL
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      // Remove any existing screenshot display
+      const existingDisplay = document.getElementById('current-screenshot-display');
+      if (existingDisplay) {
+        existingDisplay.remove();
+      }
+      
+      // Create new screenshot display
+      const screenshotDisplay = document.createElement('div');
+      screenshotDisplay.id = 'current-screenshot-display';
+      screenshotDisplay.style.cssText = 'margin-top: 1rem; padding: 1rem; border: 1px solid rgba(64, 43, 32, 0.2); border-radius: 8px; background: rgba(255, 255, 255, 0.5);';
+      
+      screenshotDisplay.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem;">
+          <img src="${e.target.result}" alt="Current screenshot" style="max-width: 100px; max-height: 100px; border-radius: 4px;">
+          <div>
+            <strong>Current screenshot:</strong> ${file.name}
+            <br>
+            <small style="opacity: 0.7;">Upload a new file to replace this screenshot</small>
+          </div>
+        </div>
+        <button type="button" onclick="removeScreenshot()" style="background: #dc2626; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; font-size: 0.875rem;">
+          Remove Screenshot
+        </button>
+      `;
+      
+      // Insert after the file input
+      const fileInputContainer = input.closest('.underline-field');
+      fileInputContainer.parentNode.insertBefore(screenshotDisplay, fileInputContainer.nextSibling);
+      
+      // Reset the remove screenshot field since we're uploading a new one
+      document.getElementById('remove_screenshot_field').value = 'false';
+    };
+    reader.readAsDataURL(file);
+  }
+}
+</script>

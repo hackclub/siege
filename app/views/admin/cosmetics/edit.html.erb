@@ -1,0 +1,88 @@
+<div class="admin-section">
+  <div class="admin-header">
+    <h1>Edit Cosmetic</h1>
+    <%= link_to 'Back to Cosmetics', admin_cosmetics_path, class: 'btn btn-outline' %>
+  </div>
+
+  <div class="admin-content">
+    <%= form_with model: [:admin, @cosmetic], local: true, multipart: true, class: 'admin-form' do |form| %>
+      <% if @cosmetic.errors.any? %>
+        <div class="admin-errors">
+          <h3><%= pluralize(@cosmetic.errors.count, "error") %> prohibited this cosmetic from being saved:</h3>
+          <ul>
+            <% @cosmetic.errors.full_messages.each do |message| %>
+              <li><%= message %></li>
+            <% end %>
+          </ul>
+        </div>
+      <% end %>
+
+      <div class="form-group">
+        <%= form.label :name, class: 'form-label' %>
+        <%= form.text_field :name, class: 'form-control', required: true %>
+      </div>
+
+      <div class="form-group">
+        <%= form.label :description, class: 'form-label' %>
+        <%= form.text_area :description, class: 'form-control', rows: 3 %>
+      </div>
+
+      <div class="form-group">
+        <%= form.label :type, class: 'form-label' %>
+        <%= form.select :type, 
+            options_for_select([
+              ['Hat', 'hat'],
+              ['Accessory', 'accessory'],
+              ['Background', 'background'],
+              ['Effect', 'effect']
+            ], @cosmetic.type), 
+            { prompt: 'Select a type' }, 
+            { class: 'form-control', required: true } %>
+      </div>
+
+      <div class="form-group">
+        <%= form.label :cost, 'Cost (coins)', class: 'form-label' %>
+        <%= form.number_field :cost, class: 'form-control', min: 0, required: true %>
+      </div>
+
+      <div class="form-group">
+        <div class="form-check">
+          <%= form.check_box :purchasable, class: 'form-check-input' %>
+          <%= form.label :purchasable, 'Available for purchase in shop', class: 'form-check-label' %>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <%= form.label :image, 'Cosmetic Image', class: 'form-label' %>
+        <% if @cosmetic.image.attached? %>
+          <div class="current-image">
+            <p>Current image:</p>
+            <%= image_tag @cosmetic.image, class: 'cosmetic-preview', alt: @cosmetic.name %>
+          </div>
+        <% end %>
+        <%= form.file_field :image, class: 'form-control', accept: 'image/*' %>
+        <small class="form-text">Upload a new image file to replace the current one (PNG, JPG, etc.)</small>
+      </div>
+
+      <div class="form-actions">
+        <%= form.submit 'Update Cosmetic', class: 'btn btn-primary' %>
+        <%= link_to 'Cancel', admin_cosmetics_path, class: 'btn btn-outline' %>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<style>
+  .cosmetic-preview {
+    max-width: 200px;
+    max-height: 200px;
+    object-fit: contain;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin: 0.5rem 0;
+  }
+
+  .current-image {
+    margin-bottom: 1rem;
+  }
+</style>

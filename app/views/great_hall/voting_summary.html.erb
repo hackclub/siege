@@ -1,0 +1,3205 @@
+<% content_for :title, "Great Hall - Voting" %>
+<% content_for :body_class, "voting-summary-page" %>
+
+<% content_for :head do %>
+      <style>
+      body, html {
+        margin: 0;
+        padding: 0;
+        font-family: "IM Fell English", serif;
+      }
+      
+      /* Only apply to this specific page */
+      body.voting-summary-page .app-main {
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+      
+      #voting-canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+      }
+      
+      .ui-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 10;
+      }
+      
+      .ui-element {
+        pointer-events: auto;
+        position: absolute;
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        font-family: "IM Fell English", serif;
+        color: #402b20;
+      }
+      
+
+      
+      
+      
+
+      </style>
+<% end %>
+
+<%
+# Use the pre-serialized votes data from the controller
+# @votes_json should already be a JSON string from the controller
+votes_json = @votes_json.presence || '[]'
+
+# Set voting state and message for JavaScript
+voting_state = @voting_state || :voting
+meeple_message = @meeple_message || ""
+%>
+
+<div style="position: relative; height: 100vh; width: 100%; overflow: hidden;">
+  <canvas id="voting-canvas"></canvas>
+  
+  <!-- Reasoning text input overlay -->
+  <div id="reasoningOverlay" style="display: none; position: absolute; pointer-events: none; z-index: 1000;">
+    <textarea 
+      id="reasoningTextarea" 
+      placeholder="Why did you vote the way you did? Share your thoughts on each project..."
+      style="width: 100%; height: 100%; padding: 10px; border: none; background: transparent; font-family: 'IM Fell English', serif; font-size: 16px; resize: none; outline: none; box-sizing: border-box;"
+    ></textarea>
+  </div>
+  
+     <div class="ui-overlay">
+   </div>
+</div>
+
+<script>
+// Wrap everything in an IIFE to prevent global scope pollution and allow early returns
+(function() {
+  // Prevent multiple executions and handle Turbo navigation properly
+  if (window.votingSummaryInitialized && canvasManager && canvasManager.isValid()) {
+    console.log('Voting summary already initialized and canvas is valid, skipping');
+    return; // Exit early to prevent re-execution
+  }
+  
+  // Reset initialization if canvas is invalid (e.g., after tab switch)
+  if (window.votingSummaryInitialized && canvasManager && !canvasManager.isValid()) {
+    console.log('Canvas context lost, reinitializing...');
+    window.votingSummaryInitialized = false;
+    // Clean up existing managers
+    if (canvasManager) canvasManager.cleanup();
+    if (eventManager) eventManager.cleanup();
+    canvasManager = null;
+    eventManager = null;
+    imageManager = null;
+    votingManager = null;
+  }
+
+  window.votingSummaryInitialized = true;
+  
+  // Configuration object for all constants
+  const VOTING_CONFIG = {
+    MAX_STARS: 12,
+    MIN_STARS_PER_PROJECT: 1,
+    WALK_SPEED: 3,
+    MEEPLE_SIZE: 425,
+    WALK_ROTATION_INTERVAL: 200,
+    WALK_ROTATION_AMOUNT: 0.3,
+    LOCAL_STORAGE_KEYS: {
+      VOTING_PROGRESS: 'great_hall_voting_progress',
+      CURRENT_WEEK: 'great_hall_current_week',
+      BALLOT_ID: 'great_hall_ballot_id'
+    }
+  };
+  
+  // Centralized state management
+  class VotingState {
+    constructor() {
+      this.state = {
+        currentStep: 1,
+        phase: 'idle',
+        meepleX: 0,
+        meepleY: 0,
+        targetX: 0,
+        targetY: 0,
+        rotation: 0,
+        rotationDirection: 1,
+        animationFrame: 0,
+        dialogueVisible: false,
+        dialogueText: '',
+        dialogueButtons: [],
+        walkRotationTimer: 0,
+        votingMode: false,
+        currentVoteIndex: 0,
+        starAllocations: {},
+        reasoning: '',
+        showReasoningInput: false,
+        isGoingBack: false,
+        mouseX: 0,
+        mouseY: 0,
+        viewedCode: false,
+        playedProject: false,
+        stepInteractions: {},
+        votingUIInitialized: false,
+        cursorPosition: 0
+      };
+      this.loadFromStorage();
+    }
+    
+    get(key) {
+      return this.state[key];
+    }
+    
+    set(key, value) {
+      this.state[key] = value;
+      // Don't save to storage on every change - batch save instead
+    }
+    
+    update(key, value) {
+      this.state[key] = value;
+      // Don't save to storage on every change - batch save instead
+    }
+    
+    batchSave() {
+      // Only save important state changes
+      if (this.state.currentStep || this.state.stepInteractions) {
+        this.saveToStorage();
+      }
+    }
+    
+    loadFromStorage() {
+      try {
+        const stored = localStorage.getItem(VOTING_CONFIG.LOCAL_STORAGE_KEYS.VOTING_PROGRESS);
+        const storedWeek = localStorage.getItem(VOTING_CONFIG.LOCAL_STORAGE_KEYS.CURRENT_WEEK);
+        const storedBallotId = localStorage.getItem(VOTING_CONFIG.LOCAL_STORAGE_KEYS.BALLOT_ID);
+        const currentWeek = <%= Date.current.cweek.to_i %>;
+        const currentBallotId = <%= @ballot&.id || 0 %>;
+        
+        // Only load from storage if we're not in a state where voting is not allowed
+        const serverVotingState = '<%= voting_state %>';
+        if (serverVotingState === 'closed' || serverVotingState === 'already_voted' || serverVotingState === 'thanks') {
+          // Clear storage if user has already voted or voting is closed
+          localStorage.removeItem(VOTING_CONFIG.LOCAL_STORAGE_KEYS.VOTING_PROGRESS);
+          localStorage.removeItem(VOTING_CONFIG.LOCAL_STORAGE_KEYS.CURRENT_WEEK);
+          localStorage.removeItem(VOTING_CONFIG.LOCAL_STORAGE_KEYS.BALLOT_ID);
+          return;
+        }
+        
+        // Clear storage if ballot ID has changed (new ballot generated)
+        if (storedBallotId && parseInt(storedBallotId) !== currentBallotId) {
+          localStorage.removeItem(VOTING_CONFIG.LOCAL_STORAGE_KEYS.VOTING_PROGRESS);
+          localStorage.removeItem(VOTING_CONFIG.LOCAL_STORAGE_KEYS.CURRENT_WEEK);
+          localStorage.removeItem(VOTING_CONFIG.LOCAL_STORAGE_KEYS.BALLOT_ID);
+          return;
+        }
+        
+        if (stored && storedWeek && parseInt(storedWeek) === currentWeek) {
+          const progress = JSON.parse(stored);
+          this.state.currentStep = progress.currentStep || 1;
+          this.state.stepInteractions = progress.stepInteractions || {};
+        } else {
+          localStorage.removeItem(VOTING_CONFIG.LOCAL_STORAGE_KEYS.VOTING_PROGRESS);
+          localStorage.removeItem(VOTING_CONFIG.LOCAL_STORAGE_KEYS.CURRENT_WEEK);
+          localStorage.removeItem(VOTING_CONFIG.LOCAL_STORAGE_KEYS.BALLOT_ID);
+        }
+      } catch (error) {
+        console.error('Error loading voting progress:', error);
+      }
+    }
+    
+    // Method to clear voting progress when user has already voted
+    clearVotingProgress() {
+      try {
+        localStorage.removeItem(VOTING_CONFIG.LOCAL_STORAGE_KEYS.VOTING_PROGRESS);
+        localStorage.removeItem(VOTING_CONFIG.LOCAL_STORAGE_KEYS.CURRENT_WEEK);
+        localStorage.removeItem(VOTING_CONFIG.LOCAL_STORAGE_KEYS.BALLOT_ID);
+        // Reset state to initial values
+        this.state.currentStep = 1;
+        this.state.stepInteractions = {};
+        this.state.votingMode = false;
+        this.state.starAllocations = {};
+        this.state.reasoning = '';
+        this.state.showReasoningInput = false;
+        this.state.phase = 'idle';
+        this.state.dialogueVisible = false;
+        this.state.dialogueText = '';
+        this.state.dialogueButtons = [];
+      } catch (error) {
+        console.error('Error clearing voting progress:', error);
+      }
+    }
+    
+    saveToStorage() {
+      try {
+        const progress = {
+          currentStep: this.state.currentStep,
+          stepInteractions: this.state.stepInteractions,
+          timestamp: Date.now()
+        };
+        localStorage.setItem(VOTING_CONFIG.LOCAL_STORAGE_KEYS.VOTING_PROGRESS, JSON.stringify(progress));
+        localStorage.setItem(VOTING_CONFIG.LOCAL_STORAGE_KEYS.CURRENT_WEEK, '<%= Date.current.cweek.to_i %>');
+        localStorage.setItem(VOTING_CONFIG.LOCAL_STORAGE_KEYS.BALLOT_ID, '<%= @ballot&.id || 0 %>');
+      } catch (error) {
+        console.error('Error saving voting progress:', error);
+      }
+    }
+  }
+  
+  // Initialize state management
+  const votingState = new VotingState();
+
+// Canvas Management Module
+class CanvasManager {
+  constructor() {
+    this.canvas = null;
+    this.ctx = null;
+    this.isInitializing = false;
+    this.resizeTimeout = null;
+    this.elements = {};
+    this.eventListenersAttached = false;
+  }
+  
+  initialize() {
+    if (this.isInitializing) return false;
+    this.isInitializing = true;
+    
+    try {
+      // Always get a fresh reference to the canvas
+      this.canvas = document.getElementById('voting-canvas');
+      
+      if (!this.canvas) {
+        console.error('Canvas element not found');
+        return false;
+      }
+      
+      // Get the 2D context
+      this.ctx = this.canvas.getContext('2d');
+      if (!this.ctx) {
+        console.error('Failed to get 2D context from canvas');
+        return false;
+      }
+      
+      // Verify the context is working by testing a simple operation
+      this.ctx.save();
+      this.ctx.restore();
+      
+      // Cache DOM elements
+      this.elements = {
+        canvas: this.canvas,
+        reasoningOverlay: document.getElementById('reasoningOverlay'),
+        reasoningTextarea: document.getElementById('reasoningTextarea')
+      };
+      
+      return true;
+    } catch (error) {
+      console.error('Canvas context test failed:', error);
+      return false;
+    } finally {
+      this.isInitializing = false;
+    }
+  }
+  
+  resize() {
+    if (!this.canvas) {
+      return;
+    }
+    
+    const container = this.canvas.parentElement || document.body;
+    const newWidth = container.clientWidth;
+    const newHeight = container.clientHeight;
+    
+    // Only resize if dimensions actually changed
+    if (this.canvas.width !== newWidth * 1.5 || this.canvas.height !== newHeight * 1.5) {
+      // Set actual canvas size to 1.5x for higher resolution
+      const scale = 1.5;
+      this.canvas.width = newWidth * scale;
+      this.canvas.height = newHeight * scale;
+      
+      // Scale the canvas back down using CSS
+      this.canvas.style.width = newWidth + 'px';
+      this.canvas.style.height = newHeight + 'px';
+      
+      // Scale the drawing context so everything draws at the higher resolution
+      this.ctx.scale(scale, scale);
+    }
+  }
+  
+  clear() {
+    if (this.ctx && this.canvas) {
+      const displayWidth = this.canvas.offsetWidth;
+      const displayHeight = this.canvas.offsetHeight;
+      this.ctx.clearRect(0, 0, displayWidth, displayHeight);
+    }
+  }
+  
+  isValid() {
+    if (!this.ctx || !this.canvas || this.canvas.width <= 0 || this.canvas.height <= 0) {
+      return false;
+    }
+    
+    // Test if context is actually working by trying a simple operation
+    try {
+      this.ctx.save();
+      this.ctx.restore();
+      return true;
+    } catch (e) {
+      console.warn('Canvas context test failed:', e);
+      return false;
+    }
+  }
+  
+  attachEventListeners() {
+    if (this.eventListenersAttached || !this.canvas) {
+      return;
+    }
+    
+    // Mouse tracking for hover effects
+    this.canvas.addEventListener('mousemove', this.handleMouseMove);
+    
+    // Click detection
+    this.canvas.addEventListener('click', this.handleClick);
+    
+    this.eventListenersAttached = true;
+  }
+  
+  removeEventListeners() {
+    if (!this.eventListenersAttached || !this.canvas) {
+      return;
+    }
+    
+    this.canvas.removeEventListener('mousemove', this.handleMouseMove);
+    this.canvas.removeEventListener('click', this.handleClick);
+    
+    this.eventListenersAttached = false;
+  }
+  
+  handleMouseMove = (event) => {
+    const rect = canvasManager.canvas.getBoundingClientRect();
+    votingState.set('mouseX', event.clientX - rect.left);
+    votingState.set('mouseY', event.clientY - rect.top);
+    
+    // Check if hovering over any button and update cursor
+    let isHoveringButton = false;
+    
+    if (votingState.get('dialogueVisible')) {
+      // Check back button
+      const boxWidth = 600;
+      const boxHeight = 200;
+      const boxX = (canvasManager.canvas.offsetWidth - boxWidth) / 2;
+      const boxY = 50;
+      const buttonWidth = 80;
+      const buttonHeight = 40;
+      const buttonX = boxX + 20;
+      const buttonY = boxY + boxHeight - 50;
+      
+      if (votingState.get('mouseX') >= buttonX && 
+          votingState.get('mouseX') <= buttonX + buttonWidth &&
+          votingState.get('mouseY') >= buttonY && 
+          votingState.get('mouseY') <= buttonY + buttonHeight) {
+        isHoveringButton = true;
+      }
+      
+      // Check dialogue buttons
+      votingState.get('dialogueButtons').forEach(button => {
+        if (button.x && button.y && button.width && button.height) {
+          if (votingState.get('mouseX') >= button.x && 
+              votingState.get('mouseX') <= button.x + button.width &&
+              votingState.get('mouseY') >= button.y && 
+              votingState.get('mouseY') <= button.y + button.height) {
+            // Don't show pointer for disabled Next button
+            if (button.text === "Next" && 
+                (!votingState.get('viewedCode') || !votingState.get('playedProject'))) {
+              // Still show tooltip but not pointer cursor
+            } else {
+              isHoveringButton = true;
+            }
+          }
+        }
+      });
+      
+      // Check voting buttons (star adjustment buttons)
+      if (votingManager.votingButtons) {
+        votingManager.votingButtons.forEach(button => {
+          if (votingState.get('mouseX') >= button.x && 
+              votingState.get('mouseX') <= button.x + button.width &&
+              votingState.get('mouseY') >= button.y && 
+              votingState.get('mouseY') <= button.y + button.height) {
+            isHoveringButton = true;
+          }
+        });
+      }
+      
+      // Redraw to update hover effects
+      if (votingState.get('votingMode')) {
+        // Clear the voting buttons array to force a fresh draw
+        votingManager.votingButtons = [];
+        drawVotingInterface();
+      } else if (votingState.get('dialogueVisible')) {
+        drawDialogueBox();
+      }
+    }
+    
+    // Update cursor style
+    canvasManager.canvas.style.cursor = isHoveringButton ? 'pointer' : 'default';
+  }
+  
+  handleClick = (event) => {
+    // Verify canvas is still valid before processing click
+    if (!canvasManager || !canvasManager.isValid()) {
+      console.log('Click detected but canvas invalid, attempting recovery...');
+      if (window.forceReinitialize) {
+        window.forceReinitialize();
+      }
+      return;
+    }
+    
+    const rect = canvasManager.canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    
+    // Check if back button in dialogue was clicked first
+    // Handle admin skip button (always available)
+    <% if can_access_admin? %>
+    if (votingState.get('adminSkipButton') && 
+        x >= votingState.get('adminSkipButton').x && x <= votingState.get('adminSkipButton').x + votingState.get('adminSkipButton').width &&
+        y >= votingState.get('adminSkipButton').y && y <= votingState.get('adminSkipButton').y + votingState.get('adminSkipButton').height) {
+      nextStep();
+      return;
+    }
+    <% end %>
+    
+    if (votingState.get('dialogueBackButton') && 
+        x >= votingState.get('dialogueBackButton').x && x <= votingState.get('dialogueBackButton').x + votingState.get('dialogueBackButton').width &&
+        y >= votingState.get('dialogueBackButton').y && y <= votingState.get('dialogueBackButton').y + votingState.get('dialogueBackButton').height) {
+      handleBackButton();
+      return;
+    }
+    
+    if (votingState.get('dialogueVisible')) {
+      // Check if any dialogue button was clicked
+      votingState.get('dialogueButtons').forEach(button => {
+        if (x >= button.x && x <= button.x + button.width &&
+            y >= button.y && y <= button.y + button.height) {
+          // Check if Next button is disabled
+          if (button.text === "Next" && 
+              (!votingState.get('viewedCode') || !votingState.get('playedProject'))) {
+            return; // Don't execute action if disabled
+          }
+          button.action();
+        }
+      });
+    } else if (votingState.get('votingMode')) {
+      // Handle voting interface clicks
+      handleVotingClick(x, y);
+      
+      // Handle voting back button
+      if (votingManager.votingBackButton &&
+          x >= votingManager.votingBackButton.x && x <= votingManager.votingBackButton.x + votingManager.votingBackButton.width &&
+          y >= votingManager.votingBackButton.y && y <= votingManager.votingBackButton.y + votingManager.votingBackButton.height) {
+        goBackToAnimation();
+        return;
+      }
+
+      // Handle voting submit button
+      if (votingManager.votingSubmitButton &&
+          x >= votingManager.votingSubmitButton.x && x <= votingManager.votingSubmitButton.x + votingManager.votingSubmitButton.width &&
+          y >= votingManager.votingSubmitButton.y && y <= votingManager.votingSubmitButton.y + votingManager.votingSubmitButton.height) {
+        if (votingManager.totalStarsAllocated === VOTING_CONFIG.MAX_STARS) {
+          votingState.set('showReasoningInput', true);
+          drawVotingInterface();
+        }
+        return;
+      }
+      
+      // Handle reasoning back button
+      if (votingManager.reasoningBackButton && 
+          x >= votingManager.reasoningBackButton.x && x <= votingManager.reasoningBackButton.x + votingManager.reasoningBackButton.width &&
+          y >= votingManager.reasoningBackButton.y && y <= votingManager.reasoningBackButton.y + votingManager.reasoningBackButton.height) {
+        votingState.set('showReasoningInput', false);
+        ensureReasoningOverlayHidden();
+        drawVotingInterface();
+        return;
+      }
+    }
+  }
+  
+  cleanup() {
+    this.removeEventListeners();
+    if (this.resizeTimeout) {
+      clearTimeout(this.resizeTimeout);
+    }
+  }
+}
+
+// Function to force reinitialization when needed
+window.forceReinitialize = function() {
+  // Remove existing event listeners first
+  canvasManager.removeEventListeners();
+  
+  // Reset canvas and context
+  canvasManager.canvas = null;
+  canvasManager.ctx = null;
+  canvasManager.eventListenersAttached = false;
+  
+  // Reinitialize
+  if (canvasManager.initialize()) {
+    canvasManager.resize();
+    canvasManager.attachEventListeners();
+    
+    // Restart appropriate interface
+    if (votingState.get('currentStep') >= 6) {
+      showVotingUI();
+    } else {
+      startAnimation();
+    }
+  }
+};
+
+// Initialize canvas manager
+const canvasManager = new CanvasManager();
+
+// Cached calculations to avoid repeated expensive operations
+const cache = {
+  backgroundLayout: null,
+  userMeeplePos: null,
+  presentingPos: null,
+  lastCanvasSize: { width: 0, height: 0 },
+  
+  updateLayout() {
+    const displayWidth = canvasManager.canvas.offsetWidth;
+    const displayHeight = canvasManager.canvas.offsetHeight;
+    
+    // Only recalculate if canvas size changed
+    if (this.lastCanvasSize.width === displayWidth && this.lastCanvasSize.height === displayHeight && this.backgroundLayout) {
+      return;
+    }
+    
+    this.lastCanvasSize = { width: displayWidth, height: displayHeight };
+    
+    if (!imageManager.images.background) return;
+    
+    const bgAspect = imageManager.images.background.width / imageManager.images.background.height;
+    const canvasAspect = displayWidth / displayHeight;
+    
+    let bgWidth, bgHeight, bgX, bgY;
+    if (canvasAspect > bgAspect) {
+      bgHeight = displayHeight;
+      bgWidth = bgHeight * bgAspect;
+      bgX = (displayWidth - bgWidth) / 2;
+      bgY = 0;
+    } else {
+      bgWidth = displayWidth;
+      bgHeight = bgWidth / bgAspect;
+      bgX = 0;
+      bgY = (displayHeight - bgHeight) / 2;
+    }
+    
+    this.backgroundLayout = { bgX, bgY, bgWidth, bgHeight };
+    this.userMeeplePos = getUserMeeplePosition(bgX, bgWidth, bgY, bgHeight);
+    this.presentingPos = { 
+      x: bgX + bgWidth * 0.6, 
+      y: bgY + bgHeight * 0.70 
+    };
+  }
+};
+
+// Consolidated background drawing function
+function drawBackground() {
+  if (!canvasManager.isValid() || !imageManager.images.background) return false;
+  
+  cache.updateLayout();
+  if (!cache.backgroundLayout) return false;
+  
+  const { bgX, bgY, bgWidth, bgHeight } = cache.backgroundLayout;
+  
+  // Draw background
+  canvasManager.ctx.drawImage(imageManager.images.background, bgX, bgY, bgWidth, bgHeight);
+  
+  // Draw user meeple on throne
+  canvasManager.ctx.save();
+  canvasManager.ctx.translate(cache.userMeeplePos.x, cache.userMeeplePos.y);
+  
+  if (imageManager.images.meeple && imageManager.images.meeple.complete && imageManager.images.meeple.naturalWidth > 0 && imageManager.images.meeple.src !== imageManager.images.redMeeple.src) {
+    canvasManager.ctx.drawImage(imageManager.images.meeple, 
+      -cache.userMeeplePos.size/2, -cache.userMeeplePos.size/2, 
+      cache.userMeeplePos.size, cache.userMeeplePos.size);
+  } else if (imageManager.images.redMeeple && imageManager.images.redMeeple.complete) {
+    canvasManager.ctx.drawImage(imageManager.images.redMeeple, 
+      -cache.userMeeplePos.size/2, -cache.userMeeplePos.size/2, 
+      cache.userMeeplePos.size, cache.userMeeplePos.size);
+  }
+  canvasManager.ctx.restore();
+  
+  // Draw throne
+  if (imageManager.images.throne && imageManager.images.throne.complete) {
+    canvasManager.ctx.drawImage(imageManager.images.throne, bgX, bgY, bgWidth, bgHeight);
+  }
+  
+  return true;
+}
+
+// Image Management Module
+class ImageManager {
+  constructor() {
+    this.imagesLoaded = 0;
+    this.totalImages = 3 + (<% if current_user.try(:meeple) && current_user.meeple.color.present? %>1<% else %>0<% end %>);
+    this.images = {};
+    this.meepleImageCache = {};
+    this.meepleAssetPaths = {};
+  }
+  
+  loadImages() {
+    // Load background images
+    this.images.background = new Image();
+    this.images.throne = new Image();
+    this.images.redMeeple = new Image();
+    
+    this.images.background.src = '<%= asset_path('great_hall.webp') %>';
+    this.images.throne.src = '<%= asset_path('great_hall_throne.webp') %>';
+    this.images.redMeeple.src = '<%= asset_path("meeple/royal-advisor.png") %>';
+    
+    // Load user meeple if available
+    <% if current_user.try(:meeple) && current_user.meeple.color.present? %>
+    this.images.meeple = new Image();
+    this.images.meeple.src = '<%= asset_path("meeple/meeple-#{current_user.meeple.color}.png") %>';
+    <% end %>
+    
+    // Set up load handlers
+    Object.values(this.images).forEach(img => {
+      img.onload = () => this.imageLoaded();
+    });
+    
+    // Load meeple asset paths
+    this.loadMeepleAssetPaths();
+  }
+  
+  imageLoaded() {
+    this.imagesLoaded++;
+    if (this.imagesLoaded >= this.totalImages) {
+      drawStaticScene();
+      setTimeout(() => {
+        if (votingState.get('phase') === 'idle' || votingState.get('phase') === 'exited') {
+          startAnimation();
+        }
+      }, 500);
+    }
+  }
+  
+  loadMeepleAssetPaths() {
+    fetch('/meeple/asset_paths')
+      .then(response => response.json())
+      .then(data => {
+        this.meepleAssetPaths = data.asset_paths;
+      })
+      .catch(error => {
+        console.error('Failed to load meeple asset paths:', error);
+      });
+  }
+  
+  getMeepleImage(color) {
+    if (this.meepleImageCache[color]) {
+      return this.meepleImageCache[color];
+    }
+    
+    if (!this.meepleAssetPaths[color]) {
+      // Fallback to blue meeple instead of royal advisor
+      return this.getBlueMeepleFallback();
+    }
+    
+    const img = new Image();
+    img.onload = () => {
+      this.meepleImageCache[color] = img;
+    };
+    img.onerror = () => {
+      // Fallback to blue meeple instead of royal advisor
+      this.meepleImageCache[color] = this.getBlueMeepleFallback();
+    };
+    img.src = this.meepleAssetPaths[color];
+    return img;
+  }
+
+  getBlueMeepleFallback() {
+    // Create a blue meeple fallback if it doesn't exist
+    if (!this.images.blueMeepleFallback) {
+      this.images.blueMeepleFallback = new Image();
+      this.images.blueMeepleFallback.src = '<%= asset_path("meeple/meeple-blue.png") %>';
+    }
+    return this.images.blueMeepleFallback;
+  }
+  
+  refreshMeepleImage() {
+    <% if current_user.try(:meeple) && current_user.meeple.color.present? %>
+    fetch('/meeple/current_color', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.color && data.asset_path) {
+        const newMeepleImage = new Image();
+        newMeepleImage.onload = () => {
+          this.images.meeple = newMeepleImage;
+          if (votingState.get('phase') === 'speaking' || votingState.get('phase') === 'idle') {
+            drawStaticScene();
+          }
+        };
+        newMeepleImage.src = data.asset_path + '?t=' + Date.now();
+      }
+    })
+    .catch(error => {
+      console.error('Error fetching meeple color:', error);
+    });
+    <% end %>
+  }
+}
+
+// Initialize image manager
+const imageManager = new ImageManager();
+
+// Initialize canvas and images
+canvasManager.initialize();
+canvasManager.resize();
+canvasManager.attachEventListeners();
+imageManager.loadImages();
+
+// Debounced resize handler
+function debouncedResize() {
+  if (canvasManager.resizeTimeout) {
+    clearTimeout(canvasManager.resizeTimeout);
+  }
+  canvasManager.resizeTimeout = setTimeout(() => canvasManager.resize(), 100);
+}
+
+// Image loading is handled by ImageManager class
+
+// Image loading is now handled by ImageManager class
+
+// Hide UI overlay initially for animation
+document.querySelector('.ui-overlay').style.display = 'none';
+
+// Initialize canvas and managers
+if (canvasManager && canvasManager.resize) {
+  canvasManager.resize();
+}
+
+// Debounced resize handler
+function debouncedResize() {
+  if (window.resizeCanvasTimeout) {
+    clearTimeout(window.resizeCanvasTimeout);
+  }
+  window.resizeCanvasTimeout = setTimeout(() => {
+    if (canvasManager && canvasManager.resize) {
+      canvasManager.resize();
+    }
+  }, 100);
+}
+
+// Event Management Module
+class EventManager {
+  constructor() {
+    this.setupEventListeners();
+  }
+  
+  setupEventListeners() {
+    window.addEventListener('resize', debouncedResize);
+    window.addEventListener('focus', () => this.handleWindowFocus());
+    document.addEventListener('visibilitychange', () => this.handleVisibilityChange());
+    document.addEventListener('turbo:before-cache', () => this.handleTurboBeforeCache());
+    document.addEventListener('turbo:load', () => this.handleTurboLoad());
+    window.addEventListener('beforeunload', () => this.handleBeforeUnload());
+  }
+  
+  handleWindowFocus() {
+    if (!canvasManager.isValid()) {
+      window.forceReinitialize();
+    } else {
+      try {
+        canvasManager.ctx.save();
+        canvasManager.ctx.restore();
+        canvasManager.resize();
+      } catch (error) {
+        window.forceReinitialize();
+      }
+    }
+
+    if (votingState.get('votingMode')) {
+      if (votingState.get('animationFrame')) {
+        cancelAnimationFrame(votingState.get('animationFrame'));
+      }
+      try {
+        drawVotingInterface();
+      } catch (error) {
+        console.error('Error drawing voting interface on focus:', error);
+        window.forceReinitialize();
+      }
+    }
+  }
+  
+  handleVisibilityChange() {
+    if (!document.hidden) {
+      // Check server voting state first - don't allow voting if closed or already voted
+      if (serverVotingState === 'closed' || serverVotingState === 'already_voted' || serverVotingState === 'thanks') {
+        return;
+      }
+      
+      imageManager.refreshMeepleImage();
+
+      if (!canvasManager.isValid()) {
+        window.forceReinitialize();
+      } else {
+        try {
+          canvasManager.ctx.save();
+          canvasManager.ctx.restore();
+          canvasManager.resize();
+        } catch (error) {
+          window.forceReinitialize();
+        }
+      }
+
+      if (votingState.get('votingMode')) {
+        if (votingState.get('animationFrame')) {
+          cancelAnimationFrame(votingState.get('animationFrame'));
+        }
+        try {
+          drawVotingInterface();
+        } catch (error) {
+          console.error('Error drawing voting interface:', error);
+          window.forceReinitialize();
+        }
+        this.restartVotingAnimation();
+      }
+    }
+  }
+  
+  restartVotingAnimation() {
+    // Check server voting state first - don't allow voting if closed or already voted
+    if (serverVotingState === 'closed' || serverVotingState === 'already_voted' || serverVotingState === 'thanks') {
+      return;
+    }
+    
+    function animateVotingInterface() {
+      if (!votingState.get('votingMode')) {
+        return;
+      }
+      try {
+        canvasManager.clear();
+        drawVotingInterface();
+        votingState.set('animationFrame', requestAnimationFrame(animateVotingInterface));
+      } catch (error) {
+        console.error('Error in voting animation loop:', error);
+        window.forceReinitialize();
+      }
+    }
+    animateVotingInterface();
+  }
+  
+  handleTurboBeforeCache() {
+    canvasManager.cleanup();
+    if (votingState.get('animationFrame')) {
+      cancelAnimationFrame(votingState.get('animationFrame'));
+    }
+    window.votingSummaryInitialized = false;
+  }
+  
+  handleTurboLoad() {
+    window.votingSummaryInitialized = false;
+    
+    // Check server voting state first before any initialization
+    const serverVotingState = '<%= voting_state %>';
+    if (serverVotingState === 'closed' || serverVotingState === 'already_voted' || serverVotingState === 'thanks') {
+      // Clear any existing voting progress
+      localStorage.removeItem(VOTING_CONFIG.LOCAL_STORAGE_KEYS.VOTING_PROGRESS);
+      localStorage.removeItem(VOTING_CONFIG.LOCAL_STORAGE_KEYS.CURRENT_WEEK);
+      localStorage.removeItem(VOTING_CONFIG.LOCAL_STORAGE_KEYS.BALLOT_ID);
+      
+      if (!canvasManager.initialize()) {
+        console.error('Failed to initialize canvas on turbo:load');
+        return;
+      }
+      
+      canvasManager.resize();
+      canvasManager.attachEventListeners();
+      showMeepleMessage("<%= j(meeple_message) %>");
+      return;
+    }
+    
+    if (!canvasManager.initialize()) {
+      console.error('Failed to initialize canvas on turbo:load');
+      return;
+    }
+    
+    canvasManager.resize();
+    canvasManager.attachEventListeners();
+    imageManager.refreshMeepleImage();
+    
+    // Reset image loading counter for cached images
+    imageManager.imagesLoaded = 0;
+    
+    // Check if images are already loaded (cached)
+    if (imageManager.images.background?.complete) imageManager.imagesLoaded++;
+    if (imageManager.images.throne?.complete) imageManager.imagesLoaded++;
+    if (imageManager.images.redMeeple?.complete) imageManager.imagesLoaded++;
+    <% if current_user.try(:meeple) && current_user.meeple.color.present? %>
+    if (imageManager.images.meeple?.complete) imageManager.imagesLoaded++;
+    <% end %>
+    
+    // Start animation if all images are ready
+    if (imageManager.imagesLoaded >= imageManager.totalImages) {
+      if (votingState.get('phase') === 'idle' || votingState.get('phase') === 'exited') {
+        startAnimation();
+      }
+    } else {
+      setTimeout(() => {
+        if (imageManager.imagesLoaded >= imageManager.totalImages && 
+            (votingState.get('phase') === 'idle' || votingState.get('phase') === 'exited')) {
+          startAnimation();
+        }
+      }, 100);
+    }
+  }
+  
+  handleBeforeUnload() {
+    if (votingState.get('animationFrame')) {
+      cancelAnimationFrame(votingState.get('animationFrame'));
+    }
+    window.votingSummaryInitialized = false;
+  }
+}
+
+// Initialize event manager
+const eventManager = new EventManager();
+
+// Remove old event handling code - now handled by EventManager
+
+// Voting Management Module
+class VotingManager {
+  constructor() {
+    this.totalStarsAllocated = 0;
+    this.votes = <%= votes_json.html_safe %>;
+    console.log('VotingManager: Loaded', this.votes.length, 'relevant projects for voting');
+    this.votingButtons = [];
+    this.votingBackButton = null;
+    this.votingSubmitButton = null;
+    this.reasoningBackButton = null;
+    this.finalSubmitButton = null;
+    this.isSubmitting = false;
+  }
+  
+  initializeStarAllocations() {
+    this.votes.forEach(vote => {
+      if (vote.project) {
+        votingState.set('starAllocations', {
+          ...votingState.get('starAllocations'),
+          [vote.id]: vote.star_count || 1
+        });
+      }
+    });
+    
+    this.calculateTotalStars();
+  }
+  
+  calculateTotalStars() {
+    this.totalStarsAllocated = Object.values(votingState.get('starAllocations')).reduce((sum, stars) => sum + stars, 0);
+  }
+  
+  adjustStarRating(voteId, change) {
+    if (!votingState.get('votingMode')) {
+      console.error('Not in voting mode');
+      return;
+    }
+    
+    const allocations = votingState.get('starAllocations');
+    if (!allocations.hasOwnProperty(voteId)) {
+      console.error('Invalid voteId:', voteId);
+      return;
+    }
+    
+    const currentStars = allocations[voteId] || 1;
+    const newStars = Math.max(VOTING_CONFIG.MIN_STARS_PER_PROJECT, Math.min(5, currentStars + change));
+    
+    // Check if this change would exceed the limit
+    const starsToAdd = newStars - currentStars;
+    if (starsToAdd > 0 && this.totalStarsAllocated + starsToAdd > VOTING_CONFIG.MAX_STARS) {
+      return;
+    }
+    
+    // Update the allocation
+    votingState.set('starAllocations', {
+      ...allocations,
+      [voteId]: newStars
+    });
+    
+    // Update total stars allocated
+    this.totalStarsAllocated = this.totalStarsAllocated - currentStars + newStars;
+    
+    // Redraw voting interface
+    if (votingState.get('votingMode')) {
+      console.log('Redrawing voting interface after star adjustment');
+      this.votingButtons = [];
+      drawVotingInterface();
+    }
+    
+    // Send update to server
+    this.sendStarUpdate(voteId, newStars, currentStars);
+  }
+  
+  sendStarUpdate(voteId, newStars, currentStars) {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+    if (!csrfToken) {
+      console.error('CSRF token not found');
+      return;
+    }
+    
+    fetch(`/votes/${voteId}/update_stars`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': csrfToken
+      },
+      body: JSON.stringify({ star_count: newStars })
+    })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response.json();
+    })
+    .then(data => {
+      if (!data.success) {
+        console.error('Error updating star rating:', data.errors);
+        // Revert the change on error
+        const allocations = votingState.get('starAllocations');
+        votingState.set('starAllocations', {
+          ...allocations,
+          [voteId]: currentStars
+        });
+        this.totalStarsAllocated = this.totalStarsAllocated + currentStars - newStars;
+        drawVotingInterface();
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      // Revert the change on error
+      const allocations = votingState.get('starAllocations');
+      votingState.set('starAllocations', {
+        ...allocations,
+        [voteId]: currentStars
+      });
+      this.totalStarsAllocated = this.totalStarsAllocated + currentStars - newStars;
+      drawVotingInterface();
+    });
+  }
+  
+  submitBallot() {
+    // Prevent double submission
+    if (this.isSubmitting) {
+      console.log('Submission already in progress, ignoring duplicate request');
+      return;
+    }
+    
+    const reasoning = votingState.get('reasoning');
+    
+    // Validate reasoning
+    if (!reasoning.trim()) {
+      alert('Please provide reasoning for your votes before submitting.');
+      return;
+    }
+    
+    // Validate star allocation
+    if (this.totalStarsAllocated !== VOTING_CONFIG.MAX_STARS) {
+      alert(`You must allocate exactly ${VOTING_CONFIG.MAX_STARS} stars before submitting. You currently have ${this.totalStarsAllocated} stars allocated.`);
+      return;
+    }
+    
+    // Validate all votes have been reviewed
+    const reviewedVotes = Object.keys(votingState.get('starAllocations')).length;
+    const totalVotes = this.votes ? this.votes.length : 0;
+    if (reviewedVotes !== totalVotes) {
+      alert(`You must review all ${totalVotes} projects before submitting. You have reviewed ${reviewedVotes} projects.`);
+      return;
+    }
+    
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+    if (!csrfToken) {
+      console.error('CSRF token not found');
+      return;
+    }
+    
+    // Set submission flag
+    this.isSubmitting = true;
+    
+    fetch(`/ballots/<%= @ballot&.id || 0 %>/submit`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': csrfToken
+      },
+      body: JSON.stringify({ reasoning: reasoning })
+    })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response.json();
+    })
+    .then(data => {
+      if (data.success) {
+        // Clear voting progress from localStorage
+        localStorage.removeItem(VOTING_CONFIG.LOCAL_STORAGE_KEYS.VOTING_PROGRESS);
+        localStorage.removeItem(VOTING_CONFIG.LOCAL_STORAGE_KEYS.CURRENT_WEEK);
+        localStorage.removeItem(VOTING_CONFIG.LOCAL_STORAGE_KEYS.BALLOT_ID);
+        
+        // Redirect to thanks page if provided, otherwise to great hall
+        if (data.redirect_url) {
+          window.location.href = data.redirect_url;
+        } else {
+          window.location.href = '/great-hall';
+        }
+      } else {
+        this.isSubmitting = false; // Reset flag on error
+        console.error('Error submitting ballot:', data.errors);
+        alert('Error submitting ballot. Please try again.');
+      }
+    })
+    .catch(error => {
+      this.isSubmitting = false; // Reset flag on error
+      console.error('Error:', error);
+      alert('Error submitting ballot. Please try again.');
+    });
+  }
+}
+
+// Initialize voting manager
+const votingManager = new VotingManager();
+
+// Get voting state from server
+const serverVotingState = '<%= voting_state %>';
+const meepleMessage = "<%= j(meeple_message) %>";
+
+// Function to show meeple message for different voting states
+function showMeepleMessage(message) {
+  // Set up animation state for meeple message
+  votingState.set('phase', 'speaking');
+  votingState.set('dialogueVisible', true);
+  votingState.set('dialogueText', message);
+  votingState.set('dialogueButtons', []);
+  
+  // Start animation loop to show meeple and message
+  function animateMeepleMessage() {
+    if (!canvasManager.isValid()) {
+      if (!canvasManager.initialize()) {
+        console.error('Failed to initialize canvas for meeple message');
+        return;
+      }
+    }
+    
+    // Clear canvas
+    canvasManager.clear();
+    
+    // Draw background
+    drawStaticScene();
+    
+    // Draw red meeple in presenting position
+    drawPresentingMeeple();
+    
+    // Draw dialogue box
+    drawDialogueBox();
+    
+    // Continue animation
+    votingState.set('animationFrame', requestAnimationFrame(animateMeepleMessage));
+  }
+  
+  // Start the animation
+  animateMeepleMessage();
+}
+
+// Function to draw presenting red meeple
+function drawPresentingMeeple() {
+  if (!imageManager.images.background || !imageManager.images.redMeeple) {
+    return;
+  }
+  
+  // Calculate aspect ratios
+  const bgAspect = imageManager.images.background.width / imageManager.images.background.height;
+  const displayWidth = canvasManager.canvas.offsetWidth;
+  const displayHeight = canvasManager.canvas.offsetHeight;
+  const canvasAspect = displayWidth / displayHeight;
+  
+  let bgWidth, bgHeight, bgX, bgY;
+  
+  if (canvasAspect > bgAspect) {
+    bgHeight = displayHeight;
+    bgWidth = bgHeight * bgAspect;
+    bgX = (displayWidth - bgWidth) / 2;
+    bgY = 0;
+  } else {
+    bgWidth = displayWidth;
+    bgHeight = bgWidth / bgAspect;
+    bgX = 0;
+    bgY = (displayHeight - bgHeight) / 2;
+  }
+  
+  // Draw presenting red meeple (static position)
+  const presentingX = bgX + bgWidth * 0.6;
+  const presentingY = bgY + bgHeight * 0.70; // Royal assistant static position
+  
+  canvasManager.ctx.save();
+  canvasManager.ctx.translate(presentingX, presentingY);
+  canvasManager.ctx.rotate(0); // No rotation when presenting
+  
+  if (imageManager.images.redMeeple && imageManager.images.redMeeple.complete && imageManager.images.redMeeple.naturalWidth > 0) {
+    canvasManager.ctx.drawImage(imageManager.images.redMeeple, 
+      -VOTING_CONFIG.MEEPLE_SIZE/2, 
+      -VOTING_CONFIG.MEEPLE_SIZE/2, 
+      VOTING_CONFIG.MEEPLE_SIZE, 
+      VOTING_CONFIG.MEEPLE_SIZE);
+  }
+  
+  canvasManager.ctx.restore();
+}
+
+// Debug the votes data
+const votes = <%= votes_json.html_safe %>;
+
+// Get meeple data for current step
+function getMeepleForStep(step) {
+  const votes = <%= votes_json.html_safe %>;
+
+  if (step >= 2 && step <= votes.length + 1) {
+    // Step 2 corresponds to vote[0], step 3 to vote[1], etc.
+    const voteIndex = step - 2;
+    const vote = votes[voteIndex];
+
+    console.log('getMeepleForStep - step:', step, 'voteIndex:', voteIndex, 'vote:', vote);
+
+    if (vote && vote.project) {
+      // Check if we have the user and meeple data (included via includes)
+      if (vote.project && vote.project.user) {
+        console.log('User data found:', vote.project.user);
+        
+        // Check for meeple in safe_attributes_for_voting first
+        let meepleData = null;
+        if (vote.project.user.safe_attributes_for_voting && vote.project.user.safe_attributes_for_voting.meeple) {
+          meepleData = vote.project.user.safe_attributes_for_voting.meeple;
+        } else if (vote.project.user.meeple) {
+          meepleData = vote.project.user.meeple;
+        }
+        
+        if (meepleData) {
+          console.log('Meeple data found:', meepleData);
+          return {
+            color: meepleData.color,
+            project: vote.project
+          };
+        } else {
+          console.log('No meeple data for user, using blue fallback');
+          return {
+            color: 'blue', // Default color when meeple is missing
+            project: vote.project
+          };
+        }
+      } else {
+        console.log('No user data found, using blue fallback');
+        return {
+          color: 'blue', // Default color when user is missing
+          project: vote.project
+        };
+      }
+    }
+  }
+  return null;
+}
+
+// Animation function
+function animate() {
+  // Ensure context exists
+  if (!canvasManager.isValid()) {
+    if (!canvasManager.initialize()) {
+      console.error('Failed to initialize canvas');
+      return;
+    }
+  }
+
+  // Check if canvas is still valid
+  if (!canvasManager.isValid()) {
+    if (!canvasManager.initialize()) {
+      console.error('Failed to reinitialize canvas');
+      return;
+    }
+    return;
+  }
+  
+  // Stop animation if in voting mode
+  if (votingState.get('votingMode')) {
+    // Don't return, let the voting interface be drawn
+  }
+  
+  // Only continue animation if we're in an active phase
+  if (votingState.get('phase') === 'exited' || votingState.get('phase') === 'idle') {
+    // Clean up animation frame
+    if (votingState.get('animationFrame')) {
+      cancelAnimationFrame(votingState.get('animationFrame'));
+      votingState.set('animationFrame', null);
+    }
+    return;
+  }
+  
+  // Cancel any existing animation frame to prevent multiple loops
+  if (votingState.get('animationFrame')) {
+    cancelAnimationFrame(votingState.get('animationFrame'));
+  }
+  
+  // Clear canvas
+  canvasManager.clear();
+  
+  votingState.set('animationFrame', requestAnimationFrame(animate));
+  
+  // Draw background scene
+  if (!drawBackground()) {
+    return;
+  }
+  
+  // Get cached positions
+  const { presentingPos } = cache;
+  const presentingX = presentingPos.x;
+  const presentingY = presentingPos.y;
+  
+  // Handle animation phases
+  if (votingState.get('phase') === 'entering') {
+    // Animate meeple walking in from the right
+    const dx = presentingX - votingState.get('meepleX');
+    const dy = presentingY - votingState.get('meepleY');
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    
+    if (distance > 5) {
+      // Move towards presenting position
+      const angle = Math.atan2(dy, dx);
+      votingState.set('meepleX', votingState.get('meepleX') + Math.cos(angle) * VOTING_CONFIG.WALK_SPEED);
+      votingState.set('meepleY', votingState.get('meepleY') + Math.sin(angle) * VOTING_CONFIG.WALK_SPEED);
+      
+      // Timer-based rotation switching
+      votingState.set('walkRotationTimer', votingState.get('walkRotationTimer') + 16); // Assuming 60fps (16ms per frame)
+      if (votingState.get('walkRotationTimer') >= VOTING_CONFIG.WALK_ROTATION_INTERVAL) {
+        votingState.set('rotationDirection', votingState.get('rotationDirection') * -1);
+        votingState.set('walkRotationTimer', 0);
+      }
+      
+      // Set rotation to fixed states
+      if (votingState.get('rotationDirection') === 1) {
+        votingState.set('rotation', VOTING_CONFIG.WALK_ROTATION_AMOUNT);
+      } else {
+        votingState.set('rotation', -VOTING_CONFIG.WALK_ROTATION_AMOUNT);
+      }
+    } else {
+      // Reached presenting position, start speaking
+      votingState.set('phase', 'speaking');
+      votingState.set('rotation', 0); // Reset rotation when speaking
+      votingState.set('dialogueVisible', true);
+      showDialogueForStep(votingState.get('currentStep'));
+      // Continue animation loop to keep meeple visible
+      // cancelAnimationFrame(votingState.get('animationFrame'));
+    }
+  } else if (votingState.get('phase') === 'exiting') {
+    // Animate meeple walking out to the right
+    const dx = votingState.get('targetX') - votingState.get('meepleX');
+    const dy = votingState.get('targetY') - votingState.get('meepleY');
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    
+    if (distance > 5) {
+      // Move towards exit position (twice as fast as entering)
+      const angle = Math.atan2(dy, dx);
+      votingState.set('meepleX', votingState.get('meepleX') + Math.cos(angle) * VOTING_CONFIG.WALK_SPEED * 2);
+      votingState.set('meepleY', votingState.get('meepleY') + Math.sin(angle) * VOTING_CONFIG.WALK_SPEED * 2);
+      
+      // Timer-based rotation switching
+      votingState.set('walkRotationTimer', votingState.get('walkRotationTimer') + 16); // Assuming 60fps (16ms per frame)
+      if (votingState.get('walkRotationTimer') >= VOTING_CONFIG.WALK_ROTATION_INTERVAL) {
+        votingState.set('rotationDirection', votingState.get('rotationDirection') * -1);
+        votingState.set('walkRotationTimer', 0);
+      }
+      
+      // Set rotation to fixed states
+      if (votingState.get('rotationDirection') === 1) {
+        votingState.set('rotation', VOTING_CONFIG.WALK_ROTATION_AMOUNT);
+      } else {
+        votingState.set('rotation', -VOTING_CONFIG.WALK_ROTATION_AMOUNT);
+      }
+    } else {
+      // Reached exit position, transition to next step
+      votingState.set('phase', 'exited');
+      votingState.set('rotation', 0); // Reset rotation when exiting
+      
+      if (votingState.get('isGoingBack')) {
+        // Going back to previous step
+        votingState.set('currentStep', votingState.get('currentStep') - 1);
+        votingState.set('isGoingBack', false);
+      } else {
+        // Going to next step
+        votingState.set('currentStep', votingState.get('currentStep') + 1);
+      }
+      
+      votingState.batchSave();
+      
+      // Stop animation loop first
+      if (votingState.get('animationFrame')) {
+        cancelAnimationFrame(votingState.get('animationFrame'));
+        votingState.set('animationFrame', null);
+      }
+      
+      // Start next animation after a short delay
+      setTimeout(() => {
+        startAnimation();
+      }, 500);
+    }
+  } else if (votingState.get('phase') === 'speaking') {
+    // In speaking phase, just continue the animation loop to keep meeple visible
+    // No movement or rotation changes
+  }
+  
+  // Draw animated meeple (during animation and speaking phases)
+  if (votingState.get('phase') !== 'exited' && votingState.get('phase') !== 'idle') {
+    canvasManager.ctx.save();
+    canvasManager.ctx.translate(votingState.get('meepleX'), votingState.get('meepleY'));
+    canvasManager.ctx.rotate(votingState.get('rotation'));
+    
+    // Determine meeple color based on current step
+    let meepleColor = 'royal_advisor'; // Default to royal advisor for announcements
+    
+    if (votingState.get('currentStep') >= 2 && votingState.get('currentStep') <= 5) {
+      // Use project owner's meeple (steps 2-5)
+      const stepMeeple = getMeepleForStep(votingState.get('currentStep'));
+      if (stepMeeple && stepMeeple.color) {
+        meepleColor = stepMeeple.color;
+        console.log('Using meeple color:', meepleColor, 'for step:', votingState.get('currentStep'));
+      }
+    }
+    
+    // Draw meeple using generic function with proper fallback logic
+    drawMeepleWithFallback(meepleColor, VOTING_CONFIG.MEEPLE_SIZE);
+    
+    canvasManager.ctx.restore();
+  }
+  
+  // Draw dialogue box if visible
+  if (votingState.get('dialogueVisible')) {
+    drawDialogueBox();
+  }
+  
+  // Draw voting interface if in voting mode
+  if (votingState.get('votingMode')) {
+    drawVotingInterface();
+    // Continue animation loop for voting interface
+    return;
+  }
+  
+  // Draw admin skip button (bottom left of entire canvas) - always visible
+  <% if can_access_admin? %>
+  const skipButtonX = 30;
+  const skipButtonY = canvasManager.canvas.offsetHeight - 40;
+  const skipButtonWidth = 80;
+  const skipButtonHeight = 30;
+  const isSkipHovered = votingState.get('mouseX') >= skipButtonX && 
+                       votingState.get('mouseX') <= skipButtonX + skipButtonWidth &&
+                       votingState.get('mouseY') >= skipButtonY && 
+                       votingState.get('mouseY') <= skipButtonY + skipButtonHeight;
+  
+  const skipButtonPos = drawStandardButton(skipButtonX, skipButtonY, skipButtonWidth, skipButtonHeight, 'Skip', false, isSkipHovered);
+  votingState.set('adminSkipButton', skipButtonPos);
+  <% end %>
+  
+  // Draw back button in dialogue box if there's a stage to go back to
+  if (votingState.get('dialogueVisible') && canGoBack()) {
+    drawBackButtonInDialogue();
+  }
+}
+
+// Cache for project owner meeple images
+var meepleImageCache = {};
+var meepleAssetPaths = {};
+
+// Load meeple asset paths from Rails helper
+fetch('/meeple/asset_paths')
+  .then(response => response.json())
+  .then(data => {
+    meepleAssetPaths = data.asset_paths;
+  })
+  .catch(error => {
+    console.error('Failed to load meeple asset paths:', error);
+  });
+
+// Clear any existing cache to ensure fresh images
+meepleImageCache = {};
+
+// Force reload of meeple images by clearing cache on page load
+window.addEventListener('load', function() {
+  meepleImageCache = {};
+});
+
+// Function to calculate user meeple position and size
+function getUserMeeplePosition(bgX, bgWidth, bgY, bgHeight) {
+  return {
+    x: bgX + bgWidth * 0.17,
+    y: bgY + bgHeight * 0.40, // Moved up from 0.46 to 0.40
+    size: 475
+  };
+}
+
+// Function to draw a meeple with proper fallback logic
+function drawMeepleWithFallback(meepleColor, size) {
+  let meepleImage = null;
+  
+  console.log('drawMeepleWithFallback called with color:', meepleColor);
+  
+  if (meepleColor === 'royal_advisor') {
+    // Special case for royal advisor - use the royal advisor image
+    meepleImage = imageManager.images.redMeeple;
+    console.log('Using royal advisor image');
+  } else if (meepleColor) {
+    // Try to get the cached image first
+    if (imageManager.meepleImageCache[meepleColor]) {
+      meepleImage = imageManager.meepleImageCache[meepleColor];
+      console.log('Using cached image for color:', meepleColor);
+    } else {
+      // Try to load the specific meeple color
+      const loadedImage = loadMeepleImage(meepleColor);
+      if (loadedImage && loadedImage.complete && loadedImage.naturalWidth > 0) {
+        meepleImage = loadedImage;
+        console.log('Using loaded image for color:', meepleColor);
+      } else {
+        console.log('Failed to load image for color:', meepleColor);
+      }
+    }
+  }
+  
+  // Fallback to blue meeple if specific color not available
+  if (!meepleImage || !meepleImage.complete || meepleImage.naturalWidth === 0) {
+    meepleImage = imageManager.getBlueMeepleFallback();
+    console.log('Using blue meeple fallback');
+  }
+  
+  // Final fallback to red meeple (royal advisor) if blue meeple not available
+  if (!meepleImage || !meepleImage.complete || meepleImage.naturalWidth === 0) {
+    meepleImage = imageManager.images.redMeeple;
+    console.log('Using red meeple fallback');
+  }
+  
+  // Draw the meeple
+  if (meepleImage && meepleImage.complete && meepleImage.naturalWidth > 0) {
+    canvasManager.ctx.drawImage(meepleImage, 
+      -size/2, 
+      -size/2, 
+      size, 
+      size);
+    console.log('Drew meeple successfully');
+  } else {
+    console.log('Failed to draw meeple - image not ready');
+  }
+}
+
+// Function to load meeple image for a specific color
+function loadMeepleImage(color) {
+  // Clear cache if it contains wrong image for this color
+  if (imageManager.meepleImageCache[color]) {
+    const cachedSrc = imageManager.meepleImageCache[color].src;
+    const expectedSrc = imageManager.meepleAssetPaths[color];
+    if (expectedSrc && cachedSrc !== expectedSrc) {
+      delete imageManager.meepleImageCache[color];
+    } else {
+      return imageManager.meepleImageCache[color];
+    }
+  }
+  
+  // Wait for asset paths to be loaded
+  if (!imageManager.meepleAssetPaths[color]) {
+    return imageManager.getBlueMeepleFallback();
+  }
+  
+  const img = new Image();
+  
+  // Use the meeple asset paths loaded from Rails helper
+  const newSrc = imageManager.meepleAssetPaths[color];
+
+  img.onload = function() {
+    imageManager.meepleImageCache[color] = img; // Cache the loaded image
+  };
+
+  img.onerror = function() {
+    console.error(`Failed to load meeple image for color: ${color} from ${newSrc}`);
+    // Fallback to blue meeple if loading fails
+    imageManager.meepleImageCache[color] = imageManager.getBlueMeepleFallback();
+  };
+
+  img.src = newSrc;
+  return img; // Don't cache until loaded
+}
+
+// Dialogue system
+function showDialogueForStep(step) {
+  // Load button interaction tracking for this step
+  const stepKey = `step_${step}`;
+  if (votingState.get('stepInteractions')[stepKey]) {
+    votingState.set('viewedCode', votingState.get('stepInteractions')[stepKey].viewedCode || false);
+    votingState.set('playedProject', votingState.get('stepInteractions')[stepKey].playedProject || false);
+  } else {
+    // Reset for new step
+    votingState.set('viewedCode', false);
+    votingState.set('playedProject', false);
+  }
+  
+  if (step === 1) {
+    // Step 1 is the initial announcement (equivalent to step 0 in animation)
+    votingState.set('dialogueText', "My liege, there are four diplomats who would like to present their rulers' plans!");
+    votingState.set('dialogueButtons', [
+      { text: "Let them in!", action: () => nextStep() }
+    ]);
+  } else if (step >= 2 && step <= 5) {
+    // Steps 2-5 are project presentations (equivalent to steps 1-4 in animation)
+    const stepMeeple = getMeepleForStep(step);
+    if (stepMeeple && stepMeeple.project) {
+      votingState.set('dialogueText', `I come to present you with ${stepMeeple.project.name}. ${stepMeeple.project.description || ''}`);
+      const buttons = [];
+      
+      if (stepMeeple.project.repo_url) {
+        buttons.push({
+          text: "View Code",
+          action: () => {
+            window.open(stepMeeple.project.repo_url, '_blank');
+            votingState.set('viewedCode', true);
+            // Save interaction for current step
+            const stepKey = `step_${votingState.get('currentStep')}`;
+            const interactions = votingState.get('stepInteractions');
+            if (!interactions[stepKey]) {
+              interactions[stepKey] = {};
+            }
+            interactions[stepKey].viewedCode = true;
+            votingState.set('stepInteractions', interactions);
+          }
+        });
+      }
+      
+      if (stepMeeple.project.demo_url) {
+        buttons.push({
+          text: "Play Project",
+          action: () => {
+            window.open(stepMeeple.project.demo_url, '_blank');
+            votingState.set('playedProject', true);
+            // Save interaction for current step
+            const stepKey = `step_${votingState.get('currentStep')}`;
+            const interactions = votingState.get('stepInteractions');
+            if (!interactions[stepKey]) {
+              interactions[stepKey] = {};
+            }
+            interactions[stepKey].playedProject = true;
+            votingState.set('stepInteractions', interactions);
+          }
+        });
+      }
+      
+      buttons.push({
+        text: "Next",
+        action: () => nextStep()
+      });
+      
+      votingState.set('dialogueButtons', buttons);
+    } else {
+      // Fallback: Skip to voting if project data is not available
+      votingState.set('dialogueText', "All presentations are complete. It's time to vote!");
+      votingState.set('dialogueButtons', [
+        { text: "Begin Voting", action: () => showVotingUI() }
+      ]);
+    }
+  } else if (step === 6) {
+    // Step 6 is the voting announcement (equivalent to step 5 in animation)
+    votingState.set('dialogueText', "Now it's time to vote on each project. Please allocate your stars wisely!");
+    votingState.set('dialogueButtons', [
+      { text: "Begin Voting", action: () => showVotingUI() }
+    ]);
+  } else {
+    // Default case for steps >= 6 - show voting UI
+    showVotingUI();
+  }
+}
+
+// Helper function to calculate dialogue box height based on text content
+function calculateDialogueBoxHeight(text, boxWidth) {
+  // Ensure we have a canvas context for text measurement
+  if (!canvasManager.isValid()) return 200; // fallback to minimum height
+  
+  // Set font for measurement
+  canvasManager.ctx.font = '20px "IM Fell English", serif';
+  
+  // Calculate text wrapping
+  const words = text.split(' ');
+  const lineHeight = 30;
+  let lines = [];
+  let currentLine = '';
+  
+  for (let word of words) {
+    const testLine = currentLine + word + ' ';
+    const metrics = canvasManager.ctx.measureText(testLine);
+    
+    if (metrics.width > boxWidth - 40 && currentLine !== '') {
+      lines.push(currentLine.trim());
+      currentLine = word + ' ';
+    } else {
+      currentLine = testLine;
+    }
+  }
+  if (currentLine.trim()) {
+    lines.push(currentLine.trim());
+  }
+  
+  // Calculate dynamic height
+  const minHeight = 200;
+  const textPadding = 50; // Top and bottom padding around text
+  const buttonSpace = 50; // Space for buttons at bottom
+  const textHeight = lines.length * lineHeight;
+  const calculatedHeight = textHeight + textPadding + buttonSpace;
+  
+  return { height: Math.max(minHeight, calculatedHeight), lines: lines };
+}
+
+function drawDialogueBox() {
+  // Ensure canvas context is available
+  if (!canvasManager.isValid()) {
+    if (!canvasManager.initialize()) {
+      console.error('Failed to initialize canvas for dialogue box');
+      return;
+    }
+  }
+  
+  const boxWidth = 600;
+  const boxX = (canvasManager.canvas.offsetWidth - boxWidth) / 2;
+  const boxY = 50; // Position at top of canvas with 50px margin
+  
+  // Calculate dynamic height and get wrapped lines
+  const dialogueResult = calculateDialogueBoxHeight(votingState.get('dialogueText'), boxWidth);
+  const boxHeight = dialogueResult.height;
+  const lines = dialogueResult.lines;
+  
+  // Set up text properties
+  canvasManager.ctx.fillStyle = '#402b20';
+  canvasManager.ctx.font = '20px "IM Fell English", serif';
+  canvasManager.ctx.textAlign = 'center';
+  
+  // Draw background
+  canvasManager.ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+  canvasManager.ctx.fillRect(boxX, boxY, boxWidth, boxHeight);
+  
+  // Draw border
+  canvasManager.ctx.strokeStyle = '#402b20';
+  canvasManager.ctx.lineWidth = 3;
+  canvasManager.ctx.strokeRect(boxX, boxY, boxWidth, boxHeight);
+  
+  // Draw text using pre-calculated lines
+  const lineHeight = 30;
+  let currentY = boxY + 25 + 20; // Start with some padding (textPadding/2 + baseline offset)
+  
+  // Reset text color after drawing background
+  canvasManager.ctx.fillStyle = '#402b20';
+  
+  for (let line of lines) {
+    canvasManager.ctx.fillText(line, canvasManager.canvas.offsetWidth / 2, currentY);
+    currentY += lineHeight;
+  }
+  
+  // Draw buttons
+  const buttonY = boxY + boxHeight - 50;
+  const buttonHeight = 40;
+  const spacing = 15;
+  
+  // Determine button sizes and layout
+  const actionButtons = votingState.get('dialogueButtons').filter(btn => 
+    btn.text === "View Code" || btn.text === "Play Project"
+  );
+  const navigationButtons = votingState.get('dialogueButtons').filter(btn => 
+    btn.text === "Next" || btn.text === "Begin Voting"
+  );
+  const singleButtons = votingState.get('dialogueButtons').filter(btn => 
+    btn.text === "Let them in!" || btn.text === "OK"
+  );
+  
+  const navButtonWidth = 80; // Same size as back button
+  const actionButtonWidth = 140; // Bigger action buttons
+  
+  // Calculate positions for proper layout
+  const totalActionWidth = actionButtons.length * (actionButtonWidth + spacing) - spacing;
+  const totalNavWidth = navigationButtons.length * (navButtonWidth + spacing) - spacing;
+  
+  // Center the action buttons
+  let actionButtonX = (canvasManager.canvas.offsetWidth - totalActionWidth) / 2;
+  
+  // Position navigation buttons at the end with same margin as back button
+  const navButtonX = boxX + boxWidth - 20 - navButtonWidth;
+  
+  // Center single buttons (like "Let them in!" or "OK")
+  const singleButtonX = (canvasManager.canvas.offsetWidth - navButtonWidth) / 2;
+  
+  // Draw action buttons first (in center)
+  actionButtons.forEach((button, index) => {
+    // Check if mouse is hovering over this button
+    const isHovered = votingState.get('mouseX') >= actionButtonX && 
+                     votingState.get('mouseX') <= actionButtonX + actionButtonWidth &&
+                     votingState.get('mouseY') >= buttonY && 
+                     votingState.get('mouseY') <= buttonY + buttonHeight;
+    
+    // Store button position for click detection
+    const buttonPos = drawStandardButton(actionButtonX, buttonY, actionButtonWidth, buttonHeight, button.text, false, isHovered);
+    button.x = buttonPos.x;
+    button.y = buttonPos.y;
+    button.width = buttonPos.width;
+    button.height = buttonPos.height;
+    
+    actionButtonX += actionButtonWidth + spacing;
+  });
+  
+  // Draw navigation buttons (at the end)
+  navigationButtons.forEach((button, index) => {
+    // Check if mouse is hovering over this button
+    const isHovered = votingState.get('mouseX') >= navButtonX && 
+                     votingState.get('mouseX') <= navButtonX + navButtonWidth &&
+                     votingState.get('mouseY') >= buttonY && 
+                     votingState.get('mouseY') <= buttonY + buttonHeight;
+    
+    // Check if Next button should be disabled
+    const isDisabled = button.text === "Next" && 
+                      (!votingState.get('viewedCode') || !votingState.get('playedProject'));
+    
+    // Store button position for click detection
+    const buttonText = button.text === "Next" ? "Next →" : button.text;
+    const buttonPos = drawStandardButton(navButtonX, buttonY, navButtonWidth, buttonHeight, buttonText, false, isHovered, isDisabled);
+    button.x = buttonPos.x;
+    button.y = buttonPos.y;
+    button.width = buttonPos.width;
+    button.height = buttonPos.height;
+    
+    // Draw tooltip for disabled Next button
+    if (isDisabled && isHovered) {
+      drawTooltip(navButtonX + navButtonWidth/2, buttonY, "You must look at this project\nand its code before continuing");
+    }
+  });
+  
+  // Draw single buttons (centered)
+  singleButtons.forEach((button, index) => {
+    // Check if mouse is hovering over this button
+    const isHovered = votingState.get('mouseX') >= singleButtonX && 
+                     votingState.get('mouseX') <= singleButtonX + navButtonWidth &&
+                     votingState.get('mouseY') >= buttonY && 
+                     votingState.get('mouseY') <= buttonY + buttonHeight;
+    
+    // Store button position for click detection
+    const buttonPos = drawStandardButton(singleButtonX, buttonY, navButtonWidth, buttonHeight, button.text, false, isHovered);
+    button.x = buttonPos.x;
+    button.y = buttonPos.y;
+    button.width = buttonPos.width;
+    button.height = buttonPos.height;
+  });
+}
+
+// Event listeners are now handled by CanvasManager
+// This section has been moved to CanvasManager.handleMouseMove and CanvasManager.handleClick
+
+
+
+function nextStep() {
+  // Don't allow next step if already transitioning
+  if (votingState.get('phase') === 'exiting' || votingState.get('phase') === 'entering') {
+    return;
+  }
+  
+  votingState.set('phase', 'exiting');
+  votingState.set('dialogueVisible', false);
+  
+  // Calculate exit target position
+  const bgAspect = imageManager.images.background.width / imageManager.images.background.height;
+  const displayWidth = canvasManager.canvas.offsetWidth;
+  const displayHeight = canvasManager.canvas.offsetHeight;
+  const canvasAspect = displayWidth / displayHeight;
+  
+  let bgWidth, bgHeight, bgX, bgY;
+  
+  if (canvasAspect > bgAspect) {
+    bgHeight = displayHeight;
+    bgWidth = bgHeight * bgAspect;
+    bgX = (displayWidth - bgWidth) / 2;
+    bgY = 0;
+  } else {
+    bgWidth = displayWidth;
+    bgHeight = bgWidth / bgAspect;
+    bgX = 0;
+    bgY = (displayHeight - bgHeight) / 2;
+  }
+  
+  const presentingY = bgY + bgHeight * 0.6;
+  
+  // Set exit target to same starting position (background-relative)
+  votingState.set('targetX', canvasManager.canvas.offsetWidth + 100);
+  votingState.set('targetY', bgY + bgHeight * 0.70); // Use royal assistant height for consistency
+  
+  // Start animation loop for exit
+  animate();
+}
+
+function showVotingUI() {
+  // Check server voting state first - don't allow voting if closed or already voted
+  if (serverVotingState === 'closed' || serverVotingState === 'already_voted' || serverVotingState === 'thanks') {
+    return;
+  }
+  
+  // Switch to voting mode in canvas
+  votingState.set('votingMode', true);
+  votingState.set('votingUIInitialized', true);
+  votingState.set('currentVoteIndex', 0);
+  votingState.set('starAllocations', {});
+  votingState.set('reasoning', '');
+  votingState.set('phase', 'idle'); // Set to idle to stop animation loop
+  
+  // Initialize star allocations
+  const votes = <%= votes_json.html_safe %>;
+  votes.forEach(vote => {
+    if (vote.project) {
+      const allocations = votingState.get('starAllocations');
+      allocations[vote.id] = vote.star_count || 1;
+      votingState.set('starAllocations', allocations);
+    }
+  });
+  
+  // Calculate total stars
+  votingManager.totalStarsAllocated = Object.values(votingState.get('starAllocations')).reduce((sum, stars) => sum + stars, 0);
+  
+  // Start with voting interface (not reasoning)
+  votingState.set('showReasoningInput', false);
+  
+  // Start voting interface animation loop
+  function animateVotingInterface() {
+    if (!votingState.get('votingMode')) {
+      return; // Stop if no longer in voting mode
+    }
+    
+    // Clear canvas
+    canvasManager.clear();
+    
+    // Draw voting interface
+  drawVotingInterface();
+    
+    // Continue animation loop
+    votingState.set('animationFrame', requestAnimationFrame(animateVotingInterface));
+  }
+  
+  // Start the voting interface animation loop
+  animateVotingInterface();
+}
+
+// Initialize animation
+function startAnimation() {
+  // Check server voting state first - don't allow voting if closed or already voted
+  if (serverVotingState === 'closed' || serverVotingState === 'already_voted' || serverVotingState === 'thanks') {
+    return;
+  }
+  
+  // Don't start if already in voting mode
+  if (votingState.get('votingMode')) {
+    return;
+  }
+  
+  // Don't start if already in a transition or speaking
+  if (votingState.get('phase') === 'exiting' || votingState.get('phase') === 'entering' || votingState.get('phase') === 'speaking') {
+    return;
+  }
+  
+  // If we're already on step 6 (voting mode) or beyond, show the voting UI directly
+  if (votingState.get('currentStep') >= 6) {
+    if (!votingState.get('votingMode')) {
+    showVotingUI();
+    } else {
+      // Already in voting mode, just ensure the animation loop is running
+      if (!votingState.get('animationFrame')) {
+        // Start the voting interface animation loop if it's not running
+        function animateVotingInterface() {
+          if (!votingState.get('votingMode')) {
+            return; // Stop if no longer in voting mode
+          }
+          
+          // Clear canvas
+          canvasManager.clear();
+          
+          // Draw voting interface
+          drawVotingInterface();
+          
+          // Continue animation loop
+          votingState.set('animationFrame', requestAnimationFrame(animateVotingInterface));
+        }
+        
+        animateVotingInterface();
+      }
+    }
+    return;
+  }
+  
+  // Calculate background dimensions for consistent positioning
+  const bgAspect = imageManager.images.background.width / imageManager.images.background.height;
+  const displayWidth = canvasManager.canvas.offsetWidth;
+  const displayHeight = canvasManager.canvas.offsetHeight;
+  const canvasAspect = displayWidth / displayHeight;
+  
+  let bgWidth, bgHeight, bgX, bgY;
+  
+  if (canvasAspect > bgAspect) {
+    bgHeight = displayHeight;
+    bgWidth = bgHeight * bgAspect;
+    bgX = (displayWidth - bgWidth) / 2;
+    bgY = 0;
+  } else {
+    bgWidth = displayWidth;
+    bgHeight = bgWidth / bgAspect;
+    bgX = 0;
+    bgY = (displayHeight - bgHeight) / 2;
+  }
+  
+  // Set initial position (off-screen to the right) using background-relative positioning
+  votingState.set('meepleX', canvasManager.canvas.offsetWidth + 100);
+  votingState.set('meepleY', bgY + bgHeight * 0.70); // Use royal assistant height for animations
+  votingState.set('phase', 'entering');
+  votingState.set('dialogueVisible', false);
+  votingState.set('rotation', 0);
+  votingState.set('rotationDirection', 1);
+  votingState.set('walkRotationTimer', 0);
+  
+  // Start animation loop
+  animate();
+}
+
+// Draw static scene (background, throne, user meeple)
+function drawStaticScene() {
+  // Ensure canvas context is available
+  if (!canvasManager.isValid()) {
+    if (!canvasManager.initialize()) {
+      console.error('Failed to initialize canvas for static scene');
+      return;
+    }
+  }
+  
+  // Check if images are available
+  if (!imageManager.images.background || !imageManager.images.throne) {
+    return;
+  }
+  
+  // Clear canvas
+  canvasManager.clear();
+  
+  // Calculate aspect ratios
+  const bgAspect = imageManager.images.background.width / imageManager.images.background.height;
+  const displayWidth = canvasManager.canvas.offsetWidth;
+  const displayHeight = canvasManager.canvas.offsetHeight;
+  const canvasAspect = displayWidth / displayHeight;
+  
+  let bgWidth, bgHeight, bgX, bgY;
+  
+  if (canvasAspect > bgAspect) {
+    bgHeight = displayHeight;
+    bgWidth = bgHeight * bgAspect;
+    bgX = (displayWidth - bgWidth) / 2;
+    bgY = 0;
+  } else {
+    bgWidth = displayWidth;
+    bgHeight = bgWidth / bgAspect;
+    bgX = 0;
+    bgY = (displayHeight - bgHeight) / 2;
+  }
+  
+  // Draw background
+  if (imageManager.images.background && imageManager.images.background.complete && imageManager.images.background.naturalWidth > 0) {
+    canvasManager.ctx.drawImage(imageManager.images.background, bgX, bgY, bgWidth, bgHeight);
+  }
+  
+  // Draw user's meeple on throne (between background and throne)
+  const userMeeplePos = getUserMeeplePosition(bgX, bgWidth, bgY, bgHeight);
+  canvasManager.ctx.save();
+  canvasManager.ctx.translate(userMeeplePos.x, userMeeplePos.y);
+  
+  // Always try to draw user meeple, with fallback
+  if (imageManager.images.meeple && imageManager.images.meeple.complete && imageManager.images.meeple.naturalWidth > 0 && imageManager.images.meeple.src !== imageManager.images.redMeeple.src) {
+    canvasManager.ctx.drawImage(imageManager.images.meeple, 
+      -userMeeplePos.size/2, 
+      -userMeeplePos.size/2, 
+      userMeeplePos.size, 
+      userMeeplePos.size);
+  } else if (imageManager.images.redMeeple && imageManager.images.redMeeple.complete && imageManager.images.redMeeple.naturalWidth > 0) {
+    // Fallback to red meeple if user meeple not ready
+    canvasManager.ctx.drawImage(imageManager.images.redMeeple, 
+      -userMeeplePos.size/2, 
+      -userMeeplePos.size/2, 
+      userMeeplePos.size, 
+      userMeeplePos.size);
+  }
+  canvasManager.ctx.restore();
+  
+  // Draw throne (on top of user meeple)
+  if (imageManager.images.throne && imageManager.images.throne.complete && imageManager.images.throne.naturalWidth > 0) {
+    canvasManager.ctx.drawImage(imageManager.images.throne, bgX, bgY, bgWidth, bgHeight);
+  }
+}
+
+// Star allocation is now handled by VotingManager class
+
+// Function to draw voting interface
+// Cache votes data to avoid re-parsing
+let cachedVotes = null;
+
+function drawVotingInterface() {
+  // Check server voting state first - don't allow voting if closed or already voted
+  if (serverVotingState === 'closed' || serverVotingState === 'already_voted' || serverVotingState === 'thanks') {
+    return;
+  }
+  
+  // Early validation - no need to repeatedly check canvas
+  if (!votingState.get('votingMode') || !canvasManager.canvas) {
+    return;
+  }
+
+  // Cache votes data
+  if (!cachedVotes) {
+    cachedVotes = <%= votes_json.html_safe %>;
+    if (!cachedVotes || cachedVotes.length === 0) {
+      console.error('No votes available for voting interface');
+      return;
+    }
+  }
+  
+  // Draw background scene with red noble meeple
+  drawVotingBackground();
+  
+  if (votingState.get('showReasoningInput')) {
+    drawReasoningInput();
+  } else {
+    // Hide reasoning overlay when not on reasoning page
+    ensureReasoningOverlayHidden();
+    drawAllProjectsVoting(cachedVotes);
+  }
+}
+
+// Function to draw voting background with red noble meeple
+function drawVotingBackground() {
+  canvasManager.clear();
+  
+  if (!drawBackground()) {
+    return;
+  }
+  
+  // Draw presenting red meeple (static position)
+  const { presentingPos } = cache;
+  
+  canvasManager.ctx.save();
+  canvasManager.ctx.translate(presentingPos.x, presentingPos.y);
+  
+  if (imageManager.images.redMeeple && imageManager.images.redMeeple.complete) {
+    canvasManager.ctx.drawImage(imageManager.images.redMeeple, 
+      -VOTING_CONFIG.MEEPLE_SIZE/2, 
+      -VOTING_CONFIG.MEEPLE_SIZE/2, 
+      VOTING_CONFIG.MEEPLE_SIZE, 
+      VOTING_CONFIG.MEEPLE_SIZE);
+  }
+  
+  canvasManager.ctx.restore();
+}
+
+// Function to draw all projects voting interface
+function drawAllProjectsVoting(votes) {
+  console.log('drawAllProjectsVoting called with', votes.length, 'votes');
+  
+  // Ensure canvas context is available
+  if (!canvasManager.isValid()) {
+    console.log('Canvas context not available for all projects voting, attempting to initialize');
+    if (!canvasManager.initialize()) {
+      console.error('Failed to initialize canvas for all projects voting');
+      return;
+    }
+  }
+  
+  // Draw main voting panel
+  const panelWidth = Math.min(1200, canvasManager.canvas.offsetWidth - 100);
+  const panelHeight = Math.min(700, canvasManager.canvas.offsetHeight - 100);
+  const panelX = (canvasManager.canvas.offsetWidth - panelWidth) / 2;
+  const panelY = (canvasManager.canvas.offsetHeight - panelHeight) / 2;
+  
+  console.log('Drawing voting panel at:', panelX, panelY, 'with size:', panelWidth, 'x', panelHeight);
+  
+  canvasManager.ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+  canvasManager.ctx.fillRect(panelX, panelY, panelWidth, panelHeight);
+  canvasManager.ctx.strokeStyle = '#402b20';
+  canvasManager.ctx.lineWidth = 3;
+  canvasManager.ctx.strokeRect(panelX, panelY, panelWidth, panelHeight);
+  
+  // Draw title
+  canvasManager.ctx.fillStyle = '#402b20';
+  canvasManager.ctx.font = 'bold 28px "IM Fell English", serif';
+  canvasManager.ctx.textAlign = 'center';
+  canvasManager.ctx.fillText('Vote on Projects', canvasManager.canvas.offsetWidth / 2, panelY + 40);
+  
+  // Draw total stars indicator
+  canvasManager.ctx.font = '18px "IM Fell English", serif';
+  canvasManager.ctx.fillText(`Total Stars: ${votingManager.totalStarsAllocated}/12`, canvasManager.canvas.offsetWidth / 2, panelY + 70);
+  
+  // Clear voting buttons array for new draw
+  votingManager.votingButtons = [];
+  
+  // Draw projects in a grid
+  const projectsPerRow = 2;
+  const projectWidth = (panelWidth - 60) / projectsPerRow;
+  const projectHeight = 200;
+  const projectSpacing = 20;
+  
+  votes.forEach((vote, index) => {
+    if (!vote.project) return;
+    
+    const row = Math.floor(index / projectsPerRow);
+    const col = index % projectsPerRow;
+    const projectX = panelX + 30 + col * (projectWidth + projectSpacing);
+    const projectY = panelY + 100 + row * (projectHeight + projectSpacing);
+    
+    // Draw project card
+    canvasManager.ctx.fillStyle = 'rgba(240, 240, 240, 0.8)';
+    canvasManager.ctx.fillRect(projectX, projectY, projectWidth, projectHeight);
+    canvasManager.ctx.strokeStyle = '#402b20';
+    canvasManager.ctx.lineWidth = 2;
+    canvasManager.ctx.strokeRect(projectX, projectY, projectWidth, projectHeight);
+    
+    // Draw project title
+    canvasManager.ctx.fillStyle = '#402b20';
+    canvasManager.ctx.font = 'bold 16px "IM Fell English", serif';
+    canvasManager.ctx.textAlign = 'center';
+    canvasManager.ctx.fillText(vote.project.name, projectX + projectWidth/2, projectY + 25);
+    
+    // Draw author
+    canvasManager.ctx.font = '14px "IM Fell English", serif';
+    const authorName = vote.project.user ? vote.project.user.name : 'Unknown Author';
+    canvasManager.ctx.fillText(`by ${authorName}`, projectX + projectWidth/2, projectY + 45);
+    
+    // Draw description (truncated)
+    if (vote.project.description) {
+      canvasManager.ctx.font = '12px "IM Fell English", serif';
+      canvasManager.ctx.textAlign = 'left';
+      const words = vote.project.description.split(' ');
+      let line = '';
+      let y = projectY + 70;
+      const maxWidth = projectWidth - 20;
+      
+      for (let word of words) {
+        const testLine = line + word + ' ';
+        const metrics = canvasManager.ctx.measureText(testLine);
+        if (metrics.width > maxWidth && line !== '') {
+          canvasManager.ctx.fillText(line, projectX + 10, y);
+          line = word + ' ';
+          y += 15;
+          if (y > projectY + 120) break; // Limit to 3 lines
+        } else {
+          line = testLine;
+        }
+      }
+      if (line && y <= projectY + 120) {
+        canvasManager.ctx.fillText(line, projectX + 10, y);
+      }
+    }
+    
+    // Draw star controls
+    const starY = projectY + 140;
+    canvasManager.ctx.font = 'bold 14px "IM Fell English", serif';
+    canvasManager.ctx.textAlign = 'center';
+    canvasManager.ctx.fillText('Stars:', projectX + projectWidth/2, starY);
+    
+    const starCount = votingState.get('starAllocations')[vote.id] || 1;
+    const starX = projectX + projectWidth/2;
+    
+    // Draw 5 star icons first
+    const starIconSize = 16;
+    const starSpacing = 4;
+    const totalStarWidth = 5 * starIconSize + 4 * starSpacing;
+    const starStartX = starX - totalStarWidth / 2;
+    
+    for (let i = 0; i < 5; i++) {
+      const iconX = starStartX + i * (starIconSize + starSpacing);
+      const iconY = starY + 15;
+      
+      if (i < starCount) {
+        // Colored star
+        canvasManager.ctx.fillStyle = '#402b20'; // Same color as buttons
+        canvasManager.ctx.font = `${starIconSize}px Arial`;
+        canvasManager.ctx.textAlign = 'center';
+        canvasManager.ctx.fillText('★', iconX + starIconSize/2, iconY + starIconSize);
+      } else {
+        // Grayed out star
+        canvasManager.ctx.fillStyle = '#CCCCCC'; // Light gray
+        canvasManager.ctx.font = `${starIconSize}px Arial`;
+        canvasManager.ctx.textAlign = 'center';
+        canvasManager.ctx.fillText('★', iconX + starIconSize/2, iconY + starIconSize);
+      }
+    }
+    
+    // Position buttons with spacing from stars
+    const buttonSpacing = 20;
+    const minusButtonX = starStartX - buttonSpacing - 30;
+    const plusButtonX = starStartX + totalStarWidth + buttonSpacing;
+    
+    // Check if buttons should be disabled
+    const isMinusDisabled = starCount <= 1;
+    const isPlusDisabled = votingManager.totalStarsAllocated >= VOTING_CONFIG.MAX_STARS || starCount >= 5;
+    
+    // Check hover states for star buttons (only if not disabled)
+    const minusHovered = !isMinusDisabled && 
+                        votingState.get('mouseX') >= minusButtonX && 
+                        votingState.get('mouseX') <= minusButtonX + 30 &&
+                        votingState.get('mouseY') >= starY + 10 && 
+                        votingState.get('mouseY') <= starY + 40;
+    
+    const plusHovered = !isPlusDisabled && 
+                       votingState.get('mouseX') >= plusButtonX && 
+                       votingState.get('mouseX') <= plusButtonX + 30 &&
+                       votingState.get('mouseY') >= starY + 10 && 
+                       votingState.get('mouseY') <= starY + 40;
+    
+    // Minus button
+    if (isMinusDisabled) {
+      canvasManager.ctx.fillStyle = '#666666'; // Gray when disabled
+    } else {
+      canvasManager.ctx.fillStyle = minusHovered ? '#5a3a2a' : '#402b20';
+    }
+    canvasManager.ctx.fillRect(minusButtonX, starY + 10, 30, 30);
+    if (minusHovered && !isMinusDisabled) {
+      canvasManager.ctx.strokeStyle = '#8b4513';
+      canvasManager.ctx.lineWidth = 2;
+      canvasManager.ctx.strokeRect(minusButtonX, starY + 10, 30, 30);
+    }
+    canvasManager.ctx.fillStyle = isMinusDisabled ? '#999999' : '#ffffff';
+    canvasManager.ctx.font = 'bold 18px "IM Fell English", serif';
+    canvasManager.ctx.fillText('-', minusButtonX + 15, starY + 30);
+    
+    // Reset text color to default
+    canvasManager.ctx.fillStyle = '#402b20';
+    
+    // Plus button
+    if (isPlusDisabled) {
+      canvasManager.ctx.fillStyle = '#666666'; // Gray when disabled
+    } else {
+      canvasManager.ctx.fillStyle = plusHovered ? '#5a3a2a' : '#402b20';
+    }
+    canvasManager.ctx.fillRect(plusButtonX, starY + 10, 30, 30);
+    if (plusHovered && !isPlusDisabled) {
+      canvasManager.ctx.strokeStyle = '#8b4513';
+      canvasManager.ctx.lineWidth = 2;
+      canvasManager.ctx.strokeRect(plusButtonX, starY + 10, 30, 30);
+    }
+    canvasManager.ctx.fillStyle = isPlusDisabled ? '#999999' : '#ffffff';
+    canvasManager.ctx.font = 'bold 18px "IM Fell English", serif';
+    canvasManager.ctx.fillText('+', plusButtonX + 15, starY + 30);
+    
+    // Reset text color to default
+    canvasManager.ctx.fillStyle = '#402b20';
+    
+    // Store button positions for click detection
+    const minusButton = { x: minusButtonX, y: starY + 10, width: 30, height: 30, voteId: vote.id, type: 'minus', disabled: isMinusDisabled };
+    const plusButton = { x: plusButtonX, y: starY + 10, width: 30, height: 30, voteId: vote.id, type: 'plus', disabled: isPlusDisabled };
+    
+    if (!votingManager.votingButtons) votingManager.votingButtons = [];
+    votingManager.votingButtons.push(minusButton, plusButton);
+  });
+  
+  // Draw navigation buttons
+  const buttonY = panelY + panelHeight - 60;
+  const buttonWidth = 120;
+  const buttonHeight = 40;
+  const spacing = 20;
+  
+  // Back button
+  const backButtonX = panelX + 30;
+  const isBackHovered = votingState.get('mouseX') >= backButtonX && 
+                       votingState.get('mouseX') <= backButtonX + buttonWidth &&
+                       votingState.get('mouseY') >= buttonY && 
+                       votingState.get('mouseY') <= buttonY + buttonHeight;
+  
+  const backButtonPos = drawStandardButton(backButtonX, buttonY, buttonWidth, buttonHeight, '← Back', false, isBackHovered);
+  votingManager.votingBackButton = backButtonPos;
+  
+  // Next button
+  const nextButtonX = panelX + panelWidth - buttonWidth - 30;
+  const isNextDisabled = votingManager.totalStarsAllocated !== VOTING_CONFIG.MAX_STARS;
+  const isNextHovered = !isNextDisabled && 
+                       votingState.get('mouseX') >= nextButtonX && 
+                       votingState.get('mouseX') <= nextButtonX + buttonWidth &&
+                       votingState.get('mouseY') >= buttonY && 
+                       votingState.get('mouseY') <= buttonY + buttonHeight;
+  
+  const nextButtonPos = drawStandardButton(nextButtonX, buttonY, buttonWidth, buttonHeight, 'Next →', false, isNextHovered, isNextDisabled);
+  votingManager.votingSubmitButton = nextButtonPos;
+  
+  // Draw tooltip for disabled next button
+  if (isNextDisabled && isNextHovered) {
+    drawTooltip(nextButtonX + buttonWidth/2, buttonY, `You must allocate exactly ${VOTING_CONFIG.MAX_STARS} stars\nto continue`);
+  }
+}
+
+// Function to draw project review
+function drawProjectReview(vote) {
+  // Ensure canvas context is available
+  if (!canvasManager.isValid()) {
+    console.log('Canvas context not available for project review, attempting to initialize');
+    if (!canvasManager.initialize()) {
+      console.error('Failed to initialize canvas for project review');
+      return;
+    }
+  }
+  
+  const project = vote.project;
+  
+  // Draw background panel
+  const panelWidth = 800;
+  const panelHeight = 600;
+  const panelX = (canvasManager.canvas.offsetWidth - panelWidth) / 2;
+  const panelY = (canvasManager.canvas.offsetHeight - panelHeight) / 2;
+  
+  canvasManager.ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+  canvasManager.ctx.fillRect(panelX, panelY, panelWidth, panelHeight);
+  canvasManager.ctx.strokeStyle = '#402b20';
+  canvasManager.ctx.lineWidth = 3;
+  canvasManager.ctx.strokeRect(panelX, panelY, panelWidth, panelHeight);
+  
+  // Draw project title
+  canvasManager.ctx.fillStyle = '#402b20';
+  canvasManager.ctx.font = 'bold 32px "IM Fell English", serif';
+  canvasManager.ctx.textAlign = 'center';
+  canvasManager.ctx.fillText(project.name, canvasManager.canvas.offsetWidth / 2, panelY + 60);
+  
+  // Draw author
+  canvasManager.ctx.font = '20px "IM Fell English", serif';
+  canvasManager.ctx.fillText(`by ${project.user.name}`, canvasManager.canvas.offsetWidth / 2, panelY + 90);
+  
+  // Draw description
+  if (project.description) {
+    canvasManager.ctx.font = '16px "IM Fell English", serif';
+    canvasManager.ctx.textAlign = 'left';
+    const words = project.description.split(' ');
+    let line = '';
+    let y = panelY + 140;
+    const maxWidth = panelWidth - 80;
+    
+    for (let word of words) {
+      const testLine = line + word + ' ';
+      const metrics = canvasManager.ctx.measureText(testLine);
+      if (metrics.width > maxWidth && line !== '') {
+        canvasManager.ctx.fillText(line, panelX + 40, y);
+        line = word + ' ';
+        y += 25;
+      } else {
+        line = testLine;
+      }
+    }
+    canvasManager.ctx.fillText(line, panelX + 40, y);
+  }
+  
+  // Draw star allocation
+  const starY = panelY + 300;
+  canvasManager.ctx.font = 'bold 20px "IM Fell English", serif';
+  canvasManager.ctx.textAlign = 'center';
+  canvasManager.ctx.fillText('Star Rating', canvasManager.canvas.width / 2, starY);
+  
+  // Draw star controls
+  const starCount = votingState.get('starAllocations')[vote.id] || 1;
+  const starX = canvasManager.canvas.width / 2 - 100;
+  
+  // Minus button
+  canvasManager.ctx.fillStyle = '#402b20';
+  canvasManager.ctx.fillRect(starX - 30, starY + 20, 40, 40);
+  canvasManager.ctx.fillStyle = 'white';
+  canvasManager.ctx.font = 'bold 24px "IM Fell English", serif';
+  canvasManager.ctx.fillText('-', starX - 10, starY + 45);
+  
+  // Star count
+  canvasManager.ctx.fillStyle = '#402b20';
+  canvasManager.ctx.font = 'bold 24px "IM Fell English", serif';
+  canvasManager.ctx.fillText(`${starCount} ★`, starX + 20, starY + 45);
+  
+  // Plus button
+  canvasManager.ctx.fillStyle = '#402b20';
+  canvasManager.ctx.fillRect(starX + 80, starY + 20, 40, 40);
+  canvasManager.ctx.fillStyle = 'white';
+  canvasManager.ctx.font = 'bold 24px "IM Fell English", serif';
+  canvasManager.ctx.fillText('+', starX + 100, starY + 45);
+  
+  // Store button positions for click detection
+  votingState.set('minusButton', { x: starX - 30, y: starY + 20, width: 40, height: 40, voteId: vote.id });
+  votingState.set('plusButton', { x: starX + 80, y: starY + 20, width: 40, height: 40, voteId: vote.id });
+  
+  // Draw navigation buttons
+  const buttonY = panelY + 400;
+  
+  if (votingState.get('currentVoteIndex') > 0) {
+    // Previous button
+    canvasManager.ctx.fillStyle = '#402b20';
+    canvasManager.ctx.fillRect(panelX + 50, buttonY, 120, 50);
+    canvasManager.ctx.fillStyle = 'white';
+    canvasManager.ctx.font = 'bold 18px "IM Fell English", serif';
+    canvasManager.ctx.fillText('← Previous', panelX + 110, buttonY + 30);
+    votingState.set('prevButton', { x: panelX + 50, y: buttonY, width: 120, height: 50 });
+  }
+  
+  if (votingState.get('currentVoteIndex') < votes.length - 1) {
+    // Next button
+    canvasManager.ctx.fillStyle = '#402b20';
+    canvasManager.ctx.fillRect(panelX + panelWidth - 170, buttonY, 120, 50);
+    canvasManager.ctx.fillStyle = 'white';
+    canvasManager.ctx.font = 'bold 18px "IM Fell English", serif';
+    canvasManager.ctx.fillText('Next →', panelX + panelWidth - 110, buttonY + 30);
+    votingState.set('nextButton', { x: panelX + panelWidth - 170, y: buttonY, width: 120, height: 50 });
+  } else {
+    // Submit button
+    canvasManager.ctx.fillStyle = '#10b981';
+    canvasManager.ctx.fillRect(panelX + panelWidth - 170, buttonY, 120, 50);
+    canvasManager.ctx.fillStyle = 'white';
+    canvasManager.ctx.font = 'bold 18px "IM Fell English", serif';
+    canvasManager.ctx.fillText('Submit', panelX + panelWidth - 110, buttonY + 30);
+    votingState.set('submitButton', { x: panelX + panelWidth - 170, y: buttonY, width: 120, height: 50 });
+  }
+  
+  // Draw total stars
+  canvasManager.ctx.fillStyle = '#402b20';
+  canvasManager.ctx.font = 'bold 18px "IM Fell English", serif';
+  canvasManager.ctx.fillText(`Total Stars: ${votingManager.totalStarsAllocated}/12`, canvasManager.canvas.width / 2, buttonY + 80);
+}
+
+// Function to draw reasoning input
+function drawReasoningInput() {
+  // Ensure canvas context is available
+  if (!canvasManager.isValid()) {
+    console.log('Canvas context not available for reasoning input, attempting to initialize');
+    if (!canvasManager.initialize()) {
+      console.error('Failed to initialize canvas for reasoning input');
+      return;
+    }
+  }
+  
+  const votes = <%= votes_json.html_safe %>;
+
+  // Draw main panel
+  const displayWidth = canvasManager.canvas.offsetWidth;
+  const displayHeight = canvasManager.canvas.offsetHeight;
+  const panelWidth = Math.min(1000, displayWidth - 100);
+  const panelHeight = Math.min(600, displayHeight - 100);
+  const panelX = (displayWidth - panelWidth) / 2;
+  const panelY = (displayHeight - panelHeight) / 2;
+  
+  canvasManager.ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+  canvasManager.ctx.fillRect(panelX, panelY, panelWidth, panelHeight);
+  canvasManager.ctx.strokeStyle = '#402b20';
+  canvasManager.ctx.lineWidth = 3;
+  canvasManager.ctx.strokeRect(panelX, panelY, panelWidth, panelHeight);
+  
+  // Draw title - use display width for proper centering
+  canvasManager.ctx.fillStyle = '#402b20';
+  canvasManager.ctx.font = 'bold 28px "IM Fell English", serif';
+  canvasManager.ctx.textAlign = 'center';
+  canvasManager.ctx.fillText('Final Review & Reasoning', displayWidth / 2, panelY + 40);
+  
+  // Draw total stars indicator
+  canvasManager.ctx.font = '18px "IM Fell English", serif';
+  canvasManager.ctx.fillText(`Total Stars Allocated: ${votingManager.totalStarsAllocated}/12`, displayWidth / 2, panelY + 70);
+  
+  // Draw projects summary on the left side
+  const leftPanelWidth = panelWidth * 0.4;
+  const leftPanelX = panelX + 20;
+  const leftPanelY = panelY + 100;
+  
+  canvasManager.ctx.fillStyle = 'rgba(240, 240, 240, 0.8)';
+  canvasManager.ctx.fillRect(leftPanelX, leftPanelY, leftPanelWidth, panelHeight - 200);
+  canvasManager.ctx.strokeStyle = '#402b20';
+  canvasManager.ctx.lineWidth = 2;
+  canvasManager.ctx.strokeRect(leftPanelX, leftPanelY, leftPanelWidth, panelHeight - 200);
+  
+  // Draw projects summary title
+    canvasManager.ctx.fillStyle = '#402b20';
+  canvasManager.ctx.font = 'bold 18px "IM Fell English", serif';
+  canvasManager.ctx.textAlign = 'center';
+  canvasManager.ctx.fillText('Your Votes', leftPanelX + leftPanelWidth/2, leftPanelY + 25);
+  
+  // Draw each project with its star allocation
+  let projectY = leftPanelY + 50;
+  votes.forEach((vote, index) => {
+    console.log(`Drawing project ${index}:`, vote);
+    if (!vote.project) {
+      console.log(`Skipping vote ${index} - no project data`);
+      return;
+    }
+    
+    const starCount = Math.max(votingState.get('starAllocations')[vote.id] || 0, 1);
+    console.log(`Project ${vote.project.name}: starCount = ${starCount}, voteId = ${vote.id}`);
+    
+    // Project name
+    canvasManager.ctx.font = 'bold 14px "IM Fell English", serif';
+    canvasManager.ctx.textAlign = 'left';
+    canvasManager.ctx.fillText(vote.project.name, leftPanelX + 10, projectY);
+    
+    // Author
+    canvasManager.ctx.font = '12px "IM Fell English", serif';
+    const authorName = vote.project.user ? vote.project.user.name : 'Unknown Author';
+    canvasManager.ctx.fillText(`by ${authorName}`, leftPanelX + 10, projectY + 18);
+    
+    // Draw star icons
+    canvasManager.ctx.font = '12px Arial';
+    canvasManager.ctx.textAlign = 'right';
+    const starIconSize = 12;
+    const starSpacing = 2;
+    const totalStarWidth = 5 * starIconSize + 4 * starSpacing;
+    const starStartX = leftPanelX + leftPanelWidth - 10 - totalStarWidth;
+    
+    for (let i = 0; i < 5; i++) {
+      const iconX = starStartX + i * (starIconSize + starSpacing);
+      const iconY = projectY + 5;
+      
+      if (i < starCount) {
+        // Colored star
+        canvasManager.ctx.fillStyle = '#402b20'; // Same color as buttons
+        canvasManager.ctx.fillText('★', iconX, iconY);
+      } else {
+        // Grayed out star
+        canvasManager.ctx.fillStyle = '#CCCCCC'; // Light gray
+        canvasManager.ctx.fillText('★', iconX, iconY);
+      }
+    }
+    
+    // Reset text color for next project
+    canvasManager.ctx.fillStyle = '#402b20';
+    
+    projectY += 40;
+  });
+  
+  // Draw reasoning input on the right side
+  const rightPanelX = leftPanelX + leftPanelWidth + 20;
+  const rightPanelWidth = panelWidth - leftPanelWidth - 60;
+  const rightPanelY = leftPanelY;
+  
+  // Reasoning title
+  canvasManager.ctx.fillStyle = '#402b20';
+  canvasManager.ctx.font = 'bold 18px "IM Fell English", serif';
+  canvasManager.ctx.textAlign = 'left';
+  canvasManager.ctx.fillText('Share your thoughts on the projects:', rightPanelX, rightPanelY + 25);
+  
+  // Draw reasoning input area
+  canvasManager.ctx.strokeStyle = '#402b20';
+  canvasManager.ctx.lineWidth = 2;
+  canvasManager.ctx.strokeRect(rightPanelX, rightPanelY + 40, rightPanelWidth, panelHeight - 240);
+  
+  // Show HTML textarea overlay for text input
+  showReasoningTextarea(rightPanelX, rightPanelY + 40, rightPanelWidth, panelHeight - 240);
+  
+  // Draw navigation buttons
+  const buttonY = panelY + panelHeight - 60;
+  const buttonWidth = 120;
+  const buttonHeight = 40;
+  
+  // Back button
+  const backButtonX = panelX + 30;
+  const isBackHovered = votingState.get('mouseX') >= backButtonX && 
+                       votingState.get('mouseX') <= backButtonX + buttonWidth &&
+                       votingState.get('mouseY') >= buttonY && 
+                       votingState.get('mouseY') <= buttonY + buttonHeight;
+  
+  const backButtonPos = drawStandardButton(backButtonX, buttonY, buttonWidth, buttonHeight, '← Back', false, isBackHovered);
+  votingManager.reasoningBackButton = backButtonPos;
+  
+  // Submit button
+  const submitButtonX = panelX + panelWidth - buttonWidth - 30;
+  const isSubmitDisabled = !votingState.get('reasoning') || !votingState.get('reasoning').trim();
+  const isSubmitHovered = !isSubmitDisabled && 
+                         votingState.get('mouseX') >= submitButtonX && 
+                         votingState.get('mouseX') <= submitButtonX + buttonWidth &&
+                         votingState.get('mouseY') >= buttonY && 
+                         votingState.get('mouseY') <= buttonY + buttonHeight;
+  
+  const submitButtonPos = drawStandardButton(submitButtonX, buttonY, buttonWidth, buttonHeight, 'Submit', false, isSubmitHovered, isSubmitDisabled);
+  votingManager.finalSubmitButton = submitButtonPos;
+  
+  // Draw tooltip for disabled submit button
+  if (isSubmitDisabled && isSubmitHovered) {
+    drawTooltip(submitButtonX + buttonWidth/2, buttonY, 'Please provide reasoning\nbefore submitting');
+  }
+}
+
+// Function to show reasoning textarea overlay
+function showReasoningTextarea(x, y, width, height) {
+  const reasoningOverlay = document.getElementById('reasoningOverlay');
+  const reasoningTextarea = document.getElementById('reasoningTextarea');
+  
+  if (reasoningOverlay && reasoningTextarea) {
+    // Position the overlay to match the canvas text area
+    const canvasRect = canvasManager.canvas.getBoundingClientRect();
+    const overlayX = canvasRect.left + x;
+    const overlayY = canvasRect.top + y;
+    
+    // Update overlay positioning
+    reasoningOverlay.style.position = 'fixed';
+    reasoningOverlay.style.left = overlayX + 'px';
+    reasoningOverlay.style.top = overlayY + 'px';
+    reasoningOverlay.style.width = width + 'px';
+    reasoningOverlay.style.height = height + 'px';
+    reasoningOverlay.style.display = 'block';
+    reasoningOverlay.style.pointerEvents = 'auto';
+    reasoningOverlay.style.zIndex = '1000';
+    
+    // Update textarea styling to match canvas area
+    reasoningTextarea.style.width = '100%';
+    reasoningTextarea.style.height = '100%';
+    reasoningTextarea.style.padding = '10px';
+    reasoningTextarea.style.border = 'none';
+    reasoningTextarea.style.background = 'transparent';
+    reasoningTextarea.style.fontFamily = '"IM Fell English", serif';
+    reasoningTextarea.style.fontSize = '16px';
+    reasoningTextarea.style.resize = 'none';
+    reasoningTextarea.style.outline = 'none';
+    reasoningTextarea.style.boxSizing = 'border-box';
+    
+    // Set the current reasoning text
+    reasoningTextarea.value = votingState.get('reasoning') || '';
+    
+    // Focus the textarea
+    reasoningTextarea.focus();
+    
+    // Simple input handler to update state
+    reasoningTextarea.oninput = function() {
+      votingState.set('reasoning', this.value);
+    };
+  }
+}
+
+// Function to hide reasoning textarea
+function hideReasoningTextarea() {
+  const reasoningOverlay = document.getElementById('reasoningOverlay');
+  if (reasoningOverlay) {
+    reasoningOverlay.style.display = 'none';
+    reasoningOverlay.style.pointerEvents = 'none';
+  }
+}
+
+// Function to ensure reasoning overlay is hidden by default
+function ensureReasoningOverlayHidden() {
+  const reasoningOverlay = document.getElementById('reasoningOverlay');
+  if (reasoningOverlay) {
+    reasoningOverlay.style.display = 'none';
+    reasoningOverlay.style.pointerEvents = 'none';
+  }
+}
+
+// Function to handle voting clicks
+function handleVotingClick(x, y) {
+  if (votingState.get('showReasoningInput')) {
+    // Handle reasoning input clicks
+    if (votingManager.finalSubmitButton && 
+        x >= votingManager.finalSubmitButton.x && x <= votingManager.finalSubmitButton.x + votingManager.finalSubmitButton.width &&
+        y >= votingManager.finalSubmitButton.y && y <= votingManager.finalSubmitButton.y + votingManager.finalSubmitButton.height) {
+      votingManager.submitBallot();
+    }
+    return;
+  }
+  
+  // Handle star allocation buttons
+  console.log('handleVotingClick called with x:', x, 'y:', y);
+  console.log('votingButtons length:', votingManager.votingButtons ? votingManager.votingButtons.length : 'null');
+
+  if (votingManager.votingButtons) {
+    votingManager.votingButtons.forEach((button, index) => {
+      console.log(`Button ${index}:`, button);
+      if (x >= button.x && x <= button.x + button.width &&
+          y >= button.y && y <= button.y + button.height) {
+        console.log('Button click detected:', button);
+        if (button.width === 30 && !button.disabled) { // Star adjustment button (only if not disabled)
+          const change = button.type === 'minus' ? -1 : 1;
+          console.log('Adjusting star rating:', button.voteId, change);
+          adjustStarRating(button.voteId, change);
+        }
+      }
+    });
+  }
+  
+
+}
+
+// Function to check if we can go back
+function canGoBack() {
+  return votingState.get('currentStep') > 1;
+}
+
+// Function to draw a standard button
+function drawStandardButton(x, y, width, height, text, isBold = false, isHovered = false, isDisabled = false) {
+  // Save current context state
+  canvasManager.ctx.save();
+  
+  // Draw button background with hover effect
+  if (isDisabled) {
+    canvasManager.ctx.fillStyle = '#666666';
+  } else {
+    canvasManager.ctx.fillStyle = isHovered ? '#5a3a2a' : '#402b20';
+  }
+  canvasManager.ctx.fillRect(x, y, width, height);
+  
+  // Draw button border for hover effect
+  if (isHovered && !isDisabled) {
+    canvasManager.ctx.strokeStyle = '#8b4513';
+    canvasManager.ctx.lineWidth = 2;
+    canvasManager.ctx.strokeRect(x, y, width, height);
+  }
+  
+  // Draw button text
+  canvasManager.ctx.fillStyle = isDisabled ? '#999999' : 'white';
+  canvasManager.ctx.font = `${isBold ? 'bold' : 'normal'} 14px "IM Fell English", serif`;
+  canvasManager.ctx.textAlign = 'center';
+  canvasManager.ctx.fillText(text, x + width/2, y + height/2 + 4);
+  
+  // Restore context state to prevent color bleeding
+  canvasManager.ctx.restore();
+  
+  return { x, y, width, height };
+}
+
+// Function to draw tooltip
+function drawTooltip(x, y, text) {
+  // Save current context state
+  canvasManager.ctx.save();
+  
+  const padding = 8;
+  const lineHeight = 16;
+  const lines = text.split('\n');
+  const maxWidth = Math.max(...lines.map(line => canvasManager.ctx.measureText(line).width));
+  
+  const tooltipWidth = maxWidth + padding * 2;
+  const tooltipHeight = lines.length * lineHeight + padding * 2;
+  
+  // Position tooltip above the button
+  const tooltipX = x - tooltipWidth / 2;
+  const tooltipY = y - tooltipHeight - 10;
+  
+  // Draw tooltip background
+  canvasManager.ctx.fillStyle = 'rgba(0, 0, 0, 0.9)';
+  canvasManager.ctx.fillRect(tooltipX, tooltipY, tooltipWidth, tooltipHeight);
+  
+  // Draw tooltip border
+  canvasManager.ctx.strokeStyle = '#402b20';
+  canvasManager.ctx.lineWidth = 1;
+  canvasManager.ctx.strokeRect(tooltipX, tooltipY, tooltipWidth, tooltipHeight);
+  
+  // Draw tooltip text
+  canvasManager.ctx.fillStyle = 'white';
+  canvasManager.ctx.font = '12px "IM Fell English", serif';
+  canvasManager.ctx.textAlign = 'center';
+  
+  lines.forEach((line, index) => {
+    canvasManager.ctx.fillText(line, x, tooltipY + padding + (index + 1) * lineHeight - 4);
+  });
+  
+  // Restore context state to prevent color bleeding
+  canvasManager.ctx.restore();
+}
+
+// Function to draw back button in dialogue box
+function drawBackButtonInDialogue() {
+  // Ensure canvas context is available
+  if (!canvasManager.isValid()) {
+    console.log('Canvas context not available for back button, attempting to initialize');
+    if (!canvasManager.initialize()) {
+      console.error('Failed to initialize canvas for back button');
+      return;
+    }
+  }
+  
+  const boxWidth = 600;
+  const boxX = (canvasManager.canvas.offsetWidth - boxWidth) / 2;
+  const boxY = 50; // Position at top of canvas with 50px margin
+  
+  // Calculate dynamic height using helper function
+  const dialogueResult = calculateDialogueBoxHeight(votingState.get('dialogueText'), boxWidth);
+  const boxHeight = dialogueResult.height;
+  
+  const buttonWidth = 80;
+  const buttonHeight = 40;
+  const buttonX = boxX + 20;
+  const buttonY = boxY + boxHeight - 50;
+  
+  // Check if mouse is hovering over back button
+  const isBackHovered = votingState.get('mouseX') >= buttonX && 
+                       votingState.get('mouseX') <= buttonX + buttonWidth &&
+                       votingState.get('mouseY') >= buttonY && 
+                       votingState.get('mouseY') <= buttonY + buttonHeight;
+  
+  // Store button position for click detection
+  votingState.set('dialogueBackButton', drawStandardButton(buttonX, buttonY, buttonWidth, buttonHeight, '← Back', false, isBackHovered));
+}
+
+// Function to handle back button click
+function handleBackButton() {
+  // Don't allow back if already transitioning
+  if (votingState.get('phase') === 'exiting' || votingState.get('phase') === 'entering') {
+    return;
+  }
+  
+  // If in animation mode, go back to previous step
+  if (votingState.get('currentStep') > 1) {
+    // Set flag to indicate we're going back
+    votingState.set('isGoingBack', true);
+    
+    // Start exit animation first
+    votingState.set('phase', 'exiting');
+    votingState.set('dialogueVisible', false);
+    
+    // Calculate background dimensions for consistent positioning
+    const bgAspect = imageManager.images.background.width / imageManager.images.background.height;
+    const displayWidth = canvasManager.canvas.offsetWidth;
+    const displayHeight = canvasManager.canvas.offsetHeight;
+    const canvasAspect = displayWidth / displayHeight;
+    
+    let bgWidth, bgHeight, bgX, bgY;
+    
+    if (canvasAspect > bgAspect) {
+      bgHeight = displayHeight;
+      bgWidth = bgHeight * bgAspect;
+      bgX = (displayWidth - bgWidth) / 2;
+      bgY = 0;
+    } else {
+      bgWidth = displayWidth;
+      bgHeight = bgWidth / bgAspect;
+      bgX = 0;
+      bgY = (displayHeight - bgHeight) / 2;
+    }
+    
+    // Calculate exit target position (same as start position - background-relative)
+    votingState.set('targetX', canvasManager.canvas.offsetWidth + 100);
+    votingState.set('targetY', bgY + bgHeight * 0.70); // Use royal assistant height for consistency
+    
+    // Start animation loop for exit
+    animate();
+  } else {
+    // If at step 1, go back to great hall
+    window.location.href = '/great-hall';
+  }
+}
+
+// Function to go back to animation from voting
+function saveVotingProgress() {
+  // Save current voting progress to localStorage
+  const progress = {
+    currentStep: votingState.get('currentStep'),
+    starAllocations: votingState.get('starAllocations'),
+    reasoning: votingState.get('reasoning'),
+    totalStarsAllocated: votingManager.totalStarsAllocated
+  };
+  localStorage.setItem(VOTING_CONFIG.LOCAL_STORAGE_KEYS.VOTING_PROGRESS, JSON.stringify(progress));
+}
+
+function goBackToAnimation() {
+  votingState.set('currentStep', 5); // Go back to last project presentation
+  saveVotingProgress();
+  
+  // Switch back to animation mode
+  votingState.set('votingMode', false);
+  votingState.set('dialogueVisible', false);
+  
+  // Start animation
+  startAnimation();
+  
+  // Set up periodic health check to recover from canvas issues
+  setInterval(() => {
+    if (!canvasManager || !canvasManager.isValid()) {
+      console.log('Canvas health check failed, attempting recovery...');
+      if (window.forceReinitialize) {
+        try {
+          window.forceReinitialize();
+        } catch (e) {
+          console.error('Failed to reinitialize canvas:', e);
+        }
+      }
+    }
+  }, 30000); // Check every 30 seconds
+  
+  // Add keyboard shortcut for manual recovery (Ctrl/Cmd + R + V)
+  document.addEventListener('keydown', (event) => {
+    if ((event.ctrlKey || event.metaKey) && event.key === 'r' && event.shiftKey) {
+      event.preventDefault();
+      console.log('Manual canvas recovery triggered');
+      if (window.forceReinitialize) {
+        window.forceReinitialize();
+      }
+    }
+  });
+}
+
+// Initialize the page
+document.addEventListener('DOMContentLoaded', function() {
+  // Ensure reasoning overlay is hidden by default
+  ensureReasoningOverlayHidden();
+  
+  // Initialize canvas if not already done
+  if (!canvasManager.isValid()) {
+    if (!canvasManager.initialize()) {
+      console.error('Failed to initialize canvas on DOMContentLoaded');
+      return;
+    }
+    canvasManager.resize();
+    canvasManager.attachEventListeners();
+  } else if (!canvasManager.eventListenersAttached) {
+    // Canvas is valid but event listeners might not be attached
+    canvasManager.attachEventListeners();
+  }
+  
+  // Handle different voting states
+  if (serverVotingState === 'closed' || serverVotingState === 'already_voted' || serverVotingState === 'thanks') {
+    // Clear any existing voting progress when user has already voted or voting is closed
+    votingState.clearVotingProgress();
+    // Force clear localStorage to prevent any interference
+    localStorage.removeItem(VOTING_CONFIG.LOCAL_STORAGE_KEYS.VOTING_PROGRESS);
+    localStorage.removeItem(VOTING_CONFIG.LOCAL_STORAGE_KEYS.CURRENT_WEEK);
+    localStorage.removeItem(VOTING_CONFIG.LOCAL_STORAGE_KEYS.BALLOT_ID);
+    showMeepleMessage(meepleMessage);
+  } else {
+    // Initialize voting manager for active voting
+    votingManager.initializeStarAllocations();
+    
+    // Check if we should show voting UI based on current step
+    if (votingState.get('currentStep') >= 6) {
+      showVotingUI();
+    }
+  }
+});
+
+// Handle page visibility changes (tab switching)
+document.addEventListener('visibilitychange', function() {
+  if (!document.hidden && document.querySelector('#voting-canvas')) {
+    // Page became visible again, check if canvas needs reinitialization
+    setTimeout(function() {
+      if (canvasManager && !canvasManager.isValid()) {
+        console.log('Canvas context lost after tab switch, reinitializing...');
+        window.votingSummaryInitialized = false;
+        
+        // Reinitialize canvas
+        if (canvasManager.initialize()) {
+          canvasManager.resize();
+          canvasManager.attachEventListeners();
+          imageManager.loadImages();
+          
+          // Restart appropriate interface based on current state
+          if (votingState.get('currentStep') >= 6) {
+            showVotingUI();
+          } else {
+            startAnimation();
+          }
+        }
+      }
+    }, 100); // Small delay to ensure DOM is ready
+  }
+});
+
+// Also handle turbo:load event for navigation
+document.addEventListener('turbo:load', function() {
+  // Check if we're on the voting summary page
+  if (document.querySelector('#voting-canvas')) {
+    // Handle different voting states
+    if (serverVotingState === 'closed' || serverVotingState === 'already_voted' || serverVotingState === 'thanks') {
+      // Clear any existing voting progress when user has already voted or voting is closed
+      votingState.clearVotingProgress();
+      // Force clear localStorage to prevent any interference
+      localStorage.removeItem(VOTING_CONFIG.LOCAL_STORAGE_KEYS.VOTING_PROGRESS);
+      localStorage.removeItem(VOTING_CONFIG.LOCAL_STORAGE_KEYS.CURRENT_WEEK);
+      localStorage.removeItem(VOTING_CONFIG.LOCAL_STORAGE_KEYS.BALLOT_ID);
+      showMeepleMessage(meepleMessage);
+    }
+  }
+});
+
+function adjustStarRating(voteId, change) {
+  // Ensure we're in voting mode
+  if (!votingState.get('votingMode')) {
+    console.error('Not in voting mode');
+    return;
+  }
+  
+  // Validate voteId exists
+  const allocations = votingState.get('starAllocations');
+  if (!allocations.hasOwnProperty(voteId)) {
+    console.error('Invalid voteId:', voteId);
+    return;
+  }
+  
+  const currentStars = allocations[voteId] || 1;
+  const newStars = Math.max(VOTING_CONFIG.MIN_STARS_PER_PROJECT, Math.min(5, currentStars + change));
+  
+  // Check if this change would exceed the 12-star limit
+  const starsToAdd = newStars - currentStars;
+  if (starsToAdd > 0 && votingManager.totalStarsAllocated + starsToAdd > VOTING_CONFIG.MAX_STARS) {
+    return; // Don't allow exceeding the limit
+  }
+  
+  // Update the allocation
+  allocations[voteId] = newStars;
+  votingState.set('starAllocations', allocations);
+  
+  // Update total stars allocated
+  votingManager.totalStarsAllocated = votingManager.totalStarsAllocated - currentStars + newStars;
+  
+  // Redraw voting interface to show updated stars
+  if (votingState.get('votingMode')) {
+    console.log('Redrawing voting interface after star adjustment');
+    // Clear the voting buttons array to force a fresh draw
+    votingManager.votingButtons = [];
+  drawVotingInterface();
+  } else {
+    console.error('Voting mode was turned off during star adjustment');
+    // Try to restore voting mode
+    votingState.set('votingMode', true);
+    drawVotingInterface();
+  }
+  
+  // Send update to server
+  fetch(`/votes/${voteId}/update_stars`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+    },
+    body: JSON.stringify({ star_count: newStars })
+  })
+  .then(response => {
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return response.json();
+  })
+  .then(data => {
+    if (!data.success) {
+      console.error('Error updating star rating:', data.errors);
+      // Revert the change on error
+      const allocations = votingState.get('starAllocations');
+      allocations[voteId] = currentStars;
+      votingState.set('starAllocations', allocations);
+      votingManager.totalStarsAllocated = votingManager.totalStarsAllocated + currentStars - newStars;
+      drawVotingInterface(); // Redraw to show reverted state
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    // Revert the change on error
+    const allocations = votingState.get('starAllocations');
+    allocations[voteId] = currentStars;
+    votingState.set('starAllocations', allocations);
+    votingManager.totalStarsAllocated = votingManager.totalStarsAllocated + currentStars - newStars;
+    drawVotingInterface(); // Redraw to show reverted state
+  });
+}
+
+ // End of initialization check
+})(); // End of IIFE
+</script>
+
+
+
