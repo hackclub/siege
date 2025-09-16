@@ -1,7 +1,7 @@
 class ProjectsController < ApplicationController
   before_action :set_project, only: %i[ show edit update destroy submit hours update_status ]
   before_action :require_authentication, only: %i[ check_identity store_idv_rec ]
-  before_action :require_address_for_verification, only: %i[ submit store_idv_rec ]
+  before_action :require_address_for_verification, only: %i[ submit ]
   before_action :check_not_banned, except: %i[ show index ]
   before_action :decorate_project, only: %i[ show edit ]
   before_action :check_creation_eligibility, only: [ :new, :create ]
