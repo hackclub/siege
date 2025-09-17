@@ -65,6 +65,10 @@ class ReviewController < ApplicationController
 
     # Get available weeks for filter dropdown
     @available_weeks = (1..helpers.current_week_number).to_a.reverse
+
+    # Generate leaderboard for review actions this week
+    @leaderboard_week = params[:leaderboard_week].present? ? params[:leaderboard_week].to_i : helpers.current_week_number
+    @review_leaderboard = generate_review_leaderboard(@leaderboard_week)
   end
 
   def show
@@ -118,6 +122,40 @@ class ReviewController < ApplicationController
   end
 
   private
+
+  def generate_review_leaderboard(week_number)
+    week_range = helpers.week_date_range(week_number)
+    return [] unless week_range
+    
+    week_start_date = Date.parse(week_range[0]).beginning_of_day
+    week_end_date = Date.parse(week_range[1]).end_of_day
+
+    # Get all users who have made review-related audit log entries in the specified week
+    review_actions = []
+    
+    User.where.not(audit_logs: []).find_each do |user|
+      user_review_count = user.audit_logs.count do |log|
+        log_time = Time.parse(log["timestamp"]) rescue nil
+        next false unless log_time
+        
+        time_in_range = log_time >= week_start_date && log_time <= week_end_date
+        review_action = log["action"] == "Project reviewed" || 
+                       log["action"] == "Project status updated" ||
+                       log["action"] == "Stonemason feedback updated"
+        
+        time_in_range && review_action
+      end
+      
+      if user_review_count > 0
+        review_actions << {
+          user: user,
+          count: user_review_count
+        }
+      end
+    end
+    
+    review_actions.sort_by { |entry| -entry[:count] }.take(10)
+  end
 
   def set_project
     @project = Project.find(params[:id])

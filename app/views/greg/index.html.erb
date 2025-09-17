@@ -320,6 +320,113 @@
       color: #402b20;
       margin-bottom: 1rem;
     }
+    .fraud-leaderboard-section {
+      background: var(--greg-bg-primary);
+      border: 2px solid var(--greg-border-color);
+      border-radius: 16px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      transition: all 0.3s ease;
+    }
+    .fraud-leaderboard-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+    .fraud-leaderboard-title {
+      font-size: 1.3rem;
+      font-weight: 600;
+      color: var(--greg-text-primary);
+      margin: 0;
+      transition: color 0.3s ease;
+    }
+    .fraud-leaderboard-week-selector {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .fraud-leaderboard-week-selector label {
+      font-size: 0.9rem;
+      color: var(--greg-text-secondary);
+      font-weight: 500;
+    }
+    .fraud-leaderboard-week-selector select {
+      padding: 0.5rem 0.75rem;
+      border: 2px solid var(--greg-input-border);
+      border-radius: 8px;
+      background: var(--greg-input-bg);
+      color: var(--greg-text-primary);
+      font-size: 0.9rem;
+      transition: all 0.3s ease;
+    }
+    .fraud-leaderboard-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .fraud-leaderboard-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem;
+      border-bottom: 1px solid var(--greg-border-secondary);
+      transition: background-color 0.3s ease;
+    }
+    .fraud-leaderboard-item:hover {
+      background: var(--greg-bg-secondary);
+    }
+    .fraud-leaderboard-item:last-child {
+      border-bottom: none;
+    }
+    .fraud-leaderboard-rank {
+      font-weight: bold;
+      color: #8b4513;
+      width: 2.5rem;
+      font-size: 1.1rem;
+    }
+    .fraud-leaderboard-name {
+      flex-grow: 1;
+      margin-left: 1rem;
+      color: var(--greg-text-primary);
+      font-weight: 500;
+      transition: color 0.3s ease;
+    }
+    .fraud-leaderboard-count {
+      font-weight: bold;
+      color: #dc2626;
+      background: rgba(220, 38, 38, 0.1);
+      padding: 0.4rem 0.8rem;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      border: 1px solid rgba(220, 38, 38, 0.2);
+    }
+    .filters-and-fraud-leaderboard-container {
+      display: flex;
+      gap: 2rem;
+      margin-bottom: 2rem;
+    }
+    .filters-section {
+      flex: 2;
+      margin-bottom: 0;
+    }
+    .fraud-leaderboard-section {
+      flex: 1;
+      margin-bottom: 0;
+      min-width: 350px;
+    }
+    @media (max-width: 1024px) {
+      .filters-and-fraud-leaderboard-container {
+        flex-direction: column;
+      }
+      .filters-section {
+        margin-bottom: 2rem;
+      }
+      .fraud-leaderboard-section {
+        margin-bottom: 2rem;
+        min-width: auto;
+      }
+    }
   </style>
 <% end %>
 
@@ -339,62 +446,103 @@
     </div>
   </div>
 
-  <!-- Filters Section -->
-  <div class="filters-section">
-    <%= form_with url: greg_path, method: :get, local: true do |form| %>
-      <div class="filters-grid">
-        <div class="filter-group">
-          <label class="filter-label">Project Name</label>
-          <%= form.text_field :name, 
-              value: params[:name], 
-              placeholder: "Search by project name", 
-              class: "filter-input" %>
+  <!-- Filters and Fraud Leaderboard Container -->
+  <div class="filters-and-fraud-leaderboard-container">
+    <!-- Filters Section -->
+    <div class="filters-section">
+      <%= form_with url: greg_path, method: :get, local: true do |form| %>
+        <div class="filters-grid">
+          <div class="filter-group">
+            <label class="filter-label">Project Name</label>
+            <%= form.text_field :name, 
+                value: params[:name], 
+                placeholder: "Search by project name", 
+                class: "filter-input" %>
+          </div>
+          
+          <div class="filter-group">
+            <label class="filter-label">Author</label>
+            <%= form.text_field :author, 
+                value: params[:author], 
+                placeholder: "Search by author name", 
+                class: "filter-input" %>
+          </div>
+          
+          <div class="filter-group">
+            <label class="filter-label">Week</label>
+            <%= form.select :week, 
+                options_for_select([['All Weeks', '']] + @available_weeks.map { |w| ["Week #{w}", w] }, params[:week]),
+                {}, 
+                { class: "filter-select" } %>
+          </div>
+          
+          <div class="filter-group">
+            <label class="filter-label">Fraud Status</label>
+            <%= form.select :fraud_status, 
+                options_for_select([
+                  ['Unchecked (Default)', 'unchecked'],
+                  ['Suspicious', 'sus'],
+                  ['Confirmed Fraud', 'fraud'],
+                  ['Good/Verified', 'good'],
+                  ['All Statuses', 'all']
+                ], params[:fraud_status] || 'unchecked'),
+                {}, 
+                { class: "filter-select" } %>
+          </div>
+          
+          <div class="filter-group">
+            <label class="filter-label">Fraud Reasoning</label>
+            <%= form.text_field :reasoning, 
+                value: params[:reasoning], 
+                placeholder: "Search in reasoning text", 
+                class: "filter-input" %>
+          </div>
         </div>
         
-        <div class="filter-group">
-          <label class="filter-label">Author</label>
-          <%= form.text_field :author, 
-              value: params[:author], 
-              placeholder: "Search by author name", 
-              class: "filter-input" %>
+        <div class="filter-actions">
+          <%= form.submit "Apply Filters", class: "greg-btn greg-btn-primary" %>
+          <%= link_to "Clear Filters", greg_path, class: "greg-btn greg-btn-secondary" %>
         </div>
-        
-        <div class="filter-group">
-          <label class="filter-label">Week</label>
-          <%= form.select :week, 
-              options_for_select([['All Weeks', '']] + @available_weeks.map { |w| ["Week #{w}", w] }, params[:week]),
-              {}, 
-              { class: "filter-select" } %>
-        </div>
-        
-        <div class="filter-group">
-          <label class="filter-label">Fraud Status</label>
-          <%= form.select :fraud_status, 
-              options_for_select([
-                ['Unchecked (Default)', 'unchecked'],
-                ['Suspicious', 'sus'],
-                ['Confirmed Fraud', 'fraud'],
-                ['Good/Verified', 'good'],
-                ['All Statuses', 'all']
-              ], params[:fraud_status] || 'unchecked'),
-              {}, 
-              { class: "filter-select" } %>
-        </div>
-        
-        <div class="filter-group">
-          <label class="filter-label">Fraud Reasoning</label>
-          <%= form.text_field :reasoning, 
-              value: params[:reasoning], 
-              placeholder: "Search in reasoning text", 
-              class: "filter-input" %>
+      <% end %>
+    </div>
+
+    <!-- Fraud Review Leaderboard -->
+    <div class="fraud-leaderboard-section">
+      <div class="fraud-leaderboard-header">
+        <h3 class="fraud-leaderboard-title">🔍 Fraud Review Activity Leaderboard</h3>
+        <div class="fraud-leaderboard-week-selector">
+          <label for="fraud_leaderboard_week">Week:</label>
+          <%= form_with url: greg_path, method: :get, local: true, id: "fraud-leaderboard-form" do |form| %>
+            <%= form.hidden_field :name, value: params[:name] %>
+            <%= form.hidden_field :author, value: params[:author] %>
+            <%= form.hidden_field :week, value: params[:week] %>
+            <%= form.hidden_field :fraud_status, value: params[:fraud_status] %>
+            <%= form.hidden_field :reasoning, value: params[:reasoning] %>
+            <%= form.select :leaderboard_week, 
+                options_for_select(@available_weeks.map { |w| ["Week #{w}", w] }, @leaderboard_week),
+                {},
+                { 
+                  class: "filter-select", 
+                  onchange: "document.getElementById('fraud-leaderboard-form').submit();" 
+                } %>
+          <% end %>
         </div>
       </div>
       
-      <div class="filter-actions">
-        <%= form.submit "Apply Filters", class: "greg-btn greg-btn-primary" %>
-        <%= link_to "Clear Filters", greg_path, class: "greg-btn greg-btn-secondary" %>
-      </div>
-    <% end %>
+      <% if @fraud_leaderboard.any? %>
+        <ol class="fraud-leaderboard-list">
+          <% @fraud_leaderboard.each_with_index do |entry, index| %>
+            <li class="fraud-leaderboard-item">
+              <span class="fraud-leaderboard-rank"><%= index + 1 %>.</span>
+              <span class="fraud-leaderboard-name"><%= entry[:user].name %></span>
+              <span class="fraud-leaderboard-count"><%= entry[:count] %> fraud review<%= entry[:count] == 1 ? '' : 's' %></span>
+            </li>
+          <% end %>
+        </ol>
+      <% else %>
+        <p style="color: var(--greg-text-secondary); text-align: center; margin: 0;">No fraud review activity for Week <%= @leaderboard_week %>.</p>
+      <% end %>
+    </div>
   </div>
 
   <!-- Projects Section -->

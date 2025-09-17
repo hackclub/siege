@@ -580,8 +580,27 @@
           </div>
           <small style="color: #6b5b4a; font-size: 0.8rem;">
             <span id="coin-calculation-display">
-              Current balance: <%= @user.coins || 0 %> coins | Suggested: <span id="suggested-coins-display"><%= @suggested_coins * 2 %></span> coins (<%= @raw_hours %>h × <%= @average_score || 0 %> avg score × <span id="multiplier-display">2</span> multiplier)
+              User balance: <span id="current-user-balance"><%= @user.coins || 0 %></span> coins | Project value: <span id="current-project-value"><%= @project&.coin_value || 0 %></span> coins<br>
+              Suggested: <span id="suggested-coins-display"><%= @suggested_coins * 2 %></span> coins (<%= @raw_hours %>h × <%= @average_score || 0 %> avg score × <span id="multiplier-display">2</span> multiplier)
             </span>
+          </small>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Project Status:</label>
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <select id="project-status-select" onchange="updateProjectStatus(this.value)" style="background: white; border: 1px solid #ccc; padding: 4px; border-radius: 4px;">
+              <option value="building" <%= 'selected' if @project&.status == 'building' %>>Building</option>
+              <option value="submitted" <%= 'selected' if @project&.status == 'submitted' %>>Submitted</option>
+              <option value="pending_voting" <%= 'selected' if @project&.status == 'pending_voting' %>>Pending Voting</option>
+              <option value="finished" <%= 'selected' if @project&.status == 'finished' %>>Finished</option>
+            </select>
+            <span style="color: #6b5b4a; font-size: 0.9rem;">
+              Current: <span class="project-status <%= @project&.status %>"><%= @project&.status&.humanize || 'N/A' %></span>
+            </span>
+          </div>
+          <small style="color: #6b5b4a; font-size: 0.8rem;">
+            Projects must be marked as "finished" for users to see reviewer feedback.
           </small>
         </div>
 
@@ -685,6 +704,13 @@
         .then(response => response.json())
         .then(data => {
           if (data.success) {
+            // Update the balance indicators
+            if (data.new_user_balance !== undefined) {
+              document.getElementById('current-user-balance').textContent = data.new_user_balance;
+            }
+            if (data.new_project_coin_value !== undefined) {
+              document.getElementById('current-project-value').textContent = data.new_project_coin_value;
+            }
             alert('Coin balance updated successfully!');
           } else {
             alert('Error updating coin balance: ' + (data.error || 'Unknown error'));
@@ -694,6 +720,42 @@
           console.error('Error:', error);
           alert('Error updating coin balance. Please try again.');
         });
+      }
+
+      function updateProjectStatus(newStatus) {
+        if (confirm(`Are you sure you want to update the project status to ${newStatus}?`)) {
+          fetch('<%= admin_update_project_status_path(@selected_week, @user.id) %>', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify({ 
+              status: newStatus,
+              week: <%= @selected_week %>
+            })
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              alert('Project status updated successfully!');
+              location.reload(); // Reload to update the status display
+            } else {
+              alert('Error updating project status: ' + (data.error || 'Unknown error'));
+              // Revert the select
+              location.reload();
+            }
+          })
+          .catch(error => {
+            console.error('Error:', error);
+            alert('Error updating project status. Please try again.');
+            // Revert the select
+            location.reload();
+          });
+        } else {
+          // Revert the select if user cancels
+          location.reload();
+        }
       }
 
       function updateOutStatus(isOut) {

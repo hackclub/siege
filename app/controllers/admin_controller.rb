@@ -937,7 +937,9 @@ class AdminController < ApplicationController
         render json: {
           success: true,
           message: "#{action_word} #{coins_to_add.abs} coins #{coins_to_add > 0 ? 'to' : 'from'} #{@user.name}. New balance: #{new_coins}" +
-                   (project ? " and project coin value to #{new_coin_value}" : "")
+                   (project ? " and project coin value to #{new_coin_value}" : ""),
+          new_user_balance: new_coins,
+          new_project_coin_value: project ? new_coin_value : 0
         }
       else
         render json: { success: false, error: "Failed to update coin balance" }
@@ -945,6 +947,58 @@ class AdminController < ApplicationController
     end
   rescue => e
     render json: { success: false, error: "Error updating coins: #{e.message}" }
+  end
+
+  def update_project_status_admin
+    @user = User.find(params[:user_id])
+    @selected_week = params[:week].to_i
+    new_status = params[:status]
+
+    # Get week date range to find the project
+    week_range = view_context.week_date_range(@selected_week)
+    week_start_date = Date.parse(week_range[0])
+    week_end_date = Date.parse(week_range[1])
+
+    # Find project for this specific week
+    project = @user.projects.where(
+      created_at: week_start_date.beginning_of_day..week_end_date.end_of_day
+    ).first
+
+    unless %w[building submitted pending_voting finished].include?(new_status)
+      render json: { success: false, error: "Invalid status" }
+      return
+    end
+
+    if project
+      # Skip screenshot validation when updating status
+      project.skip_screenshot_validation!
+      old_status = project.status
+
+      if project.update(status: new_status)
+        # Add audit log entry for status change
+        @user.add_audit_log(
+          action: "Project status updated",
+          actor: current_user,
+          details: {
+            "project_name" => project.name,
+            "project_id" => project.id,
+            "old_status" => old_status,
+            "new_status" => new_status
+          }
+        )
+
+        render json: {
+          success: true,
+          message: "Updated #{project.name} status from #{old_status} to #{new_status}"
+        }
+      else
+        render json: { success: false, error: "Failed to update project status" }
+      end
+    else
+      render json: { success: false, error: "No project found for this user in week #{@selected_week}" }
+    end
+  rescue => e
+    render json: { success: false, error: "Error updating project status: #{e.message}" }
   end
 
   def update_reviewer_feedback
@@ -967,6 +1021,18 @@ class AdminController < ApplicationController
       project.skip_screenshot_validation!
 
       if project.update(reviewer_feedback: reviewer_feedback)
+        # Add audit log entry for project review
+        @user.add_audit_log(
+          action: "Project reviewed",
+          actor: current_user,
+          details: {
+            "project_name" => project.name,
+            "project_id" => project.id,
+            "reviewer_feedback" => reviewer_feedback,
+            "coin_value" => project.coin_value || 0
+          }
+        )
+        
         # Send Slack notification
         SlackNotificationService.new.send_reviewer_feedback_notification(project)
         
@@ -1089,14 +1155,14 @@ class AdminController < ApplicationController
         # Skip screenshot validation for Airtable updates
         @project.skip_screenshot_validation!
 
-        # Mark project as submitted to airtable and finished
-        @project.update!(in_airtable: true, status: "finished")
+        # Mark project as submitted to airtable (but don't automatically set to finished)
+        @project.update!(in_airtable: true)
 
         # Add log entry
         log_entry = {
           timestamp: Time.current.iso8601,
           old_status: @project.status,
-          new_status: "finished",
+          new_status: @project.status,
           reviewer_id: current_user.id,
           reviewer_name: current_user.name,
           message: "Submitted to Airtable with #{hour_override > 0 ? "#{hour_override}h override" : "no override"}. #{justification}"

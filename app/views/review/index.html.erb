@@ -201,6 +201,93 @@
       margin-bottom: 1rem;
       color: #402b20;
     }
+    .leaderboard-section {
+      background: rgba(255, 255, 255, 0.9);
+      border: 2px solid rgba(64, 43, 32, 0.2);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    .leaderboard-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    .leaderboard-title {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: #402b20;
+      margin: 0;
+    }
+    .leaderboard-week-selector {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .leaderboard-week-selector select {
+      padding: 0.5rem;
+      border: 2px solid rgba(64, 43, 32, 0.2);
+      border-radius: 6px;
+      background: white;
+      font-size: 0.9rem;
+    }
+    .leaderboard-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .leaderboard-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem;
+      border-bottom: 1px solid rgba(64, 43, 32, 0.1);
+    }
+    .leaderboard-item:last-child {
+      border-bottom: none;
+    }
+    .leaderboard-rank {
+      font-weight: bold;
+      color: #8b4513;
+      width: 2rem;
+    }
+    .leaderboard-name {
+      flex-grow: 1;
+      margin-left: 1rem;
+    }
+    .leaderboard-count {
+      font-weight: bold;
+      color: #402b20;
+      background: rgba(64, 43, 32, 0.1);
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+    }
+    .filters-and-leaderboard-container {
+      display: flex;
+      gap: 2rem;
+      margin-bottom: 2rem;
+    }
+    .filters-section {
+      flex: 2;
+      margin-bottom: 0;
+    }
+    .leaderboard-section {
+      flex: 1;
+      margin-bottom: 0;
+      min-width: 300px;
+    }
+    @media (max-width: 768px) {
+      .filters-and-leaderboard-container {
+        flex-direction: column;
+      }
+      .filters-section {
+        margin-bottom: 2rem;
+      }
+      .leaderboard-section {
+        margin-bottom: 2rem;
+      }
+    }
   </style>
 <% end %>
 
@@ -210,62 +297,103 @@
     <p class="review-subtitle">Review and manage project statuses</p>
   </div>
 
-  <!-- Filters Section -->
-  <div class="filters-section">
-    <h3 class="filters-title">Filter Projects</h3>
-    <%= form_with url: review_path, method: :get, local: true, class: "filters-form" do |form| %>
-      <div class="filter-group">
-        <%= form.label :name, "Project Name", class: "filter-label" %>
-        <%= form.text_field :name, value: params[:name], placeholder: "Search by name...", class: "filter-input" %>
-      </div>
+  <!-- Filters and Leaderboard Container -->
+  <div class="filters-and-leaderboard-container">
+    <!-- Filters Section -->
+    <div class="filters-section">
+      <h3 class="filters-title">Filter Projects</h3>
+      <%= form_with url: review_path, method: :get, local: true, class: "filters-form" do |form| %>
+        <div class="filter-group">
+          <%= form.label :name, "Project Name", class: "filter-label" %>
+          <%= form.text_field :name, value: params[:name], placeholder: "Search by name...", class: "filter-input" %>
+        </div>
 
-      <div class="filter-group">
-        <%= form.label :owner, "Owner", class: "filter-label" %>
-        <%= form.select :owner,
-            options_from_collection_for_select(@users, :name, :name, params[:owner]),
-            { prompt: "All owners" },
-            { class: "filter-select" } %>
-      </div>
+        <div class="filter-group">
+          <%= form.label :owner, "Owner", class: "filter-label" %>
+          <%= form.select :owner,
+              options_from_collection_for_select(@users, :name, :name, params[:owner]),
+              { prompt: "All owners" },
+              { class: "filter-select" } %>
+        </div>
 
-      <div class="filter-group">
-        <%= form.label :status, "Status", class: "filter-label" %>
-        <%= form.select :status,
-            options_for_select(@statuses.map { |s| [s.capitalize, s] }, params[:status] || 'submitted'),
-            { prompt: "All statuses" },
-            { class: "filter-select" } %>
-      </div>
+        <div class="filter-group">
+          <%= form.label :status, "Status", class: "filter-label" %>
+          <%= form.select :status,
+              options_for_select(@statuses.map { |s| [s.capitalize, s] }, params[:status] || 'submitted'),
+              { prompt: "All statuses" },
+              { class: "filter-select" } %>
+        </div>
 
-      <div class="filter-group">
-        <%= form.label :week, "Week", class: "filter-label" %>
-        <%= form.select :week,
-            options_for_select(@available_weeks.map { |w| ["Week #{w}", w] }, params[:week]&.to_i),
-            { prompt: "All weeks" },
-            { class: "filter-select" } %>
-      </div>
+        <div class="filter-group">
+          <%= form.label :week, "Week", class: "filter-label" %>
+          <%= form.select :week,
+              options_for_select(@available_weeks.map { |w| ["Week #{w}", w] }, params[:week]&.to_i),
+              { prompt: "All weeks" },
+              { class: "filter-select" } %>
+        </div>
 
-      <div class="filter-group">
-        <%= form.label :sort, "Sort By", class: "filter-label" %>
-        <%= form.select :sort,
-            options_for_select([
-              ['Newest First', 'newest'],
-              ['Oldest First', 'oldest'],
-              ['Most Hours', 'most_hours'],
-              ['Least Hours', 'least_hours']
-            ], params[:sort]),
-            { prompt: "Default (Newest)" },
-            { class: "filter-select" } %>
-      </div>
+        <div class="filter-group">
+          <%= form.label :sort, "Sort By", class: "filter-label" %>
+          <%= form.select :sort,
+              options_for_select([
+                ['Newest First', 'newest'],
+                ['Oldest First', 'oldest'],
+                ['Most Hours', 'most_hours'],
+                ['Least Hours', 'least_hours']
+              ], params[:sort]),
+              { prompt: "Default (Newest)" },
+              { class: "filter-select" } %>
+        </div>
 
-      <div class="filter-group">
-        <%= form.submit "Apply", class: "filter-button" %>
-      </div>
-    <% end %>
+        <div class="filter-group">
+          <%= form.submit "Apply", class: "filter-button" %>
+        </div>
+      <% end %>
 
-    <% if params[:name].present? || params[:owner].present? || params[:status].present? || params[:week].present? || params[:sort].present? %>
-      <div style="margin-top: 1rem;">
-        <%= link_to "Clear All Filters", review_path, class: "clear-filters" %>
+      <% if params[:name].present? || params[:owner].present? || params[:status].present? || params[:week].present? || params[:sort].present? %>
+        <div style="margin-top: 1rem;">
+          <%= link_to "Clear All Filters", review_path, class: "clear-filters" %>
+        </div>
+      <% end %>
+    </div>
+
+    <!-- Review Leaderboard -->
+    <div class="leaderboard-section">
+      <div class="leaderboard-header">
+        <h3 class="leaderboard-title">Review Activity Leaderboard</h3>
+        <div class="leaderboard-week-selector">
+          <label for="leaderboard_week">Week:</label>
+          <%= form_with url: review_path, method: :get, local: true, id: "leaderboard-form" do |form| %>
+            <%= form.hidden_field :name, value: params[:name] %>
+            <%= form.hidden_field :owner, value: params[:owner] %>
+            <%= form.hidden_field :status, value: params[:status] %>
+            <%= form.hidden_field :week, value: params[:week] %>
+            <%= form.hidden_field :sort, value: params[:sort] %>
+            <%= form.select :leaderboard_week, 
+                options_for_select(@available_weeks.map { |w| ["Week #{w}", w] }, @leaderboard_week),
+                {},
+                { 
+                  class: "filter-select", 
+                  onchange: "document.getElementById('leaderboard-form').submit();" 
+                } %>
+          <% end %>
+        </div>
       </div>
-    <% end %>
+      
+      <% if @review_leaderboard.any? %>
+        <ol class="leaderboard-list">
+          <% @review_leaderboard.each_with_index do |entry, index| %>
+            <li class="leaderboard-item">
+              <span class="leaderboard-rank"><%= index + 1 %>.</span>
+              <span class="leaderboard-name"><%= entry[:user].name %></span>
+              <span class="leaderboard-count"><%= entry[:count] %> review<%= entry[:count] == 1 ? '' : 's' %></span>
+            </li>
+          <% end %>
+        </ol>
+      <% else %>
+        <p>No review activity for Week <%= @leaderboard_week %>.</p>
+      <% end %>
+    </div>
   </div>
 
   <!-- Projects Count -->

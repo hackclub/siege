@@ -60,6 +60,10 @@ class GregController < ApplicationController
 
     offset = (@current_page - 1) * @per_page
     @projects = @projects.offset(offset).limit(@per_page)
+
+    # Generate leaderboard for fraud review actions this week
+    @leaderboard_week = params[:leaderboard_week].present? ? params[:leaderboard_week].to_i : ApplicationController.helpers.current_week_number
+    @fraud_leaderboard = generate_fraud_leaderboard(@leaderboard_week)
   end
 
   def show
@@ -117,6 +121,38 @@ class GregController < ApplicationController
   end
 
   private
+
+  def generate_fraud_leaderboard(week_number)
+    week_range = ApplicationController.helpers.week_date_range(week_number)
+    return [] unless week_range
+    
+    week_start_date = Date.parse(week_range[0]).beginning_of_day
+    week_end_date = Date.parse(week_range[1]).end_of_day
+
+    # Get all users who have made fraud-related audit log entries in the specified week
+    fraud_actions = []
+    
+    User.where.not(audit_logs: []).find_each do |user|
+      user_fraud_count = user.audit_logs.count do |log|
+        log_time = Time.parse(log["timestamp"]) rescue nil
+        next false unless log_time
+        
+        time_in_range = log_time >= week_start_date && log_time <= week_end_date
+        fraud_action = log["action"] == "Project fraud status updated"
+        
+        time_in_range && fraud_action
+      end
+      
+      if user_fraud_count > 0
+        fraud_actions << {
+          user: user,
+          count: user_fraud_count
+        }
+      end
+    end
+    
+    fraud_actions.sort_by { |entry| -entry[:count] }.take(10)
+  end
 
   def require_fraud_access
     unless current_user&.can_access_fraud_dashboard?
