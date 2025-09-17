@@ -129,26 +129,35 @@ class GregController < ApplicationController
     week_start_date = Date.parse(week_range[0]).beginning_of_day
     week_end_date = Date.parse(week_range[1]).end_of_day
 
-    # Get all users who have made fraud-related audit log entries in the specified week
-    fraud_actions = []
+    # Count fraud reviews by actor (the person doing the reviewing, not being reviewed)
+    reviewer_counts = Hash.new(0)
     
+    # Look through all users' audit logs to find fraud review actions
     User.where.not(audit_logs: []).find_each do |user|
-      user_fraud_count = user.audit_logs.count do |log|
+      user.audit_logs.each do |log|
+        next unless log["action"] == "Project fraud status updated"
+        
         log_time = Time.parse(log["timestamp"]) rescue nil
-        next false unless log_time
+        next unless log_time && log_time >= week_start_date && log_time <= week_end_date
         
-        time_in_range = log_time >= week_start_date && log_time <= week_end_date
-        fraud_action = log["action"] == "Project fraud status updated"
+        # Count the action for the actor (reviewer), not the user being reviewed
+        actor_id = log["actor_id"]
+        next unless actor_id
         
-        time_in_range && fraud_action
+        reviewer_counts[actor_id] += 1
       end
+    end
+    
+    # Convert to array with user objects and sort
+    fraud_actions = []
+    reviewer_counts.each do |actor_id, count|
+      reviewer = User.find_by(id: actor_id)
+      next unless reviewer
       
-      if user_fraud_count > 0
-        fraud_actions << {
-          user: user,
-          count: user_fraud_count
-        }
-      end
+      fraud_actions << {
+        user: reviewer,
+        count: count
+      }
     end
     
     fraud_actions.sort_by { |entry| -entry[:count] }.take(10)

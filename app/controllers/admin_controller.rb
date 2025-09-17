@@ -949,6 +949,40 @@ class AdminController < ApplicationController
     render json: { success: false, error: "Error updating coins: #{e.message}" }
   end
 
+  def save_reviewer_multiplier
+    @user = User.find(params[:user_id])
+    @selected_week = params[:week].to_i
+    multiplier = params[:multiplier].to_f
+
+    # Get week date range to find the project
+    week_range = view_context.week_date_range(@selected_week)
+    week_start_date = Date.parse(week_range[0])
+    week_end_date = Date.parse(week_range[1])
+
+    # Find project for this specific week
+    project = @user.projects.where(
+      created_at: week_start_date.beginning_of_day..week_end_date.end_of_day
+    ).first
+
+    if project
+      # Skip screenshot validation when updating reviewer multiplier
+      project.skip_screenshot_validation!
+
+      if project.update(reviewer_multiplier: multiplier)
+        render json: {
+          success: true,
+          message: "Saved reviewer multiplier #{multiplier} for #{project.name}"
+        }
+      else
+        render json: { success: false, error: "Failed to save reviewer multiplier" }
+      end
+    else
+      render json: { success: false, error: "No project found for this user in week #{@selected_week}" }
+    end
+  rescue => e
+    render json: { success: false, error: "Error saving reviewer multiplier: #{e.message}" }
+  end
+
   def update_project_status_admin
     @user = User.find(params[:user_id])
     @selected_week = params[:week].to_i

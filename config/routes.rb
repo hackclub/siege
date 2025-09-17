@@ -64,6 +64,7 @@ Rails.application.routes.draw do
   post "/admin/shop-purchases/:id/refund", to: "admin#refund_shop_purchase", as: :admin_refund_shop_purchase
   post "/admin/weekly-overview/:week/:user_id/submit_to_airtable", to: "admin#submit_to_airtable", as: :admin_submit_to_airtable
   post "/admin/weekly-overview/:week/:user_id/update_coins", to: "admin#update_user_coins", as: :admin_update_user_coins
+  post "/admin/weekly-overview/:week/:user_id/save_multiplier", to: "admin#save_reviewer_multiplier", as: :admin_save_reviewer_multiplier
   post "/admin/weekly-overview/:week/:user_id/update_project_status", to: "admin#update_project_status_admin", as: :admin_update_project_status
   post "/admin/weekly-overview/:week/:user_id/update_reviewer_feedback", to: "admin#update_reviewer_feedback", as: :admin_update_reviewer_feedback
   post "/admin/projects/:project_id/update_coin_value", to: "admin#update_project_coin_value", as: :admin_update_project_coin_value

@@ -564,11 +564,12 @@
         <div class="form-group">
           <label class="form-label">Reviewer Multiplier:</label>
           <div style="display: flex; gap: 0.5rem; align-items: center;">
-            <input type="number" id="reviewer-multiplier" value="2" min="0" step="0.1" class="form-input" style="flex: 1;" placeholder="Reviewer multiplier (default: 2)" oninput="updateSuggestedCoins()">
+            <input type="number" id="reviewer-multiplier" value="<%= @project&.reviewer_multiplier || 2.0 %>" min="0" step="0.1" class="form-input" style="flex: 1;" placeholder="Reviewer multiplier (default: 2)" oninput="updateSuggestedCoins()">
+            <button type="button" onclick="saveMultiplier()" class="submit-button" style="white-space: nowrap; background: #059669; font-size: 0.8rem; padding: 0.5rem;">Save Multiplier</button>
             <button type="button" onclick="resetToCalculated()" class="submit-button" style="white-space: nowrap; background: #6366f1; font-size: 0.8rem; padding: 0.5rem;">Reset</button>
           </div>
           <small style="color: #6b5b4a; font-size: 0.8rem;">
-            This multiplier affects the suggested coin calculation. Use Reset to recalculate if manually edited.
+            This multiplier affects the suggested coin calculation. Click "Save Multiplier" to store it without adding coins.
           </small>
         </div>
 
@@ -635,6 +636,7 @@
       const baseHours = <%= @raw_hours %>;
       const averageScore = <%= @average_score || 0 %>;
       const baseSuggestedCoins = <%= @suggested_coins %>;
+      const storedMultiplier = <%= @project&.reviewer_multiplier || 2.0 %>;
 
       function updateSuggestedCoins() {
         if (isManuallyEdited) return; // Don't update if user manually edited
@@ -657,6 +659,36 @@
       function resetToCalculated() {
         isManuallyEdited = false;
         updateSuggestedCoins();
+      }
+
+      function saveMultiplier() {
+        const multiplier = parseFloat(document.getElementById('reviewer-multiplier').value) || 0;
+        
+        if (confirm(`Save reviewer multiplier as ${multiplier}? This will be stored with the project.`)) {
+          fetch('<%= admin_save_reviewer_multiplier_path(@selected_week, @user.id) %>', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify({ 
+              multiplier: multiplier,
+              week: <%= @selected_week %>
+            })
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              alert('Reviewer multiplier saved successfully!');
+            } else {
+              alert('Error saving multiplier: ' + (data.error || 'Unknown error'));
+            }
+          })
+          .catch(error => {
+            console.error('Error:', error);
+            alert('Error saving multiplier. Please try again.');
+          });
+        }
       }
 
       function updateReviewerFeedback() {
