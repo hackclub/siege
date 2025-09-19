@@ -741,17 +741,19 @@ class AdminController < ApplicationController
         @user_status_filter = "all"  # Default to showing all users
       end
 
-      # Handle show hidden projects checkbox
+      # Handle show hidden projects checkbox - all users respect this setting
       @show_hidden = params[:show_hidden] == "1"
       
       # Pre-fetch all projects for the selected week to avoid N+1 queries
       if @show_hidden
+        # Show all projects including hidden ones
         week_projects = Project.where(
           user_id: @users.pluck(:id),
           created_at: week_start_date.beginning_of_day..week_end_date.end_of_day
         ).includes(:user)
       else
-        week_projects = Project.visible_to_user(current_user).where(
+        # Show only visible projects for ALL users (including super admins)
+        week_projects = Project.visible.where(
           user_id: @users.pluck(:id),
           created_at: week_start_date.beginning_of_day..week_end_date.end_of_day
         ).includes(:user)
