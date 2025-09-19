@@ -18,25 +18,30 @@ class ProjectsController < ApplicationController
       @projects = []
     end
 
-    # Pre-fetch votes for finished projects to calculate average scores
-    finished_projects = @projects.select(&:finished?)
-    if finished_projects.any?
-      project_ids = finished_projects.map(&:id)
-      @vote_averages = Vote.where(project_id: project_ids, voted: true)
-                           .group(:project_id)
-                           .average(:star_count)
-                           .transform_values { |avg| avg.to_f.round(2) }
-    else
-      @vote_averages = {}
+    # Pre-fetch votes for finished projects to calculate average scores (admin only)
+    if can_access_admin?
+      finished_projects = @projects.select(&:finished?)
+      if finished_projects.any?
+        project_ids = finished_projects.map(&:id)
+        @vote_averages = Vote.where(project_id: project_ids, voted: true)
+                             .group(:project_id)
+                             .average(:star_count)
+                             .transform_values { |avg| avg.to_f.round(2) }
+      else
+        @vote_averages = {}
+      end
     end
   end
 
   # GET /projects/1 or /projects/1.json
   def show
     if @project.finished?
-      @votes = Vote.where(project_id: @project.id)
-      cast_votes = @votes.where(voted: true)
-      @average_score = cast_votes.any? ? cast_votes.average(:star_count).to_f.round(2) : nil
+      # Only expose vote data to admins
+      if can_access_admin?
+        @votes = Vote.where(project_id: @project.id)
+        cast_votes = @votes.where(voted: true)
+        @average_score = cast_votes.any? ? cast_votes.average(:star_count).to_f.round(2) : nil
+      end
     end
   end
 

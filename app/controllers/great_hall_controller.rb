@@ -53,15 +53,19 @@ class GreatHallController < ApplicationController
 
         # Serialize the votes data for JavaScript with minimal user data exposure
         @votes_json = @votes.map do |vote|
-          {
+          vote_data = {
             id: vote.id,
             week: vote.week,
             voted: vote.voted,
-            star_count: vote.star_count,
             project: vote.project.safe_attributes_for_voting.merge(
               user: vote.project.user.safe_attributes_for_voting
             )
           }
+          # Only expose star_count to admins
+          if can_access_admin?
+            vote_data[:star_count] = vote.star_count
+          end
+          vote_data
         end.to_json
         @current_step = params[:step]&.to_i || 1
         @total_steps = @votes.count + 1 # +1 for summary step
@@ -169,16 +173,20 @@ class GreatHallController < ApplicationController
 
             # Serialize the votes data for JavaScript with explicit includes
             @votes_json = @votes.map do |vote|
-          {
-            id: vote.id,
-            week: vote.week,
-            voted: vote.voted,
-            star_count: vote.star_count,
-            project: vote.project.safe_attributes_for_voting.merge(
-              user: vote.project.user.safe_attributes_for_voting
-            )
-          }
-        end.to_json
+              vote_data = {
+                id: vote.id,
+                week: vote.week,
+                voted: vote.voted,
+                project: vote.project.safe_attributes_for_voting.merge(
+                  user: vote.project.user.safe_attributes_for_voting
+                )
+              }
+              # Only expose star_count to admins
+              if can_access_admin?
+                vote_data[:star_count] = vote.star_count
+              end
+              vote_data
+            end.to_json
 
     true # Indicate successful ballot creation
   rescue => e
