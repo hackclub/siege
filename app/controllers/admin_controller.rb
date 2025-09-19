@@ -741,11 +741,21 @@ class AdminController < ApplicationController
         @user_status_filter = "all"  # Default to showing all users
       end
 
+      # Handle show hidden projects checkbox
+      @show_hidden = params[:show_hidden] == "1"
+      
       # Pre-fetch all projects for the selected week to avoid N+1 queries
-      week_projects = Project.visible_to_user(current_user).where(
-        user_id: @users.pluck(:id),
-        created_at: week_start_date.beginning_of_day..week_end_date.end_of_day
-      ).includes(:user)
+      if @show_hidden
+        week_projects = Project.where(
+          user_id: @users.pluck(:id),
+          created_at: week_start_date.beginning_of_day..week_end_date.end_of_day
+        ).includes(:user)
+      else
+        week_projects = Project.visible_to_user(current_user).where(
+          user_id: @users.pluck(:id),
+          created_at: week_start_date.beginning_of_day..week_end_date.end_of_day
+        ).includes(:user)
+      end
 
       # Group projects by user_id for efficient lookup
       projects_by_user = week_projects.group_by(&:user_id)
@@ -908,10 +918,8 @@ class AdminController < ApplicationController
   def update_user_coins
     @user = User.find(params[:user_id])
     @selected_week = params[:week].to_i
-    coins_to_add = params[:coins].to_i
-    current_coins = @user.coins || 0
-    new_coins = current_coins + coins_to_add
-
+    use_calculated_amount = params[:use_calculated] == "true"
+    
     # Get week date range to find the project
     week_range = view_context.week_date_range(@selected_week)
     week_start_date = Date.parse(week_range[0])
@@ -922,24 +930,55 @@ class AdminController < ApplicationController
       created_at: week_start_date.beginning_of_day..week_end_date.end_of_day
     ).first
 
+    unless project
+      render json: { success: false, error: "No project found for this user in week #{@selected_week}" }
+      return
+    end
+
+    # Calculate coins using saved multiplier if requested, otherwise use manual amount
+    if use_calculated_amount
+      # Calculate based on project's stored multiplier
+      time_seconds = view_context.user_hackatime_time_for_projects(@user, [project], project.effective_time_range)
+      raw_hours = (time_seconds / 3600.0).round(2)
+      
+      # Get votes for average score calculation
+      votes = Vote.joins(:ballot).includes(ballot: :user).where(project: project)
+      cast_votes = votes.where(voted: true)
+      average_score = cast_votes.any? ? cast_votes.average(:star_count).to_f.round(2) : 0
+      
+      # Use stored multiplier or default to 2.0
+      multiplier = project.reviewer_multiplier || 2.0
+      base_coins = (raw_hours * average_score).round
+      calculated_coins = (base_coins * multiplier).round
+      
+      coins_to_add = calculated_coins
+    else
+      # Use manual amount from form
+      coins_to_add = params[:coins].to_i
+    end
+
+    current_coins = @user.coins || 0
+    new_coins = current_coins + coins_to_add
+
     ActiveRecord::Base.transaction do
       # Update user's coin balance
       if @user.update(coins: new_coins)
-        # Update project's coin value if project exists
-        if project
-          project.skip_screenshot_validation!
-          current_coin_value = project.coin_value || 0
-          new_coin_value = current_coin_value + coins_to_add
-          project.update!(coin_value: new_coin_value)
-        end
+        # Update project's coin value
+        project.skip_screenshot_validation!
+        current_coin_value = project.coin_value || 0
+        new_coin_value = current_coin_value + coins_to_add
+        project.update!(coin_value: new_coin_value)
 
         action_word = coins_to_add > 0 ? "Added" : "Removed"
+        calculation_note = use_calculated_amount ? 
+          " (calculated: #{raw_hours}h × #{average_score} score × #{multiplier} multiplier)" : 
+          " (manual entry)"
+        
         render json: {
           success: true,
-          message: "#{action_word} #{coins_to_add.abs} coins #{coins_to_add > 0 ? 'to' : 'from'} #{@user.name}. New balance: #{new_coins}" +
-                   (project ? " and project coin value to #{new_coin_value}" : ""),
+          message: "#{action_word} #{coins_to_add.abs} coins #{coins_to_add > 0 ? 'to' : 'from'} #{@user.name}#{calculation_note}. New balance: #{new_coins}, project value: #{new_coin_value}",
           new_user_balance: new_coins,
-          new_project_coin_value: project ? new_coin_value : 0
+          new_project_coin_value: new_coin_value
         }
       else
         render json: { success: false, error: "Failed to update coin balance" }

@@ -575,14 +575,21 @@
 
         <div class="form-group">
           <label class="form-label">Add/Remove Coins:</label>
-          <div style="display: flex; gap: 0.5rem; align-items: center;">
-            <input type="number" id="coin-balance" value="<%= @suggested_coins * 2 %>" class="form-input" style="flex: 1;" placeholder="Enter amount to add/subtract" oninput="markAsManuallyEdited()">
-            <button type="button" onclick="updateCoins()" class="submit-button" style="white-space: nowrap;">Add/Remove Coins</button>
+          <div style="margin-bottom: 1rem;">
+            <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem;">
+              <button type="button" onclick="updateCoins(true)" class="submit-button" style="background: #059669; flex: 1;">Use Calculated Amount</button>
+              <button type="button" onclick="updateCoins(false)" class="submit-button" style="background: #d97706; flex: 1;">Use Manual Amount</button>
+            </div>
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+              <input type="number" id="coin-balance" value="<%= (@suggested_coins * (@project&.reviewer_multiplier || 2.0)).round %>" class="form-input" style="flex: 1;" placeholder="Enter manual amount" oninput="markAsManuallyEdited()">
+              <span style="color: #6b5b4a; font-size: 0.9rem;">← Manual override</span>
+            </div>
           </div>
           <small style="color: #6b5b4a; font-size: 0.8rem;">
             <span id="coin-calculation-display">
               User balance: <span id="current-user-balance"><%= @user.coins || 0 %></span> coins | Project value: <span id="current-project-value"><%= @project&.coin_value || 0 %></span> coins<br>
-              Suggested: <span id="suggested-coins-display"><%= @suggested_coins * 2 %></span> coins (<%= @raw_hours %>h × <%= @average_score || 0 %> avg score × <span id="multiplier-display">2</span> multiplier)
+              <strong>Calculated amount:</strong> <span id="calculated-coins-display"><%= (@suggested_coins * (@project&.reviewer_multiplier || 2.0)).round %></span> coins 
+              (<%= @raw_hours %>h × <%= @average_score || 0 %> avg score × <span id="saved-multiplier-display"><%= @project&.reviewer_multiplier || 2.0 %></span> saved multiplier)
             </span>
           </small>
         </div>
@@ -637,27 +644,29 @@
       const averageScore = <%= @average_score || 0 %>;
       const baseSuggestedCoins = <%= @suggested_coins %>;
       const storedMultiplier = <%= @project&.reviewer_multiplier || 2.0 %>;
+      const calculatedAmount = Math.round(baseSuggestedCoins * storedMultiplier);
 
       function updateSuggestedCoins() {
-        if (isManuallyEdited) return; // Don't update if user manually edited
-        
+        // Update the calculated amount display when multiplier changes
         const multiplier = parseFloat(document.getElementById('reviewer-multiplier').value) || 0;
-        const suggestedCoins = Math.round(baseSuggestedCoins * multiplier);
+        const newCalculatedAmount = Math.round(baseSuggestedCoins * multiplier);
         
-        document.getElementById('coin-balance').value = suggestedCoins;
-        document.getElementById('suggested-coins-display').textContent = suggestedCoins;
-        document.getElementById('multiplier-display').textContent = multiplier;
+        document.getElementById('calculated-coins-display').textContent = newCalculatedAmount;
+        document.getElementById('saved-multiplier-display').textContent = storedMultiplier;
+        
+        // Only update the input if not manually edited
+        if (!isManuallyEdited) {
+          document.getElementById('coin-balance').value = newCalculatedAmount;
+        }
       }
 
       function markAsManuallyEdited() {
         isManuallyEdited = true;
-        // Update multiplier display to reflect current values
-        const multiplier = parseFloat(document.getElementById('reviewer-multiplier').value) || 0;
-        document.getElementById('multiplier-display').textContent = multiplier;
       }
 
       function resetToCalculated() {
         isManuallyEdited = false;
+        document.getElementById('coin-balance').value = calculatedAmount;
         updateSuggestedCoins();
       }
 
@@ -719,8 +728,16 @@
         });
       }
 
-      function updateCoins() {
+      function updateCoins(useCalculated) {
         const coinBalance = document.getElementById('coin-balance').value;
+        
+        // Confirm the action
+        const actionType = useCalculated ? 'calculated amount' : 'manual amount';
+        const amount = useCalculated ? calculatedAmount : coinBalance;
+        
+        if (!confirm(`Add ${amount} coins using ${actionType}?`)) {
+          return;
+        }
         
         fetch('<%= admin_update_user_coins_path(@selected_week, @user.id) %>', {
           method: 'POST',
@@ -729,7 +746,8 @@
             'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
           },
           body: JSON.stringify({ 
-            coins: coinBalance,
+            coins: useCalculated ? null : coinBalance, // null means use calculated
+            use_calculated: useCalculated,
             week: <%= @selected_week %>
           })
         })
@@ -743,7 +761,7 @@
             if (data.new_project_coin_value !== undefined) {
               document.getElementById('current-project-value').textContent = data.new_project_coin_value;
             }
-            alert('Coin balance updated successfully!');
+            alert(data.message);
           } else {
             alert('Error updating coin balance: ' + (data.error || 'Unknown error'));
           }

@@ -107,6 +107,17 @@ class ReviewController < ApplicationController
     @project.skip_screenshot_validation!
     
     if @project.update(stonemason_feedback: stonemason_feedback)
+      # Add audit log entry for stonemason feedback
+      @project.user.add_audit_log(
+        action: "Stonemason feedback updated",
+        actor: current_user,
+        details: {
+          "project_name" => @project.name,
+          "project_id" => @project.id,
+          "stonemason_feedback" => stonemason_feedback
+        }
+      )
+      
       # Send Slack notification
       SlackNotificationService.new.send_stonemason_feedback_notification(@project)
       
@@ -138,7 +149,8 @@ class ReviewController < ApplicationController
       user.audit_logs.each do |log|
         review_action = log["action"] == "Project reviewed" || 
                        log["action"] == "Project status updated" ||
-                       log["action"] == "Stonemason feedback updated"
+                       log["action"] == "Stonemason feedback updated" ||
+                       log["action"]&.include?("Coins") && log["action"]&.include?("admin")
         next unless review_action
         
         log_time = Time.parse(log["timestamp"]) rescue nil

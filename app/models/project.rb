@@ -206,6 +206,19 @@ class Project < ApplicationRecord
     new_logs = logs + [ log_entry ]
     update!(status: new_status, logs: new_logs)
 
+    # Add audit log entry for the user being reviewed
+    user.add_audit_log(
+      action: "Project status updated",
+      actor: reviewer,
+      details: {
+        "project_name" => name,
+        "project_id" => id,
+        "old_status" => old_status,
+        "new_status" => new_status,
+        "message" => message.presence
+      }
+    )
+
     # Send Slack notification for pending_voting status
     if new_status == "pending_voting"
       SlackNotificationService.new.send_pending_voting_notification(self)

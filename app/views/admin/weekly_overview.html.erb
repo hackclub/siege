@@ -349,6 +349,11 @@
         </div>
       <% end %>
       
+      <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-top: 1rem;">
+        <%= form.check_box :show_hidden, { checked: @show_hidden, onchange: "this.form.submit();" }, "1", "0" %>
+        <%= form.label :show_hidden, "Show hidden projects", style: "margin-left: 0.5rem;" %>
+      </div>
+      
       <div style="margin-top: 1rem;">
         <% 
           current_week = current_week_number
@@ -357,8 +362,9 @@
           is_non_default_user_status = params[:user_status].present? && params[:user_status] != 'all'
           is_non_default_status = params[:status].present? && params[:status] != 'pending_voting'
           is_non_default_fraud = current_user&.can_access_fraud_dashboard? && params[:fraud_status].present? && params[:fraud_status] != 'good'
+          is_non_default_hidden = params[:show_hidden] == "1"
         %>
-        <% if is_non_default_week || is_non_default_user_status || is_non_default_status || is_non_default_fraud %>
+        <% if is_non_default_week || is_non_default_user_status || is_non_default_status || is_non_default_fraud || is_non_default_hidden %>
           <%= link_to "Reset to Defaults", admin_weekly_overview_path, class: "clear-filters" %>
         <% end %>
       </div>
@@ -376,6 +382,9 @@
     <% end %>
     <% if params[:fraud_status].present? && params[:fraud_status] != '' %>
       and <%= params[:fraud_status] %> fraud status
+    <% end %>
+    <% if @show_hidden %>
+      (including hidden projects)
     <% end %>
     for week <%= @selected_week %>
     <% if @total_pages > 1 %>
