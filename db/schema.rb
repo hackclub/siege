@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_09_17_120000) do
+ActiveRecord::Schema[8.0].define(version: 2025_09_21_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -153,6 +153,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_17_120000) do
     t.boolean "hidden", default: false, null: false
     t.text "stonemason_feedback"
     t.decimal "reviewer_multiplier", precision: 3, scale: 1, default: "2.0"
+    t.text "reviewer_video_url"
     t.index ["fraud_status"], name: "index_projects_on_fraud_status"
     t.index ["hidden"], name: "index_projects_on_hidden"
     t.index ["status"], name: "index_projects_on_status"

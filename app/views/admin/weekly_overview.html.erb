@@ -413,6 +413,11 @@
                     <%= data[:fraud_status] %>
                   </span>
                 <% end %>
+                <% if data[:project].reviewer_video.attached? %>
+                  <span style="background: #8b5cf6; color: white; padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.75rem; font-weight: 500; margin-left: 0.25rem;" title="Has review video">
+                    📹
+                  </span>
+                <% end %>
               </div>
             <% else %>
               <span class="no-project">No Project</span>

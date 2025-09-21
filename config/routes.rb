@@ -96,7 +96,8 @@ Rails.application.routes.draw do
   get "/review", to: "review#index", as: :review
   get "/review/projects/:id", to: "review#show", as: :review_project
   patch "/review/projects/:id/status", to: "review#update_status", as: :review_project_status
-  post "/review/projects/:id/update_stonemason_feedback", to: "review#update_stonemason_feedback", as: :review_update_stonemason_feedback
+  post "/review/projects/:id/submit_review", to: "review#submit_review", as: :review_submit_review
+  delete "/review/projects/:id/remove_video", to: "review#remove_video", as: :review_remove_video
   get "/greg", to: "greg#index", as: :greg
   get "/greg/projects/:id", to: "greg#show", as: :greg_project
   post "/greg/projects/:id/fraud_status", to: "greg#update_fraud_status", as: :greg_update_fraud_status

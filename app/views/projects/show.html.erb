@@ -70,8 +70,11 @@
     
     .reviewer-feedback-content {
       line-height: 1.6;
-      white-space: pre-wrap;
     }
+
+		.reviewer-feedback-text {
+			white-space: pre-wrap;
+		}
   </style>
 <% end %>
 
@@ -153,17 +156,33 @@
             
             Reviewer Feedback
           </h3>
-          <div class="reviewer-feedback-content"><%= @project.reviewer_feedback %></div>
+          <div class="reviewer-feedback-text"><%= @project.reviewer_feedback %></div>
         </div>
       <% end %>
 
-      <% if @project.building? && @project.stonemason_feedback.present? && (@project.user == current_user || can_access_admin?) %>
+      <% if @project.stonemason_feedback.present? && (@project.user == current_user || can_access_admin?) %>
         <div class="reviewer-feedback-container">
           <h3 class="reviewer-feedback-title">
             
             Stonemason Feedback
           </h3>
           <div class="reviewer-feedback-content"><%= @project.stonemason_feedback %></div>
+        </div>
+      <% end %>
+
+      <% if @project.reviewer_video.attached? && (@project.user == current_user || can_access_admin?) %>
+        <div class="reviewer-feedback-container" style="margin-top: 1.5rem;">
+          <h3 class="reviewer-feedback-title">
+          	Review Video
+          </h3>
+          <div class="reviewer-feedback-content">
+            <div style="margin-top: 0.5rem;">
+              <video controls style="width: 100%; max-height: 400px; border-radius: 6px;">
+                <source src="<%= url_for(@project.reviewer_video) %>" type="<%= @project.reviewer_video.content_type %>">
+                Your browser does not support the video tag.
+              </video>
+            </div>
+          </div>
         </div>
       <% end %>
 
@@ -603,6 +622,35 @@
               setTimeout(() => input.focus(), 100);
             }
 
+            // Countdown function for project submission - starts immediately when modal opens
+            function startSubmissionCountdown(onEnable) {
+              // Wait for modal to be fully rendered
+              setTimeout(() => {
+                const confirmButton = document.querySelector('.modal-button-primary');
+                if (!confirmButton) return;
+                
+                let countdown = 10;
+                confirmButton.disabled = true;
+                confirmButton.style.opacity = '0.6';
+                confirmButton.style.cursor = 'not-allowed';
+                confirmButton.textContent = countdown.toString();
+                
+                const countdownInterval = setInterval(() => {
+                  countdown--;
+                  if (countdown > 0) {
+                    confirmButton.textContent = countdown.toString();
+                  } else {
+                    clearInterval(countdownInterval);
+                    confirmButton.textContent = 'Confirm';
+                    confirmButton.disabled = false;
+                    confirmButton.style.opacity = '1';
+                    confirmButton.style.cursor = 'pointer';
+                    if (onEnable) onEnable();
+                  }
+                }, 1000);
+              }, 100);
+            }
+
             // Project submission checklist function
            function showProjectSubmissionChecklist() {
              // Get project data
@@ -707,79 +755,96 @@
              projectData.hackatimeProjects && projectData.hackatimeProjects.length > 0 &&
               (isPreparationPhase || projectData.weekHours >= 10 || projectData.hasBypassFlag);
              
+             // Create submission function that will be called after countdown
+             let submissionFunction = null;
+             if (canSubmit) {
+              submissionFunction = () => {
+                // Submit project immediately (countdown already completed)
+              const confirmButton = document.querySelector('.modal-button-primary');
+              if (confirmButton) {
+                confirmButton.textContent = 'Submitting...';
+              confirmButton.disabled = true;
+              confirmButton.style.opacity = '0.5';
+             }
+              
+              const isUpdate = window.projectUpdateFlag || false;
+              
+              fetch('<%= submit_project_path(@project) %>', {
+              method: 'POST',
+              headers: {
+                  'Content-Type': 'application/json',
+              'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+             },
+              body: JSON.stringify({
+                is_update: isUpdate
+             })
+              })
+              .then(response => {
+                if (response.ok) {
+                hideModal();
+             window.location.reload();
+                } else {
+                  throw new Error('Failed to submit project');
+              }
+             })
+             .catch(error => {
+                console.error('Error:', error);
+                showModalAlert('Failed to submit project. Please try again.', 'Error');
+              });
+             };
+             }
+
              // Show the checklist modal
              showModalChecklist(
              'Project Submission Checklist',
              checklistItems,
-             canSubmit ? () => {
-             // Submit project with update flag
-             const isUpdate = window.projectUpdateFlag || false;
+             submissionFunction,
+             () => {
+               // Cancel action
+             hideModal();
+             }
+             );
              
-             fetch('<%= submit_project_path(@project) %>', {
-             method: 'POST',
-             headers: {
-                 'Content-Type': 'application/json',
-                 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
-             },
-             body: JSON.stringify({
-               is_update: isUpdate
-             })
-             })
-             .then(response => {
-               if (response.ok) {
-               window.location.reload();
-             } else {
-                 throw new Error('Failed to submit project');
+             // Start countdown immediately when modal opens
+             if (canSubmit) {
+               startSubmissionCountdown(() => {
+                 // Enable the confirm button to call submissionFunction
+                 const confirmButton = document.querySelector('.modal-button-primary');
+                 if (confirmButton) {
+                   confirmButton.onclick = (e) => {
+                     e.preventDefault();
+                     submissionFunction();
+                   };
                  }
-               })
-             .catch(error => {
-               console.error('Error:', error);
-                 showModalAlert('Failed to submit project. Please try again.', 'Error');
-                 });
-                } : null,
-                () => {
-                  // Cancel action
-                  hideModal();
-                }
-              );
+               });
+             }
              
              // Update checklist display after demo URL check
              function updateChecklistDisplay() {
-             showModalChecklist(
-             'Project Submission Checklist',
-             checklistItems,
-             canSubmit ? () => {
-             // Submit project with update flag
-             const isUpdate = window.projectUpdateFlag || false;
+               showModalChecklist(
+               'Project Submission Checklist',
+               checklistItems,
+               submissionFunction,
+             () => {
+               // Cancel action
+               hideModal();
+             }
+             );
              
-             fetch('<%= submit_project_path(@project) %>', {
-             method: 'POST',
-             headers: {
-                 'Content-Type': 'application/json',
-                 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
-             },
-             body: JSON.stringify({
-               is_update: isUpdate
-             })
-             })
-             .then(response => {
-               if (response.ok) {
-               window.location.reload();
-             } else {
-                 throw new Error('Failed to submit project');
+             // Restart countdown when checklist is updated
+             if (canSubmit) {
+               startSubmissionCountdown(() => {
+                 // Enable the confirm button to call submissionFunction
+                 const confirmButton = document.querySelector('.modal-button-primary');
+                 if (confirmButton) {
+                   confirmButton.onclick = (e) => {
+                 e.preventDefault();
+                 submissionFunction();
+                   };
                  }
-               })
-             .catch(error => {
-               console.error('Error:', error);
-                 showModalAlert('Failed to submit project. Please try again.', 'Error');
-                 });
-                 } : null,
-                  () => {
-                    // Cancel action
-                    hideModal();
-                  }
-                );
-              }
+             });
+             }
+             }
            }
 
            // Update project created date function

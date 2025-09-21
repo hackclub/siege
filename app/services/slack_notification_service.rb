@@ -5,15 +5,7 @@ class SlackNotificationService
     @client = Slack::Web::Client.new(token: Rails.application.credentials.slack[:bot_token])
   end
 
-  def send_stonemason_feedback_notification(project)
-    return unless project.stonemason_feedback.present? && project.user.slack_id.present?
 
-    message = "A stonemason checked out your #{project.name} project and there were a few cracks in the walls. Here's what they said: #{project.stonemason_feedback}"
-
-    send_direct_message(project.user.slack_id, message)
-  rescue => e
-    Rails.logger.error "Failed to send stonemason feedback notification for project #{project.id}: #{e.message}"
-  end
 
   def send_reviewer_feedback_notification(project)
     return unless project.reviewer_feedback.present? && project.user.slack_id.present?
@@ -26,14 +18,45 @@ class SlackNotificationService
     Rails.logger.error "Failed to send reviewer feedback notification for project #{project.id}: #{e.message}"
   end
 
-  def send_pending_voting_notification(project)
+  def send_review_notification(project, review_status, feedback_changed, video_changed = false, reviewer = nil, include_reviewer_handle = false)
     return unless project.user.slack_id.present?
-
-    message = "The diplomats have been sent out to preach about #{project.name}! They should be back in a few days to report how it went..."
-
-    send_direct_message(project.user.slack_id, message)
+    
+    # Get reviewer handle for mention if requested
+    reviewer_mention = "A stonemason"
+    if include_reviewer_handle && reviewer&.slack_id.present?
+      reviewer_mention = "<@#{reviewer.slack_id}>"
+    end
+    
+    # Check if there's video content
+    video_text = video_changed && project.reviewer_video.attached? ? " 📹 They also left you a video review!" : ""
+    
+    case review_status
+    when "reject"
+      # Always send cracks in wall message for rejections
+      message = "#{reviewer_mention} checked out your #{project.name} project and there were a few cracks in the walls. Here's what they said: #{project.stonemason_feedback}#{video_text}"
+      send_direct_message(project.user.slack_id, message)
+    when "add_comment"
+      # Only send message if feedback was updated or video was added
+      if (feedback_changed && project.stonemason_feedback.present?) || video_changed
+        feedback_part = project.stonemason_feedback.present? ? ": #{project.stonemason_feedback}" : ""
+        message = "#{reviewer_mention} checked out your #{project.name} project#{feedback_part}#{video_text}"
+        send_direct_message(project.user.slack_id, message)
+      end
+    when "accept"
+      # Send approval message - with feedback if updated, generic if not
+      if feedback_changed && project.stonemason_feedback.present?
+        message = "Great news! #{reviewer_mention} approved your #{project.name} project! Here's what they said: #{project.stonemason_feedback}#{video_text}"
+      else
+        message = "Great news! #{reviewer_mention} approved your #{project.name} project!#{video_text}"
+      end
+      send_direct_message(project.user.slack_id, message)
+      
+      # Also send pending voting notification for approved projects
+      message = "The diplomats have been sent out to preach about #{project.name}! They should be back in a few days to report how it went..."
+      send_direct_message(project.user.slack_id, message)
+    end
   rescue => e
-    Rails.logger.error "Failed to send pending voting notification for project #{project.id}: #{e.message}"
+    Rails.logger.error "Failed to send review notification for project #{project.id}: #{e.message}"
   end
 
   def handle_reply_message(user_slack_id, reply_text)

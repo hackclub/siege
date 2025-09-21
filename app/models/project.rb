@@ -2,6 +2,7 @@ class Project < ApplicationRecord
   belongs_to :user
   has_many :votes, dependent: :destroy
   has_one_attached :screenshot
+  has_one_attached :reviewer_video
 
   before_create :set_time_override_from_flipper
   after_initialize :set_time_override_from_flipper, if: :new_record?
@@ -19,6 +20,7 @@ class Project < ApplicationRecord
   validate :repo_url_must_be_github
   validate :screenshot_must_be_image
   validate :screenshot_file_exists, if: -> { screenshot.attached? && !@skip_screenshot_validation && persisted? }
+  validate :reviewer_video_must_be_video, if: -> { reviewer_video.attached? }
 
   # Scopes for handling hidden projects
   scope :visible, -> { where(hidden: false) }
@@ -218,11 +220,6 @@ class Project < ApplicationRecord
         "message" => message.presence
       }
     )
-
-    # Send Slack notification for pending_voting status
-    if new_status == "pending_voting"
-      SlackNotificationService.new.send_pending_voting_notification(self)
-    end
   end
 
   # Update fraud status with logging
@@ -367,6 +364,14 @@ class Project < ApplicationRecord
       Rails.logger.error "Screenshot file missing for project #{id}: #{screenshot.blob.key} - Blob created: #{screenshot.blob.created_at}, Attachment created: #{screenshot.attachment.created_at}"
       Rails.logger.error "Storage service: #{screenshot.blob.service.class.name}, Root: #{screenshot.blob.service.root if screenshot.blob.service.respond_to?(:root)}"
       errors.add(:screenshot, "file is missing from storage")
+    end
+  end
+
+  def reviewer_video_must_be_video
+    return unless reviewer_video.attached?
+
+    unless reviewer_video.content_type.start_with?("video/")
+      errors.add(:reviewer_video, "must be a video file")
     end
   end
 

@@ -1,6 +1,6 @@
 class ReviewController < ApplicationController
   before_action :require_review_access
-  before_action :set_project, only: [ :show, :update_status ]
+  before_action :set_project, only: [ :show, :update_status, :submit_review, :remove_video ]
 
   def index
     @projects = Project.visible_to_user(current_user).includes(:user)
@@ -92,45 +92,134 @@ class ReviewController < ApplicationController
     end
   end
 
-  def update_stonemason_feedback
-    @project = Project.find(params[:id])
+  def submit_review
+    review_status = params[:review_status]
+    private_notes = params[:private_notes]
+    stonemason_feedback = params[:stonemason_feedback]
+    reviewer_video = params[:reviewer_video]
+    include_reviewer_handle = params[:include_reviewer_handle] == true || params[:include_reviewer_handle] == "true"
     
-    # Check if project is hidden and user is not super admin
-    if @project.hidden? && !current_user&.super_admin?
-      render json: { success: false, error: "Project not found" }
+    unless %w[accept reject add_comment].include?(review_status)
+      render json: { success: false, error: "Invalid review status" }
       return
     end
     
-    stonemason_feedback = params[:stonemason_feedback]
+    # Store old feedback and video to check for changes
+    old_feedback = @project.stonemason_feedback
+    old_video_attached = @project.reviewer_video.attached?
+    feedback_changed = old_feedback != stonemason_feedback
+    video_changed = reviewer_video.present?
     
-    # Skip screenshot validation when updating stonemason feedback
+    # Determine new project status based on review status
+    new_project_status = case review_status
+    when "accept"
+      "pending_voting"
+    when "reject"
+      "building"
+    when "add_comment"
+      @project.status # Keep current status
+    end
+    
+    # Skip screenshot validation
     @project.skip_screenshot_validation!
     
-    if @project.update(stonemason_feedback: stonemason_feedback)
-      # Add audit log entry for stonemason feedback
-      @project.user.add_audit_log(
-        action: "Stonemason feedback updated",
-        actor: current_user,
-        details: {
-          "project_name" => @project.name,
-          "project_id" => @project.id,
-          "stonemason_feedback" => stonemason_feedback
-        }
-      )
+    begin
+      # Update stonemason feedback
+      @project.update!(stonemason_feedback: stonemason_feedback)
       
-      # Send Slack notification
-      SlackNotificationService.new.send_stonemason_feedback_notification(@project)
+      # Attach video if provided
+      if reviewer_video.present?
+        @project.reviewer_video.attach(reviewer_video)
+      end
+      
+      # Update project status if needed
+      if new_project_status != @project.status
+        @project.update_status!(new_project_status, current_user, private_notes)
+      else
+        # If status isn't changing but we have private notes, add them to logs
+        if private_notes.present?
+          log_entry = {
+            timestamp: Time.current.iso8601,
+            old_status: @project.status,
+            new_status: @project.status,
+            reviewer_id: current_user.id,
+            reviewer_name: current_user.name,
+            message: private_notes
+          }
+          
+          new_logs = @project.logs + [ log_entry ]
+          @project.update!(logs: new_logs)
+          
+          # Add audit log entry
+          @project.user.add_audit_log(
+            action: "Project review comment added",
+            actor: current_user,
+            details: {
+              "project_name" => @project.name,
+              "project_id" => @project.id,
+              "message" => private_notes
+            }
+          )
+        end
+      end
+      
+      # Add audit log entry for stonemason feedback if it was updated
+      if feedback_changed || video_changed
+        @project.user.add_audit_log(
+          action: "Review content updated",
+          actor: current_user,
+          details: {
+            "project_name" => @project.name,
+            "project_id" => @project.id,
+            "stonemason_feedback" => stonemason_feedback,
+            "video_attached" => reviewer_video.present?,
+            "feedback_changed" => feedback_changed,
+            "video_changed" => video_changed
+          }
+        )
+      end
+      
+      # Send appropriate Slack notification
+      SlackNotificationService.new.send_review_notification(@project, review_status, feedback_changed, video_changed, current_user, include_reviewer_handle)
       
       render json: { 
         success: true, 
-        message: "Stonemason feedback updated for #{@project.user.name}'s project"
+        message: "Review submitted successfully"
       }
-    else
-      render json: { success: false, error: "Failed to update stonemason feedback" }
+    rescue => e
+      render json: { success: false, error: "Error submitting review: #{e.message}" }
     end
-  rescue => e
-    render json: { success: false, error: "Error updating stonemason feedback: #{e.message}" }
   end
+
+  def remove_video
+    unless @project.reviewer_video.attached?
+      render json: { success: false, error: "No video to remove" }
+      return
+    end
+
+    begin
+      # Remove the video attachment
+      @project.reviewer_video.purge
+      
+      # Add audit log entry
+      @project.user.add_audit_log(
+        action: "Reviewer video removed",
+        actor: current_user,
+        details: {
+          "project_name" => @project.name,
+          "project_id" => @project.id
+        }
+      )
+      
+      render json: { 
+        success: true, 
+        message: "Reviewer video removed successfully"
+      }
+    rescue => e
+      render json: { success: false, error: "Error removing video: #{e.message}" }
+    end
+  end
+
 
   private
 

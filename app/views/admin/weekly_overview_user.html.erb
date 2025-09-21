@@ -551,6 +551,23 @@
           <button type="button" onclick="updateReviewerFeedback()" class="submit-button">
             Save Reviewer Feedback
           </button>
+          
+          <!-- Display Existing Review Video if Present -->
+          <% if @project&.reviewer_video&.attached? %>
+            <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 2px solid rgba(217, 119, 6, 0.2);">
+              <h4 style="margin-bottom: 1rem; color: #402b20;">📹 Review Video</h4>
+              <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+                <video controls style="width: 100%; max-height: 300px; border-radius: 6px;">
+                  <source src="<%= url_for(@project.reviewer_video) %>" type="<%= @project.reviewer_video.content_type %>">
+                  Your browser does not support the video tag.
+                </video>
+              </div>
+              <div style="margin-top: 0.75rem; font-size: 0.85rem; color: #6b5b4a;">
+                <strong>Video file:</strong> <%= @project.reviewer_video.filename %> 
+                (<%= number_to_human_size(@project.reviewer_video.byte_size) %>)
+              </div>
+            </div>
+          <% end %>
         </div>
       </div>
 

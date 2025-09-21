@@ -302,124 +302,156 @@
     </div>
   </div>
 
-  <div class="detail-grid">
-    <!-- Project Details -->
-    <div class="detail-section">
-      <h2 class="section-title">Project Information</h2>
-      
+  <!-- Project Details -->
+  <div class="detail-section" style="margin-bottom: 2rem;">
+    <h2 class="section-title">Project Information</h2>
+    
+    <div class="detail-field">
+      <span class="detail-label">Description</span>
+      <div class="detail-value"><%= @project.description.presence || "No description provided" %></div>
+    </div>
+    
+    <div class="detail-field">
+      <span class="detail-label">Current Status</span>
+      <span class="status-badge status-<%= @project.status %>">
+        <%= @project.status.capitalize %>
+      </span>
+    </div>
+    
+    <% if @project.is_update %>
       <div class="detail-field">
-        <span class="detail-label">Description</span>
-        <div class="detail-value"><%= @project.description.presence || "No description provided" %></div>
-      </div>
-      
-      <div class="detail-field">
-        <span class="detail-label">Current Status</span>
-        <span class="status-badge status-<%= @project.status %>">
-          <%= @project.status.capitalize %>
+        <span class="detail-label">Project Type</span>
+        <span class="status-badge" style="background-color: #fbbf24; color: #92400e;">
+          Update
         </span>
       </div>
-      
-      <% if @project.is_update %>
-        <div class="detail-field">
-          <span class="detail-label">Project Type</span>
-          <span class="status-badge" style="background-color: #fbbf24; color: #92400e;">
-            Update
-          </span>
-        </div>
-      <% end %>
-      
-      <div class="detail-field">
-        <span class="detail-label">ELO Rating</span>
-        <div class="detail-value"><%= @project.elo || "Not rated" %></div>
-      </div>
-      
-      <div class="detail-field">
-        <span class="detail-label">Links</span>
-        <div class="project-links">
-          <% if @project.repo_url.present? %>
-            <%= link_to "Repository", @project.repo_url, target: "_blank", class: "project-link" %>
-          <% else %>
-            <span class="project-link disabled">No Repository</span>
-          <% end %>
-          
-          <% if @project.demo_url.present? %>
-            <%= link_to "Demo", @project.demo_url, target: "_blank", class: "project-link" %>
-          <% else %>
-            <span class="project-link disabled">No Demo</span>
-          <% end %>
-        </div>
-      </div>
-      
-      <% if @project.hackatime_projects.present? && @project.hackatime_projects.any? %>
-        <div class="detail-field">
-          <span class="detail-label">Hackatime Projects</span>
-          <div class="hackatime-projects">
-            <% @project.hackatime_projects.each do |hackatime_project| %>
-              <span class="hackatime-project"><%= hackatime_project %></span>
-            <% end %>
-          </div>
-        </div>
-        
-        <% total_seconds = project_total_hackatime_time(@project) %>
-        <% if total_seconds > 0 %>
-          <div class="detail-field">
-            <span class="detail-label">Total Hackatime</span>
-            <div class="detail-value hackatime-total">
-              <span class="hackatime-time"><%= format_time_from_seconds(total_seconds) %></span>
-            </div>
-          </div>
+    <% end %>
+    
+    <div class="detail-field">
+      <span class="detail-label">ELO Rating</span>
+      <div class="detail-value"><%= @project.elo || "Not rated" %></div>
+    </div>
+    
+    <div class="detail-field">
+      <span class="detail-label">Links</span>
+      <div class="project-links">
+        <% if @project.repo_url.present? %>
+          <%= link_to "Repository", @project.repo_url, target: "_blank", class: "project-link" %>
+        <% else %>
+          <span class="project-link disabled">No Repository</span>
         <% end %>
-      <% end %>
+        
+        <% if @project.demo_url.present? %>
+          <%= link_to "Demo", @project.demo_url, target: "_blank", class: "project-link" %>
+        <% else %>
+          <span class="project-link disabled">No Demo</span>
+        <% end %>
+      </div>
     </div>
-
-    <!-- Status Update Panel -->
-    <div class="detail-section">
-      <h2 class="section-title">Update Status</h2>
+    
+    <% if @project.hackatime_projects.present? && @project.hackatime_projects.any? %>
+      <div class="detail-field">
+        <span class="detail-label">Hackatime Projects</span>
+        <div class="hackatime-projects">
+          <% @project.hackatime_projects.each do |hackatime_project| %>
+            <span class="hackatime-project"><%= hackatime_project %></span>
+          <% end %>
+        </div>
+      </div>
       
-      <%= form_with url: review_project_status_path(@project), method: :patch, local: true, class: "status-update-form" do |form| %>
-        <div class="form-group">
-          <%= form.label :new_status, "New Status", class: "form-label" %>
-          <%= form.select :new_status, 
-              options_for_select([
-                ['Building', 'building'],
-                ['Submitted', 'submitted'],
-                ['Pending Voting', 'pending_voting'], 
-                ['Finished', 'finished']
-              ], 'pending_voting'),
-              { prompt: "Select new status" },
-              { class: "form-select", required: true } %>
+      <% total_seconds = project_total_hackatime_time(@project) %>
+      <% if total_seconds > 0 %>
+        <div class="detail-field">
+          <span class="detail-label">Total Hackatime</span>
+          <div class="detail-value hackatime-total">
+            <span class="hackatime-time"><%= format_time_from_seconds(total_seconds) %></span>
+          </div>
         </div>
-        
-        <div class="form-group">
-          <%= form.label :message, "Review Notes (Optional)", class: "form-label" %>
-          <%= form.text_area :message, 
-              placeholder: "Add any notes about this status change...",
-              class: "form-textarea" %>
-        </div>
-        
-        <%= form.submit "Update Status", class: "form-button" %>
       <% end %>
-    </div>
+    <% end %>
   </div>
 
-  <!-- Stonemason Feedback Section -->
+  <!-- Review Section -->
   <div class="detail-section">
-    <div class="section-content">
-      <h2 class="section-title">Stonemason Feedback</h2>
-      <p class="stonemason-feedback-description">
-        Add feedback for the project creator. This will be visible to them while the project is in "building" status.
-      </p>
-
+    <h2 class="section-title">Review</h2>
+    
+    <div class="review-form" id="review-form">
       <div class="form-group">
-        <label class="form-label">Feedback for <%= @project.user.name %>:</label>
-        <textarea id="stonemason-feedback" class="form-textarea stonemason-feedback-textarea" placeholder="Add feedback for the project creator..."><%= @project.stonemason_feedback %></textarea>
+        <label class="form-label">Review Status</label>
+        <select id="review-status" class="form-select" required>
+          <option value="">Select review action</option>
+          <option value="accept">Accept</option>
+          <option value="reject">Reject</option>
+          <option value="add_comment">Add Comment</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">Private Notes (Optional)</label>
+        <textarea id="private-notes" class="form-textarea" 
+                  placeholder="Add any private notes about this review..."></textarea>
         <small class="stonemason-feedback-help">
-          This feedback will be shown to the user only when the project status is "building".
+          These notes will be logged in the review history but not shared with the user.
+        </small>
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">Public Feedback for <%= @project.user.name %></label>
+        <textarea id="stonemason-feedback" class="form-textarea stonemason-feedback-textarea" 
+                  placeholder="Add feedback for the project creator..."><%= @project.stonemason_feedback %></textarea>
+        <small class="stonemason-feedback-help">
+          This feedback will be visible to the user and may trigger a Slack notification.
         </small>
       </div>
 
-      <button type="button" onclick="updateStonemasonFeedback()" class="form-button">
-        Save Stonemason Feedback
+      <div class="form-group">
+        <label class="form-label">Review Video (Optional)</label>
+        <input type="file" id="reviewer-video-file" accept="video/*" class="form-textarea" 
+               onchange="previewVideoFile()">
+        <small class="stonemason-feedback-help">
+          Upload a video file to provide visual feedback to the project creator. Supported formats: MP4, WebM, MOV, etc.
+        </small>
+        
+        <!-- Show existing video if present -->
+        <% if @project.reviewer_video.attached? %>
+          <div id="current-video-container" style="margin-top: 1rem; padding: 1rem; background: #f0f9ff; border: 1px solid #0284c7; border-radius: 8px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+              <div style="font-weight: 600; color: #0284c7;">Current Video:</div>
+              <button type="button" onclick="removeCurrentVideo()" style="background: #dc2626; color: white; border: none; padding: 0.25rem 0.75rem; border-radius: 4px; font-size: 0.8rem; cursor: pointer;" title="Remove current video">
+                🗑️ Remove
+              </button>
+            </div>
+            <video controls style="width: 100%; max-height: 250px; border-radius: 6px;">
+              <source src="<%= url_for(@project.reviewer_video) %>" type="<%= @project.reviewer_video.content_type %>">
+              Your browser does not support the video tag.
+            </video>
+            <div style="margin-top: 0.5rem; font-size: 0.85rem; color: #374151;">
+              <strong>Current file:</strong> <%= @project.reviewer_video.filename %> 
+              (<%= number_to_human_size(@project.reviewer_video.byte_size) %>)
+            </div>
+          </div>
+        <% end %>
+        
+        <div id="video-preview" style="margin-top: 1rem; display: none;">
+          <div style="font-weight: 600; margin-bottom: 0.5rem; color: #402b20;">New Video Preview:</div>
+          <div id="video-embed" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem;">
+            <!-- Video preview will be inserted here -->
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" style="display: flex; align-items: center; gap: 0.5rem; font-weight: normal; cursor: pointer;">
+          <input type="checkbox" id="include-reviewer-handle" style="margin: 0;">
+          Include my Slack @ in the notification
+        </label>
+        <small class="stonemason-feedback-help">
+          When checked, your Slack handle will be included in the message sent to the user.
+        </small>
+      </div>
+
+      <button type="button" onclick="submitReview()" class="form-button">
+        Submit Review
       </button>
     </div>
   </div>
@@ -458,30 +490,116 @@
 </div>
 
 <script>
-function updateStonemasonFeedback() {
-  const feedback = document.getElementById('stonemason-feedback').value;
+function previewVideoFile() {
+  const fileInput = document.getElementById('reviewer-video-file');
+  const previewDiv = document.getElementById('video-preview');
+  const embedDiv = document.getElementById('video-embed');
   
-  fetch('<%= review_update_stonemason_feedback_path(@project) %>', {
-    method: 'POST',
+  const file = fileInput.files[0];
+  if (!file) {
+    previewDiv.style.display = 'none';
+    return;
+  }
+  
+  // Check if it's a video file
+  if (!file.type.startsWith('video/')) {
+    embedDiv.innerHTML = `<div style="color: #dc2626;">❌ Please select a video file.</div>`;
+    previewDiv.style.display = 'block';
+    return;
+  }
+  
+  // Show preview container
+  previewDiv.style.display = 'block';
+  
+  // Create video preview
+  const videoURL = URL.createObjectURL(file);
+  const fileSize = (file.size / (1024 * 1024)).toFixed(2); // Convert to MB
+  
+  embedDiv.innerHTML = `
+    <video controls style="width: 100%; max-height: 250px; border-radius: 6px;">
+      <source src="${videoURL}" type="${file.type}">
+      Your browser does not support the video tag.
+    </video>
+    <div style="margin-top: 0.5rem; font-size: 0.85rem; color: #374151;">
+      <strong>File:</strong> ${file.name} (${fileSize} MB)
+    </div>
+  `;
+}
+
+function removeCurrentVideo() {
+  if (!confirm('Are you sure you want to remove the current video? This action cannot be undone.')) {
+    return;
+  }
+  
+  fetch('<%= review_remove_video_path(@project) %>', {
+    method: 'DELETE',
     headers: {
-      'Content-Type': 'application/json',
       'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
-    },
-    body: JSON.stringify({ 
-      stonemason_feedback: feedback
-    })
+    }
   })
   .then(response => response.json())
   .then(data => {
     if (data.success) {
-      alert('Stonemason feedback updated successfully!');
+      // Hide the current video container
+      const container = document.getElementById('current-video-container');
+      if (container) {
+        container.style.display = 'none';
+      }
+      alert('Video removed successfully!');
     } else {
-      alert('Error updating stonemason feedback: ' + (data.error || 'Unknown error'));
+      alert('Error removing video: ' + (data.error || 'Unknown error'));
     }
   })
   .catch(error => {
     console.error('Error:', error);
-    alert('Error updating stonemason feedback. Please try again.');
+    alert('Error removing video. Please try again.');
   });
 }
+
+function submitReview() {
+  const reviewStatus = document.getElementById('review-status').value;
+  const privateNotes = document.getElementById('private-notes').value;
+  const publicFeedback = document.getElementById('stonemason-feedback').value;
+  const videoFile = document.getElementById('reviewer-video-file').files[0];
+  const includeReviewerHandle = document.getElementById('include-reviewer-handle').checked;
+  
+  if (!reviewStatus) {
+    alert('Please select a review status');
+    return;
+  }
+  
+  // Use FormData to handle file uploads
+  const formData = new FormData();
+  formData.append('review_status', reviewStatus);
+  formData.append('private_notes', privateNotes);
+  formData.append('stonemason_feedback', publicFeedback);
+  formData.append('include_reviewer_handle', includeReviewerHandle);
+  
+  if (videoFile) {
+    formData.append('reviewer_video', videoFile);
+  }
+  
+  fetch('<%= review_submit_review_path(@project) %>', {
+    method: 'POST',
+    headers: {
+      'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+    },
+    body: formData
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      alert('Review submitted successfully!');
+      location.reload();
+    } else {
+      alert('Error submitting review: ' + (data.error || 'Unknown error'));
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    alert('Error submitting review. Please try again.');
+  });
+}
+
+// No need to initialize video preview on page load since we show existing videos directly in the form
 </script>

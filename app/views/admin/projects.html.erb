@@ -486,6 +486,11 @@
               <span class="airtable-status <%= project.in_airtable? ? 'in-airtable' : 'not-in-airtable' %>">
                 <%= project.in_airtable? ? 'In Airtable' : 'Not Synced' %>
               </span>
+              <% if project.reviewer_video.attached? %>
+                <span style="background: #8b5cf6; color: white; padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.75rem; font-weight: 500;" title="Has review video">
+                  📹 Video
+                </span>
+              <% end %>
             </div>
           </div>
 
