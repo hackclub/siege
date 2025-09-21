@@ -170,7 +170,7 @@
         </div>
       <% end %>
 
-      <% if @project.reviewer_video.attached? && (@project.user == current_user || can_access_admin?) %>
+      <% if @project.reviewer_video.attached? && (@project.user == current_user || can_access_admin?) && (@project.building? || @project.submitted?) %>
         <div class="reviewer-feedback-container" style="margin-top: 1.5rem;">
           <h3 class="reviewer-feedback-title">
           	Review Video
