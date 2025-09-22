@@ -826,13 +826,15 @@ class AdminController < ApplicationController
 
       # Apply fraud status filter (only available to fraud team members)
       if current_user&.can_access_fraud_dashboard?
-        @fraud_status_filter = params[:fraud_status].present? ? params[:fraud_status] : "good"
+        @fraud_status_filter = params[:fraud_status].present? ? params[:fraud_status] : "good_and_unchecked"
         fraud_status_filter = @fraud_status_filter
 
         @user_data = @user_data.select do |user_id, data|
           case fraud_status_filter
           when "unchecked", "sus", "fraud", "good"
             data[:project]&.fraud_status == fraud_status_filter
+          when "good_and_unchecked"
+            data[:project]&.fraud_status.in?(["good", "unchecked"])
           when "all"
             true
           else

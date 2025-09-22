@@ -339,6 +339,7 @@
           <%= form.select :fraud_status,
               options_for_select([
                 ['All Fraud Statuses', ''],
+                ['Good & Unchecked (Default)', 'good_and_unchecked'],
                 ['Unchecked', 'unchecked'],
                 ['Suspicious', 'sus'],
                 ['Confirmed Fraud', 'fraud'],
@@ -361,7 +362,7 @@
           is_non_default_week = params[:week].present? && params[:week].to_i != previous_week
           is_non_default_user_status = params[:user_status].present? && params[:user_status] != 'all'
           is_non_default_status = params[:status].present? && params[:status] != 'pending_voting'
-          is_non_default_fraud = current_user&.can_access_fraud_dashboard? && params[:fraud_status].present? && params[:fraud_status] != 'good'
+          is_non_default_fraud = current_user&.can_access_fraud_dashboard? && params[:fraud_status].present? && params[:fraud_status] != 'good_and_unchecked'
           is_non_default_hidden = params[:show_hidden] == "1"
         %>
         <% if is_non_default_week || is_non_default_user_status || is_non_default_status || is_non_default_fraud || is_non_default_hidden %>

@@ -480,12 +480,12 @@
             <label class="filter-label">Fraud Status</label>
             <%= form.select :fraud_status, 
                 options_for_select([
-                  ['Unchecked (Default)', 'unchecked'],
-                  ['Suspicious', 'sus'],
+                  ['Unchecked', 'unchecked'],
+                  ['Suspicious (Default)', 'sus'],
                   ['Confirmed Fraud', 'fraud'],
                   ['Good/Verified', 'good'],
                   ['All Statuses', 'all']
-                ], params[:fraud_status] || 'unchecked'),
+                ], params[:fraud_status] || 'sus'),
                 {}, 
                 { class: "filter-select" } %>
           </div>

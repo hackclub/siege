@@ -275,15 +275,15 @@
      }
      
     .fraud-link {
-      display: inline-block;
-      padding: 0.5rem 1rem;
-      background: #6366f1;
-      color: white;
-      text-decoration: none;
-      border-radius: 6px;
-      font-size: 0.9rem;
-      font-weight: 500;
-      transition: all 0.2s ease;
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    background: #6366f1;
+    color: white;
+    text-decoration: none;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
     }
     
     .fraud-link:hover {
@@ -292,6 +292,26 @@
     text-decoration: none;
     transform: translateY(-1px);
     }
+
+     .slack-dm-button {
+       background: #4A154B;
+       color: white;
+       padding: 0.5rem 1rem;
+       border-radius: 6px;
+       text-decoration: none;
+       font-size: 0.9rem;
+       font-weight: 500;
+       transition: background-color 0.2s ease;
+       display: inline-flex;
+       align-items: center;
+       gap: 0.5rem;
+     }
+     
+     .slack-dm-button:hover {
+       background: #3A0F3A;
+       color: white;
+       text-decoration: none;
+     }
      
      .reviewer-feedback-section {
        margin-top: 2rem;
@@ -323,8 +343,20 @@
   <% end %>
 
   <div class="page-header">
-    <h1 class="page-title"><%= @user.name %></h1>
-    <p class="page-subtitle">Week <%= @selected_week %> Details</p>
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 2rem;">
+      <div>
+        <h1 class="page-title"><%= @user.name %></h1>
+        <p class="page-subtitle">Week <%= @selected_week %> Details</p>
+      </div>
+      <% if @user.slack_id.present? %>
+        <a href="https://app.slack.com/client/T0266FRGM/D0266FRGM/user_profile/<%= @user.slack_id %>" 
+           target="_blank" 
+           class="slack-dm-button"
+           title="Open Slack DM with <%= @user.name %>">
+          💬 DM in Slack
+        </a>
+      <% end %>
+    </div>
   </div>
 
   <% if @project %>
@@ -506,152 +538,175 @@
     <!-- Admin Panels Grid -->
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 2rem;">
       
-      <!-- Admin Review Panel -->
+      <!-- Panel 1: Review & Airtable Submission -->
       <div class="review-panel">
         <% if @submitted_to_airtable %>
           <div class="submitted-notice">
             ✓ This project has already been submitted to Airtable
           </div>
         <% else %>
-          <h2 class="card-title">Admin Review Panel</h2>
+          <h2 class="card-title">Review & Airtable Submission</h2>
           <p style="color: #6b5b4a; margin-bottom: 1.5rem;">
-            Review this project and submit it to Airtable with optional hour override and comments.
-          </p>
-
-          <%= form_with url: admin_submit_to_airtable_path(@selected_week, @user.id), method: :post, local: true do |form| %>
-            <div class="form-group">
-              <%= form.label :hour_override, "Hour Override (optional):", class: "form-label" %>
-              <%= form.number_field :hour_override, step: "any", min: 0, value: @raw_hours, placeholder: "Leave blank for no override", class: "form-input" %>
-            </div>
-
-            <div class="form-group">
-              <%= form.label :justification, "Justification/Comments:", class: "form-label" %>
-              <%= form.text_area :justification, placeholder: "Add any comments or justification for this submission...", class: "form-textarea" %>
-            </div>
-
-            <%= form.submit "Submit to Airtable", class: "submit-button" %>
-          <% end %>
-        <% end %>
-
-        <!-- Reviewer Feedback Section -->
-        <div class="reviewer-feedback-section">
-          <h3 class="card-title">Reviewer Feedback</h3>
-          <p class="reviewer-feedback-description">
-            Add feedback for the project creator. This will only be visible to them once the project is finished.
+            Complete the review and submit to Airtable in one action.
           </p>
 
           <div class="form-group">
-            <label class="form-label">Feedback for <%= @user.name %>:</label>
+            <label class="form-label">Hour Override (optional):</label>
+            <input type="number" id="hour-override" step="any" min="0" value="<%= @raw_hours %>" placeholder="Leave blank for no override" class="form-input">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Airtable Comments:</label>
+            <textarea id="airtable-comments" class="form-textarea" placeholder="Add any comments or justification for this submission..."></textarea>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Reviewer Feedback for <%= @user.name %>:</label>
             <textarea id="reviewer-feedback" class="form-textarea reviewer-feedback-textarea" placeholder="Add feedback for the project creator..."><%= @project.reviewer_feedback %></textarea>
             <small class="reviewer-feedback-help">
               This feedback will be shown to the user only when the project status is "finished".
             </small>
           </div>
 
-          <button type="button" onclick="updateReviewerFeedback()" class="submit-button">
-            Save Reviewer Feedback
+          <div class="form-group">
+            <label class="form-label">Reviewer Multiplier:</label>
+            <input type="number" id="reviewer-multiplier" value="<%= @project&.reviewer_multiplier || 2.0 %>" min="0" step="0.1" class="form-input" placeholder="Reviewer multiplier (default: 2)" oninput="updateSuggestedCoins()">
+            <small class="reviewer-feedback-help">
+              This multiplier affects the suggested coin calculation.
+            </small>
+          </div>
+
+          <button type="button" onclick="submitReviewAndAirtable()" class="submit-button" style="width: 100%; padding: 1rem; font-size: 1rem; font-weight: 600;">
+            Save Review & Submit to Airtable
           </button>
-          
-          <!-- Display Existing Review Video if Present -->
-          <% if @project&.reviewer_video&.attached? %>
-            <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 2px solid rgba(217, 119, 6, 0.2);">
-              <h4 style="margin-bottom: 1rem; color: #402b20;">📹 Review Video</h4>
-              <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
-                <video controls style="width: 100%; max-height: 300px; border-radius: 6px;">
-                  <source src="<%= url_for(@project.reviewer_video) %>" type="<%= @project.reviewer_video.content_type %>">
-                  Your browser does not support the video tag.
-                </video>
-              </div>
-              <div style="margin-top: 0.75rem; font-size: 0.85rem; color: #6b5b4a;">
-                <strong>Video file:</strong> <%= @project.reviewer_video.filename %> 
-                (<%= number_to_human_size(@project.reviewer_video.byte_size) %>)
-              </div>
+        <% end %>
+        
+        <!-- Display Existing Review Video if Present -->
+        <% if @project&.reviewer_video&.attached? %>
+          <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 2px solid rgba(217, 119, 6, 0.2);">
+            <h4 style="margin-bottom: 1rem; color: #402b20;">📹 Review Video</h4>
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+              <video controls style="width: 100%; max-height: 300px; border-radius: 6px;">
+                <source src="<%= url_for(@project.reviewer_video) %>" type="<%= @project.reviewer_video.content_type %>">
+                Your browser does not support the video tag.
+              </video>
             </div>
-          <% end %>
-        </div>
+            <div style="margin-top: 0.75rem; font-size: 0.85rem; color: #6b5b4a;">
+              <strong>Video file:</strong> <%= @project.reviewer_video.filename %> 
+              (<%= number_to_human_size(@project.reviewer_video.byte_size) %>)
+            </div>
+          </div>
+        <% end %>
       </div>
 
-      <!-- User Management Panel -->
+      <!-- Panel 2: Project Management & Status -->
       <div class="user-management-panel">
-        <h2 class="card-title">User Management</h2>
+        <h2 class="card-title">Project Management & Status</h2>
         <p style="color: #6b5b4a; margin-bottom: 1.5rem;">
-          Manage user coin balance and status.
+          Manage coins, status, and finalize the project.
         </p>
 
+        <!-- Project Statistics -->
         <div class="form-group">
-          <label class="form-label">Reviewer Multiplier:</label>
-          <div style="display: flex; gap: 0.5rem; align-items: center;">
-            <input type="number" id="reviewer-multiplier" value="<%= @project&.reviewer_multiplier || 2.0 %>" min="0" step="0.1" class="form-input" style="flex: 1;" placeholder="Reviewer multiplier (default: 2)" oninput="updateSuggestedCoins()">
-            <button type="button" onclick="saveMultiplier()" class="submit-button" style="white-space: nowrap; background: #059669; font-size: 0.8rem; padding: 0.5rem;">Save Multiplier</button>
-            <button type="button" onclick="resetToCalculated()" class="submit-button" style="white-space: nowrap; background: #6366f1; font-size: 0.8rem; padding: 0.5rem;">Reset</button>
+          <label class="form-label">Project Statistics:</label>
+          <div style="background: #f8fafc; padding: 1rem; border-radius: 8px; border: 1px solid #e2e8f0;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; font-size: 0.9rem;">
+              <div>
+                <strong>User Balance:</strong> <span id="current-user-balance"><%= @user.coins || 0 %></span> coins
+              </div>
+              <div>
+                <strong>Current Project Value:</strong> <span id="current-project-value"><%= @project&.coin_value || 0 %></span> coins
+              </div>
+              <div>
+                <strong>Hours Worked:</strong> <%= @raw_hours %>h
+              </div>
+              <div>
+                <strong>Average Score:</strong> <%= @average_score || 0 %>/5
+              </div>
+              <div>
+                <strong>Multiplier:</strong> <span id="saved-multiplier-display"><%= @project&.reviewer_multiplier || 2.0 %></span>x
+              </div>
+              <div>
+                <strong>Calculated Coins:</strong> <span id="calculated-coins-display"><%= (@suggested_coins * (@project&.reviewer_multiplier || 2.0)).round %></span>
+              </div>
+            </div>
           </div>
-          <small style="color: #6b5b4a; font-size: 0.8rem;">
-            This multiplier affects the suggested coin calculation. Click "Save Multiplier" to store it without adding coins.
-          </small>
         </div>
 
+        <!-- Manual Coin Override -->
         <div class="form-group">
-          <label class="form-label">Add/Remove Coins:</label>
-          <div style="margin-bottom: 1rem;">
-            <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem;">
-              <button type="button" onclick="updateCoins(true)" class="submit-button" style="background: #059669; flex: 1;">Use Calculated Amount</button>
-              <button type="button" onclick="updateCoins(false)" class="submit-button" style="background: #d97706; flex: 1;">Use Manual Amount</button>
-            </div>
-            <div style="display: flex; gap: 0.5rem; align-items: center;">
-              <input type="number" id="coin-balance" value="<%= (@suggested_coins * (@project&.reviewer_multiplier || 2.0)).round %>" class="form-input" style="flex: 1;" placeholder="Enter manual amount" oninput="markAsManuallyEdited()">
-              <span style="color: #6b5b4a; font-size: 0.9rem;">← Manual override</span>
-            </div>
+          <label class="form-label">Coin Award:</label>
+          <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem;">
+            <input type="number" id="coin-balance" value="<%= (@suggested_coins * (@project&.reviewer_multiplier || 2.0)).round %>" class="form-input" style="flex: 1;" placeholder="Enter coin amount" oninput="markAsManuallyEdited()">
+            <button type="button" onclick="resetToCalculated()" class="submit-button" style="background: #6366f1; font-size: 0.8rem; padding: 0.5rem;">Reset to Calculated</button>
           </div>
-          <small style="color: #6b5b4a; font-size: 0.8rem;">
-            <span id="coin-calculation-display">
-              User balance: <span id="current-user-balance"><%= @user.coins || 0 %></span> coins | Project value: <span id="current-project-value"><%= @project&.coin_value || 0 %></span> coins<br>
-              <strong>Calculated amount:</strong> <span id="calculated-coins-display"><%= (@suggested_coins * (@project&.reviewer_multiplier || 2.0)).round %></span> coins 
-              (<%= @raw_hours %>h × <%= @average_score || 0 %> avg score × <span id="saved-multiplier-display"><%= @project&.reviewer_multiplier || 2.0 %></span> saved multiplier)
-            </span>
-          </small>
+          <button type="button" onclick="finalizeProject()" class="submit-button" style="width: 100%; background: #059669; font-weight: 600;">
+            Award Coins & Mark as Finished
+          </button>
         </div>
 
+        <!-- Project Status -->
         <div class="form-group">
           <label class="form-label">Project Status:</label>
-          <div style="display: flex; align-items: center; gap: 0.5rem;">
-            <select id="project-status-select" onchange="updateProjectStatus(this.value)" style="background: white; border: 1px solid #ccc; padding: 4px; border-radius: 4px;">
-              <option value="building" <%= 'selected' if @project&.status == 'building' %>>Building</option>
-              <option value="submitted" <%= 'selected' if @project&.status == 'submitted' %>>Submitted</option>
-              <option value="pending_voting" <%= 'selected' if @project&.status == 'pending_voting' %>>Pending Voting</option>
-              <option value="finished" <%= 'selected' if @project&.status == 'finished' %>>Finished</option>
-            </select>
-            <span style="color: #6b5b4a; font-size: 0.9rem;">
-              Current: <span class="project-status <%= @project&.status %>"><%= @project&.status&.humanize || 'N/A' %></span>
-            </span>
-          </div>
-          <small style="color: #6b5b4a; font-size: 0.8rem;">
-            Projects must be marked as "finished" for users to see reviewer feedback.
+          <select id="project-status-select" onchange="updateProjectStatus(this.value)" class="form-input">
+            <option value="building" <%= 'selected' if @project&.status == 'building' %>>Building</option>
+            <option value="submitted" <%= 'selected' if @project&.status == 'submitted' %>>Submitted</option>
+            <option value="pending_voting" <%= 'selected' if @project&.status == 'pending_voting' %>>Pending Voting</option>
+            <option value="finished" <%= 'selected' if @project&.status == 'finished' %>>Finished</option>
+          </select>
+          <small class="reviewer-feedback-help">
+            Current: <span class="project-status <%= @project&.status %>"><%= @project&.status&.humanize || 'N/A' %></span>
           </small>
         </div>
 
+        <!-- User Status -->
         <div class="form-group">
           <label class="form-label">User Status:</label>
-          <div style="display: flex; align-items: center; gap: 0.5rem;">
-            <select id="status-select" onchange="updateUserStatus(this.value)" style="background: white; border: 1px solid #ccc; padding: 4px; border-radius: 4px;">
-              <option value="working" <%= 'selected' if @user.status == 'working' %>>Working</option>
-              <option value="out" <%= 'selected' if @user.status == 'out' %>>Out</option>
-              <option value="banned" <%= 'selected' if @user.status == 'banned' %>>Banned</option>
-              <option value="new" <%= 'selected' if @user.status == 'new' %>>New</option>
-            </select>
-            <span style="color: #6b5b4a; font-size: 0.9rem;">
-              <%= case @user.status
-                  when 'banned' then 'User is banned'
-                  when 'out' then 'User is marked as out (siege failed)'
-                  when 'working' then 'User is active'
-                  when 'new' then 'User is new (not through welcome)'
-                  else @user.status.humanize
-                  end %>
-            </span>
-          </div>
-          <small style="color: #6b5b4a; font-size: 0.8rem;">
-            When marked as out, users cannot create or submit projects.
+          <select id="status-select" onchange="updateUserStatus(this.value)" class="form-input">
+            <option value="working" <%= 'selected' if @user.status == 'working' %>>Working</option>
+            <option value="out" <%= 'selected' if @user.status == 'out' %>>Out</option>
+            <option value="banned" <%= 'selected' if @user.status == 'banned' %>>Banned</option>
+            <option value="new" <%= 'selected' if @user.status == 'new' %>>New</option>
+          </select>
+          <small class="reviewer-feedback-help">
+            <%= case @user.status
+                when 'banned' then 'User is banned'
+                when 'out' then 'User is marked as out (siege failed)'
+                when 'working' then 'User is active'
+                when 'new' then 'User is new (not through welcome)'
+                else @user.status.humanize
+                end %>
           </small>
         </div>
+
+        <!-- Fraud Status Section -->
+        <% if current_user&.can_access_fraud_dashboard? && @project %>
+          <div class="form-group">
+            <label class="form-label">Fraud Review:</label>
+            <div style="background: #fef7f7; padding: 1rem; border-radius: 8px; border: 1px solid #fecaca;">
+              <div style="margin-bottom: 0.75rem;">
+                <strong>Current Status:</strong> 
+                <span class="fraud-status-badge <%= @project.fraud_status %>" style="padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem; font-weight: 500;">
+                  <%= @project.fraud_status&.humanize || 'Unchecked' %>
+                </span>
+              </div>
+              
+              <div style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem;">
+                <select id="fraud-status-select" class="form-input" style="flex: 1;">
+                  <option value="unchecked" <%= 'selected' if @project.fraud_status == 'unchecked' %>>Unchecked</option>
+                  <option value="sus" <%= 'selected' if @project.fraud_status == 'sus' %>>Suspicious</option>
+                  <option value="fraud" <%= 'selected' if @project.fraud_status == 'fraud' %>>Confirmed Fraud</option>
+                  <option value="good" <%= 'selected' if @project.fraud_status == 'good' %>>Good/Verified</option>
+                </select>
+                <button type="button" onclick="updateFraudStatus()" class="submit-button" style="background: #dc2626; font-size: 0.8rem; padding: 0.5rem;">
+                  Update Fraud Status
+                </button>
+              </div>
+              
+              <textarea id="fraud-reasoning" class="form-textarea" placeholder="Add reasoning for fraud status change..." style="font-size: 0.85rem; min-height: 60px;"><%= @project.fraud_reasoning %></textarea>
+            </div>
+          </div>
+        <% end %>
       </div>
     </div>
 
@@ -859,6 +914,167 @@
           // Revert the toggle if user cancels
           document.getElementById('out-status').checked = !isOut;
         }
+      }
+
+      // New combined functions for refactored panels
+      function submitReviewAndAirtable() {
+        const hourOverride = document.getElementById('hour-override').value;
+        const airtableComments = document.getElementById('airtable-comments').value;
+        const reviewerFeedback = document.getElementById('reviewer-feedback').value;
+        const reviewerMultiplier = document.getElementById('reviewer-multiplier').value;
+
+        if (!confirm('This will save the reviewer feedback, reviewer multiplier, and submit to Airtable. Continue?')) {
+          return;
+        }
+
+        // First save reviewer feedback and multiplier
+        Promise.all([
+          fetch(`<%= admin_update_reviewer_feedback_path(@selected_week, @user.id) %>`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify({ reviewer_feedback: reviewerFeedback })
+          }),
+          fetch(`<%= admin_save_reviewer_multiplier_path(@selected_week, @user.id) %>`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify({ reviewer_multiplier: parseFloat(reviewerMultiplier) })
+          })
+        ])
+        .then(responses => Promise.all(responses.map(r => r.json())))
+        .then(results => {
+          if (results.every(r => r.success)) {
+            // Then submit to Airtable
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '<%= admin_submit_to_airtable_path(@selected_week, @user.id) %>';
+            
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'authenticity_token';
+            csrfInput.value = document.querySelector('meta[name="csrf-token"]').content;
+            form.appendChild(csrfInput);
+            
+            if (hourOverride) {
+              const hourInput = document.createElement('input');
+              hourInput.type = 'hidden';
+              hourInput.name = 'hour_override';
+              hourInput.value = hourOverride;
+              form.appendChild(hourInput);
+            }
+            
+            if (airtableComments) {
+              const commentsInput = document.createElement('input');
+              commentsInput.type = 'hidden';
+              commentsInput.name = 'justification';
+              commentsInput.value = airtableComments;
+              form.appendChild(commentsInput);
+            }
+            
+            document.body.appendChild(form);
+            form.submit();
+          } else {
+            alert('Error saving review data. Please try again.');
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert('Error saving review data. Please try again.');
+        });
+      }
+
+      function finalizeProject() {
+        const coinAmount = document.getElementById('coin-balance').value;
+        
+        if (!coinAmount || isNaN(coinAmount) || parseFloat(coinAmount) < 0) {
+          alert('Please enter a valid coin amount.');
+          return;
+        }
+
+        if (!confirm(`This will award ${coinAmount} coins and mark the project as finished. Continue?`)) {
+          return;
+        }
+
+        // Award coins and mark as finished
+        fetch(`<%= admin_update_user_coins_path(@selected_week, @user.id) %>`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+          },
+          body: JSON.stringify({ 
+            coin_amount: parseFloat(coinAmount),
+            mark_finished: true
+          })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            // Update project status to finished
+            return fetch(`<%= admin_update_project_status_path(@selected_week, @user.id) %>`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+              },
+              body: JSON.stringify({ project_status: 'finished' })
+            });
+          } else {
+            throw new Error(data.error || 'Failed to award coins');
+          }
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            alert('Project finalized successfully!');
+            location.reload();
+          } else {
+            throw new Error(data.error || 'Failed to update project status');
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert('Error finalizing project: ' + error.message);
+        });
+      }
+
+      function updateFraudStatus() {
+        const fraudStatus = document.getElementById('fraud-status-select').value;
+        const fraudReasoning = document.getElementById('fraud-reasoning').value;
+
+        if (!confirm('Are you sure you want to update the fraud status?')) {
+          return;
+        }
+
+        fetch(`<%= greg_update_fraud_status_path(@project) %>`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+          },
+          body: JSON.stringify({
+            fraud_status: fraudStatus,
+            fraud_reasoning: fraudReasoning
+          })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            alert('Fraud status updated successfully!');
+            location.reload();
+          } else {
+            alert('Error updating fraud status: ' + (data.error || 'Unknown error'));
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert('Error updating fraud status. Please try again.');
+        });
       }
     </script>
 

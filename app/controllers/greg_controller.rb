@@ -5,8 +5,8 @@ class GregController < ApplicationController
     @projects = Project.includes(:user)
                       .where(status: [ "submitted", "pending_voting", "finished" ])
 
-    # Default to showing only unchecked projects
-    fraud_status_filter = params[:fraud_status].presence || "unchecked"
+    # Default to showing only sus projects
+    fraud_status_filter = params[:fraud_status].presence || "sus"
 
     # Apply fraud status filter
     if fraud_status_filter != "all"
@@ -180,7 +180,7 @@ class GregController < ApplicationController
                      .where(status: [ "submitted", "pending_voting", "finished" ])
 
     # Apply the same filters as index action
-    fraud_status_filter = safe_params[:fraud_status].presence || safe_params["fraud_status"].presence || "unchecked"
+    fraud_status_filter = safe_params[:fraud_status].presence || safe_params["fraud_status"].presence || "sus"
 
     if fraud_status_filter != "all"
       projects = projects.where(fraud_status: fraud_status_filter)
