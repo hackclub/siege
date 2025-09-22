@@ -242,7 +242,7 @@ GEM
       actionview (>= 7.0.0)
       activesupport (>= 7.0.0)
     jmespath (1.6.2)
-    json (2.13.2)
+    json (2.15.0)
     jwt (3.1.2)
       base64
     kamal (2.7.0)
@@ -471,7 +471,7 @@ GEM
       websocket (~> 1.0)
     skylight (6.0.4)
       activesupport (>= 5.2.0)
-    slack-ruby-client (2.7.0)
+    slack-ruby-client (3.0.0)
       faraday (>= 2.0.1)
       faraday-mashify
       faraday-multipart
