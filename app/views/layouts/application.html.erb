@@ -47,7 +47,6 @@
       }
       .app-main {
         flex: 1;
-        padding: 1.5rem;
         display: flex;
         flex-direction: column;
         gap: 1rem;
@@ -137,8 +136,9 @@
   <body<%= " class=\"#{content_for(:body_class)}\"".html_safe if content_for?(:body_class) %>>
     <div class="app-container">
       <% unless (controller_name == "sessions" && action_name == "new") ||
-                (controller_name == "addresses" && (action_name == "new" || action_name == "create")) ||
-                (controller_name == "welcome") %>
+      (controller_name == "addresses" && (action_name == "new" || action_name == "create")) ||
+      (controller_name == "welcome") ||
+                 (controller_name == "castle") %>
         <%= render "application/navbar" %>
       <% end %>
       <main class="app-main">

@@ -1,5 +1,5 @@
 Rails.application.routes.draw do
-  resources :projects do
+  resources :projects, path: 'armory' do
     member do
       post :submit
       patch :update_status
@@ -151,6 +151,7 @@ Rails.application.routes.draw do
 
   # Countdown timer page
   get "/countdown", to: "countdown#index"
+  get "/castle", to: "castle#index", as: :castle
   get "/identity_verification_callback", to: "sessions#identity_verification_callback"
 
   # Slack webhook endpoints
