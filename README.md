@@ -18,4 +18,5 @@ Contributing is always appreciated! Please make sure to note exactly what you've
 
 
 
-Heidi and Orhpeus are counting on you! See you in the battle...
+Heidi and Orpheus are counting on you! See you in the battle...
+
