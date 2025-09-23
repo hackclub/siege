@@ -59,16 +59,6 @@ class Meeple < ApplicationRecord
     }
   end
 
-  private
-
-  def color_must_be_unlocked
-    return unless color.present?
-
-    unless color_unlocked?(color)
-      errors.add(:color, "is not unlocked for this meeple")
-    end
-  end
-
   def unlock_cosmetic(cosmetic)
     meeple_cosmetic = meeple_cosmetics.find_or_initialize_by(cosmetic: cosmetic)
     meeple_cosmetic.unlocked = true
@@ -78,10 +68,18 @@ class Meeple < ApplicationRecord
   def equip_cosmetic(cosmetic)
     return unless unlocked_cosmetics.exists?(cosmetic: cosmetic)
 
-    # Unequip other cosmetics of the same type
-    meeple_cosmetics.joins(:cosmetic)
-                   .where(cosmetics: { type: cosmetic.type })
-                   .update_all(equipped: false)
+    # Handle mutually exclusive cosmetics (back and cloak)
+    if cosmetic.type == 'back' || cosmetic.type == 'cloak'
+      # Unequip both back and cloak cosmetics
+      meeple_cosmetics.joins(:cosmetic)
+                     .where(cosmetics: { type: ['back', 'cloak'] })
+                     .update_all(equipped: false)
+    else
+      # Unequip other cosmetics of the same type
+      meeple_cosmetics.joins(:cosmetic)
+                     .where(cosmetics: { type: cosmetic.type })
+                     .update_all(equipped: false)
+    end
 
     # Equip the new cosmetic
     meeple_cosmetics.find_by(cosmetic: cosmetic).update!(equipped: true)
@@ -89,5 +87,15 @@ class Meeple < ApplicationRecord
 
   def unequip_cosmetic(cosmetic)
     meeple_cosmetics.find_by(cosmetic: cosmetic)&.update!(equipped: false)
+  end
+
+  private
+
+  def color_must_be_unlocked
+    return unless color.present?
+
+    unless color_unlocked?(color)
+      errors.add(:color, "is not unlocked for this meeple")
+    end
   end
 end

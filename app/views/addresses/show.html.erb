@@ -59,8 +59,8 @@
     }
 
     .meeple-preview {
-      width: 100px;
-      height: 100px;
+      width: 150px;
+      height: 150px;
       margin: 1rem 0;
       display: flex;
       align-items: center;
@@ -70,8 +70,8 @@
     }
 
     .meeple-preview img {
-      width: 100px;
-      height: 100px;
+      width: 150px;
+      height: 150px;
       object-fit: contain;
     }
 
@@ -116,6 +116,62 @@
       transform: translate(1px, -5px);
     }
 
+    .cosmetics-grid {
+      margin-top: 1rem;
+    }
+
+    .cosmetic-items {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 1rem;
+    }
+
+    .cosmetic-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 1rem;
+      border: 3px solid rgba(64, 43, 32, 0.75);
+      cursor: pointer;
+      background: transparent;
+      position: relative;
+    }
+
+    .cosmetic-item:hover {
+      filter: brightness(0.95);
+    }
+
+    .cosmetic-item.equipped {
+      border-width: 5px;
+    }
+
+
+    .cosmetic-image {
+      width: 60px;
+      height: 60px;
+      object-fit: contain;
+      margin-bottom: 0.5rem;
+    }
+
+    .cosmetic-name {
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-align: center;
+      line-height: 1.3;
+      word-break: break-word;
+      margin-bottom: 0.25rem;
+      color: #402b20;
+    }
+
+    .cosmetic-type {
+      font-size: 0.7rem;
+      text-align: center;
+      color: #6b5b4a;
+      text-transform: uppercase;
+      font-weight: 500;
+      letter-spacing: 0.5px;
+    }
+
     @media (max-width: 768px) {
       .chambers-layout {
         grid-template-columns: 1fr;
@@ -151,7 +207,45 @@
       </div>
       <div class="details-field">
         <strong class="details-label">Cosmetics:</strong>
-        <p class="details-value">None equipped</p>
+        <% if @unlocked_cosmetics.any? %>
+          <div class="cosmetics-grid">
+            <div class="cosmetic-items">
+              <% 
+                # Flatten all cosmetics and sort by render order
+                render_order = ['back', 'hat', 'eyes', 'front', 'neck', 'feet', 'cloak', 'face', 'left', 'right']
+                all_cosmetics = []
+                @unlocked_cosmetics.each do |cosmetic_type, meeple_cosmetics|
+                  meeple_cosmetics.each do |meeple_cosmetic|
+                    cosmetic = meeple_cosmetic.cosmetic
+                    is_equipped = @equipped_cosmetics[cosmetic_type]&.cosmetic == cosmetic
+                    all_cosmetics << {
+                      meeple_cosmetic: meeple_cosmetic,
+                      cosmetic: cosmetic,
+                      cosmetic_type: cosmetic_type,
+                      is_equipped: is_equipped,
+                      sort_order: render_order.index(cosmetic_type) || 999
+                    }
+                  end
+                end
+                all_cosmetics.sort_by! { |item| item[:sort_order] }
+              %>
+              
+              <% all_cosmetics.each do |item| %>
+                <div class="cosmetic-item <%= 'equipped' if item[:is_equipped] %>" 
+                     data-cosmetic-id="<%= item[:cosmetic].id %>" 
+                     data-cosmetic-type="<%= item[:cosmetic_type] %>"
+                     onclick="toggleCosmetic(<%= item[:cosmetic].id %>, '<%= item[:cosmetic_type] %>')">
+                  <% if item[:cosmetic].image.attached? %>
+                    <%= image_tag item[:cosmetic].image, alt: item[:cosmetic].name, class: "cosmetic-image" %>
+                  <% end %>
+                  <span class="cosmetic-name"><%= item[:cosmetic].name %></span>
+                </div>
+              <% end %>
+            </div>
+          </div>
+        <% else %>
+          <p class="details-value">No cosmetics unlocked yet</p>
+        <% end %>
       </div>
     </div>
     
@@ -399,7 +493,8 @@ function showShippingNameModalForSetup() {
 </script>
 
 <script>
-const colorPaths = {
+// Use window object to avoid redeclaration issues with Turbo navigation
+window.colorPaths = window.colorPaths || {
   'blue': '<%= asset_path("meeple/meeple-blue.png") %>',
   'red': '<%= asset_path("meeple/meeple-red.png") %>',
   'pink': '<%= asset_path("meeple/meeple-pink.png") %>',
@@ -409,29 +504,158 @@ const colorPaths = {
   'cyan': '<%= asset_path("meeple/meeple-cyan.png") %>',
   'yellow': '<%= asset_path("meeple/meeple-yellow.png") %>'
 };
+const colorPaths = window.colorPaths;
+
+function toggleCosmetic(cosmeticId, cosmeticType) {
+  const cosmeticItem = document.querySelector(`[data-cosmetic-id="${cosmeticId}"]`);
+  
+  // Determine current equipped state dynamically
+  const isEquipped = cosmeticItem.classList.contains('equipped');
+  
+  // Store original state in case we need to revert
+  const originalEquippedItems = [];
+  document.querySelectorAll('.cosmetic-item.equipped').forEach(item => {
+    originalEquippedItems.push(item.dataset.cosmeticId);
+  });
+  
+  if (isEquipped) {
+    // Unequip the cosmetic - update UI optimistically
+    cosmeticItem.classList.remove('equipped');
+    
+    // Update meeple display immediately
+    updateMeepleDisplay();
+    
+    fetch('<%= chambers_path %>', {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+      },
+      body: JSON.stringify({ meeple: { unequip_cosmetic_id: cosmeticId } })
+    }).then(response => {
+      if (response.ok) {
+        console.log('Successfully unequipped cosmetic');
+      } else {
+        // Revert UI changes on server error
+        cosmeticItem.classList.add('equipped');
+        updateMeepleDisplay(); // Update again after revert
+        console.error('Failed to unequip cosmetic - reverted UI');
+        showErrorMessage('Failed to unequip cosmetic. Please try again.');
+      }
+    }).catch(error => {
+      // Revert UI changes on network error
+      cosmeticItem.classList.add('equipped');
+      updateMeepleDisplay(); // Update again after revert
+      console.error('Network error unequipping cosmetic:', error);
+      showErrorMessage('Connection error. Please check your network and try again.');
+    });
+  } else {
+    // Handle mutually exclusive cosmetics (back and cloak)
+    if (cosmeticType === 'back' || cosmeticType === 'cloak') {
+      // Unequip both back and cloak items
+      const backItems = document.querySelectorAll(`[data-cosmetic-type="back"]`);
+      const cloakItems = document.querySelectorAll(`[data-cosmetic-type="cloak"]`);
+      backItems.forEach(item => item.classList.remove('equipped'));
+      cloakItems.forEach(item => item.classList.remove('equipped'));
+    } else {
+      // Unequip other cosmetics of the same type - update UI optimistically
+      const typeItems = document.querySelectorAll(`[data-cosmetic-type="${cosmeticType}"]`);
+      typeItems.forEach(item => item.classList.remove('equipped'));
+    }
+    
+    // Equip this cosmetic
+    cosmeticItem.classList.add('equipped');
+    
+    // Update meeple display immediately
+    updateMeepleDisplay();
+    
+    fetch('<%= chambers_path %>', {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+      },
+      body: JSON.stringify({ meeple: { equip_cosmetic_id: cosmeticId } })
+    }).then(response => {
+      if (response.ok) {
+        console.log('Successfully equipped cosmetic');
+      } else {
+        // Revert UI changes on server error
+        revertCosmeticState(originalEquippedItems);
+        updateMeepleDisplay(); // Update again after revert
+        console.error('Failed to equip cosmetic - reverted UI');
+        showErrorMessage('Failed to equip cosmetic. Please try again.');
+      }
+    }).catch(error => {
+      // Revert UI changes on network error
+      revertCosmeticState(originalEquippedItems);
+      updateMeepleDisplay(); // Update again after revert
+      console.error('Network error equipping cosmetic:', error);
+      showErrorMessage('Connection error. Please check your network and try again.');
+    });
+  }
+}
+
+function revertCosmeticState(originalEquippedIds) {
+  // Remove all equipped states
+  document.querySelectorAll('.cosmetic-item').forEach(item => {
+    item.classList.remove('equipped');
+  });
+  
+  // Restore original equipped states
+  originalEquippedIds.forEach(cosmeticId => {
+    const item = document.querySelector(`[data-cosmetic-id="${cosmeticId}"]`);
+    if (item) item.classList.add('equipped');
+  });
+  
+  // Ensure back/cloak mutual exclusivity is maintained
+  const backEquipped = document.querySelector('[data-cosmetic-type="back"].equipped');
+  const cloakEquipped = document.querySelector('[data-cosmetic-type="cloak"].equipped');
+  if (backEquipped && cloakEquipped) {
+    // If both are equipped, keep only the back item (arbitrary choice)
+    cloakEquipped.classList.remove('equipped');
+  }
+}
+
+function showErrorMessage(message) {
+  // Create a temporary error message
+  const errorDiv = document.createElement('div');
+  errorDiv.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #ef4444;
+    color: white;
+    padding: 1rem;
+    border-radius: 8px;
+    z-index: 1000;
+    max-width: 300px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  `;
+  errorDiv.textContent = message;
+  document.body.appendChild(errorDiv);
+  
+  // Remove after 5 seconds
+  setTimeout(() => {
+    if (errorDiv.parentNode) {
+      errorDiv.parentNode.removeChild(errorDiv);
+    }
+  }, 5000);
+}
 
 function updateMeepleColor(color) {
   const colorOptions = document.querySelectorAll('.color-option');
   
-  // Update color options UI
+  // Store original color in case we need to revert
+  const originalColor = document.querySelector('.color-option.active')?.dataset.color;
+  
+  // Update color options UI optimistically
   colorOptions.forEach(option => {
     option.classList.toggle('active', option.dataset.color === color);
   });
   
-  // Update meeple display
-  const userData = {
-    meeple: {
-      color: color,
-      imageSrc: colorPaths[color],
-      meeple_cosmetics: []
-    }
-  };
-  
-  const meepleDisplay = new MeepleDisplay(userData, 100, 120);
-  const container = document.getElementById('meeple-display-container');
-  if (container) {
-    meepleDisplay.renderToHTML(container);
-  }
+  // Update meeple display immediately
+  updateMeepleDisplay();
   
   // Send request to server asynchronously
   fetch('<%= chambers_path %>', {
@@ -442,33 +666,178 @@ function updateMeepleColor(color) {
     },
     body: JSON.stringify({ meeple: { color: color } })
   }).then(response => {
-    if (!response.ok) {
-      console.error('Failed to update meeple color');
-      location.reload();
+    if (response.ok) {
+      console.log('Successfully updated meeple color');
+    } else {
+      // Revert UI changes on server error
+      colorOptions.forEach(option => {
+        option.classList.toggle('active', option.dataset.color === originalColor);
+      });
+      updateMeepleDisplay();
+      console.error('Failed to update meeple color - reverted UI');
+      showErrorMessage('Failed to update meeple color. Please try again.');
     }
   }).catch(error => {
-    console.error('Error updating meeple color:', error);
-    location.reload();
+    // Revert UI changes on network error
+    colorOptions.forEach(option => {
+      option.classList.toggle('active', option.dataset.color === originalColor);
+    });
+    updateMeepleDisplay();
+    console.error('Network error updating meeple color:', error);
+    showErrorMessage('Connection error. Please check your network and try again.');
   });
 }
 
+// Store cosmetic data for dynamic updates - avoid redeclaration with Turbo
+window.cosmeticDatabase = window.cosmeticDatabase || {
+  <% @unlocked_cosmetics.each do |type, meeple_cosmetics| %>
+    <% meeple_cosmetics.each do |meeple_cosmetic| %>
+      '<%= meeple_cosmetic.cosmetic.id %>': {
+        id: '<%= meeple_cosmetic.cosmetic.id %>',
+        name: '<%= meeple_cosmetic.cosmetic.name %>',
+        type: '<%= type %>',
+        image: {
+          attached: <%= meeple_cosmetic.cosmetic.image.attached? %>,
+          url: '<%= url_for(meeple_cosmetic.cosmetic.image) if meeple_cosmetic.cosmetic.image.attached? %>'
+        }
+      },
+    <% end %>
+  <% end %>
+};
+const cosmeticDatabase = window.cosmeticDatabase;
+
+function updateMeepleDisplay() {
+  console.log('updateMeepleDisplay called');
+  
+  // Get current equipped cosmetics from DOM with full data
+  const equippedCosmetics = [];
+  document.querySelectorAll('.cosmetic-item.equipped').forEach(item => {
+    const cosmeticId = item.dataset.cosmeticId;
+    const cosmeticData = cosmeticDatabase[cosmeticId];
+    if (cosmeticData) {
+      equippedCosmetics.push({
+        equipped: true,
+        cosmetic: cosmeticData
+      });
+    }
+  });
+  
+  // Sort by proper render order: Back, Hat, Eyes, Front, Neck, Feet, Cloak, Face, Left, Right
+  const renderOrder = ['back', 'hat', 'eyes', 'front', 'neck', 'feet', 'cloak', 'face', 'left', 'right'];
+  equippedCosmetics.sort((a, b) => {
+    const aIndex = renderOrder.indexOf(a.cosmetic.type) !== -1 ? renderOrder.indexOf(a.cosmetic.type) : 999;
+    const bIndex = renderOrder.indexOf(b.cosmetic.type) !== -1 ? renderOrder.indexOf(b.cosmetic.type) : 999;
+    return aIndex - bIndex;
+  });
+
+  const currentColor = document.querySelector('.color-option.active')?.dataset.color || 'blue';
+  
+  console.log('Update - equipped cosmetics:', equippedCosmetics);
+  console.log('Update - current color:', currentColor);
+  
+  // Update meeple display
+  const userData = {
+    meeple: {
+      color: currentColor,
+      imageSrc: colorPaths[currentColor],
+      meeple_cosmetics: equippedCosmetics
+    }
+  };
+  
+  console.log('Update - user data:', userData);
+  
+  const container = document.getElementById('meeple-display-container');
+  console.log('Update - container:', container);
+  
+  if (container) {
+    console.log('Update - rendering meeple');
+    if (typeof window.renderUnifiedMeeple === 'function') {
+      const success = renderUnifiedMeeple(userData, container, null, null, 150, 180);
+      if (success) {
+        console.log('Update - meeple rendering complete using unified renderer');
+      } else {
+        console.log('Update - unified renderer failed, using direct MeepleDisplay');
+        const meepleDisplay = new MeepleDisplay(userData, 150, 180);
+        meepleDisplay.renderToHTML(container);
+      }
+    } else {
+      const meepleDisplay = new MeepleDisplay(userData, 150, 180);
+      meepleDisplay.renderToHTML(container);
+      console.log('Update - meeple rendering complete using direct MeepleDisplay');
+    }
+  } else {
+    console.error('Update - container not found!');
+  }
+}
+
 // Initialize MeepleDisplay
-document.addEventListener('DOMContentLoaded', function() {
+function initializeChambersMeepleDisplay() {
+  console.log('initializeChambersMeepleDisplay called');
+  console.log('MeepleDisplay available:', typeof window.MeepleDisplay);
+  
+  const container = document.getElementById('meeple-display-container');
+  console.log('Chambers container:', container);
+  
+  if (typeof window.MeepleDisplay === 'undefined') {
+    console.log('MeepleDisplay not loaded yet, retrying in 100ms');
+    setTimeout(initializeChambersMeepleDisplay, 100);
+    return;
+  }
+
+  const equippedCosmetics = [
+    <% @equipped_cosmetics.each do |type, meeple_cosmetic| %>
+      {
+        equipped: true,
+        cosmetic: {
+          id: '<%= meeple_cosmetic.cosmetic.id %>',
+          name: '<%= meeple_cosmetic.cosmetic.name %>',
+          type: '<%= type %>',
+          image: {
+            attached: <%= meeple_cosmetic.cosmetic.image.attached? %>,
+            url: '<%= url_for(meeple_cosmetic.cosmetic.image) if meeple_cosmetic.cosmetic.image.attached? %>'
+          }
+        }
+      },
+    <% end %>
+  ];
+
   const userData = {
     meeple: {
       color: '<%= @meeple.color %>',
       imageSrc: '<%= image_path("meeple/meeple-#{@meeple.color}.png") %>',
-      meeple_cosmetics: [
-        // You'll need to populate this with actual equipped cosmetics
-        // For now, we'll leave it empty
-      ]
+      meeple_cosmetics: equippedCosmetics
     }
   };
   
-  const meepleDisplay = new MeepleDisplay(userData, 100, 120);
-  const container = document.getElementById('meeple-display-container');
+  console.log('Chambers user data:', userData);
+  
   if (container) {
-    meepleDisplay.renderToHTML(container);
+    console.log('Rendering to chambers container');
+    if (typeof window.renderUnifiedMeeple === 'function') {
+      const success = renderUnifiedMeeple(userData, container, null, null, 150, 180);
+      if (success) {
+        console.log('Chambers meeple rendering complete using unified renderer');
+      } else {
+        console.log('Chambers unified renderer failed, using direct MeepleDisplay');
+        const meepleDisplay = new MeepleDisplay(userData, 150, 180);
+        meepleDisplay.renderToHTML(container);
+      }
+    } else {
+      const meepleDisplay = new MeepleDisplay(userData, 150, 180);
+      meepleDisplay.renderToHTML(container);
+      console.log('Chambers meeple rendering complete using direct MeepleDisplay');
+    }
+  } else {
+    console.error('Chambers container not found!');
   }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  initializeChambersMeepleDisplay();
+});
+
+document.addEventListener('turbo:load', function() {
+  console.log('turbo:load fired on chambers page');
+  initializeChambersMeepleDisplay();
 });
 </script>

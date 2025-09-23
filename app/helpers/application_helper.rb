@@ -453,8 +453,8 @@ module ApplicationHelper
 
     meeple = user.meeple
 
-    # Get equipped cosmetics grouped by type
-    equipped_cosmetics = meeple.equipped_cosmetics.includes(:cosmetic).group_by { |mc| mc.cosmetic.type }
+    # Get equipped cosmetics grouped by type (with proper eager loading)
+    equipped_cosmetics = meeple.equipped_cosmetics.includes(cosmetic: { image_attachment: :blob }).group_by { |mc| mc.cosmetic.type }
 
     # Build the data structure
     {
@@ -464,8 +464,8 @@ module ApplicationHelper
       unlocked_colors: meeple.unlocked_colors,
       image_path: asset_path("meeple/meeple-#{meeple.color}.png"),
       equipped_cosmetics: equipped_cosmetics,
-      unlocked_cosmetics: meeple.unlocked_cosmetics.includes(:cosmetic),
-      all_cosmetics: meeple.meeple_cosmetics.includes(:cosmetic)
+      unlocked_cosmetics: meeple.unlocked_cosmetics.includes(cosmetic: { image_attachment: :blob }),
+      all_cosmetics: meeple.meeple_cosmetics.includes(cosmetic: { image_attachment: :blob })
     }
   end
 

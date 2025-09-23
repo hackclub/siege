@@ -251,7 +251,9 @@
           <!-- Preparation Phase: Meeple on castle with coins around -->
           <svg class="home-wave" viewBox="0 0 600 130" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
             <g id="preparationGroup">
-							<image id="userMarker" href="<%= asset_path("meeple/meeple-#{current_user.meeple.color}.png") %>" x="290" y="50" width="40" height="40" />
+							<foreignObject id="userMarker" x="290" y="50" width="40" height="40">
+								<div id="home-meeple-container" style="width: 40px; height: 40px;"></div>
+							</foreignObject>
 
               <image id="centralCastle" href="<%= asset_path('castle.webp') %>" x="260" y="50" width="160" height="80" />
               
@@ -295,7 +297,9 @@
               <image id="castleStart" href="<%= asset_path('castle.webp') %>" x="0" y="0" width="200" height="84.1" preserveAspectRatio="xMidYMid meet" />
               <image id="castleEnd" href="<%= asset_path('castle.webp') %>" x="0" y="0" width="340" height="142.9" preserveAspectRatio="xMidYMid meet" />
               <!-- User marker image -->
-              <image id="userMarker" href="<%= asset_path("meeple/meeple-#{current_user.meeple.color}.png") %>" x="0" y="0" width="84" height="84" />
+              <foreignObject id="userMarker" x="0" y="0" width="84" height="84">
+								<div id="home-meeple-container-2" style="width: 84px; height: 84px;"></div>
+							</foreignObject>
             </g>
           </svg>
         <% end %>
@@ -582,10 +586,8 @@ function updateHomeMeepleImage() {
   .then(response => response.json())
   .then(data => {
     if (data.color && data.asset_path) {
-      const userMarker = document.querySelector('#userMarker');
-      if (userMarker) {
-        userMarker.setAttribute('href', data.asset_path);
-      }
+      // Re-initialize MeepleDisplay with updated data
+      initializeHomeMeepleDisplay();
     }
   })
   .catch(error => {
@@ -603,6 +605,78 @@ document.addEventListener('visibilitychange', function() {
 
 // Update meeple on Turbo navigation
 document.addEventListener('turbo:load', function() {
+  console.log('turbo:load event fired on home page');
   updateHomeMeepleImage();
+  
+  // Initialize MeepleDisplay for cosmetics rendering
+  initializeHomeMeepleDisplay();
 });
+
+// Also try DOMContentLoaded as backup
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('DOMContentLoaded event fired on home page');
+  initializeHomeMeepleDisplay();
+});
+
+function initializeHomeMeepleDisplay() {
+  <% if current_user&.meeple %>
+    console.log('initializeHomeMeepleDisplay called');
+    console.log('MeepleDisplay available:', typeof window.MeepleDisplay);
+    
+    // If MeepleDisplay is not available, wait and try again
+    if (typeof window.MeepleDisplay === 'undefined') {
+      console.log('MeepleDisplay not loaded yet, retrying in 100ms');
+      setTimeout(initializeHomeMeepleDisplay, 100);
+      return;
+    }
+    
+    // Get user's equipped cosmetics
+    const equippedCosmetics = [
+      <% current_user.meeple.equipped_cosmetics.includes(cosmetic: { image_attachment: :blob }).each do |meeple_cosmetic| %>
+        {
+          equipped: true,
+          cosmetic: {
+            id: '<%= meeple_cosmetic.cosmetic.id %>',
+            name: '<%= meeple_cosmetic.cosmetic.name %>',
+            type: '<%= meeple_cosmetic.cosmetic.type %>',
+            image: {
+              attached: <%= meeple_cosmetic.cosmetic.image.attached? %>,
+              url: '<%= url_for(meeple_cosmetic.cosmetic.image) if meeple_cosmetic.cosmetic.image.attached? %>'
+            }
+          }
+        },
+      <% end %>
+    ];
+
+    const userData = {
+      meeple: {
+        color: '<%= current_user.meeple.color %>',
+        imageSrc: '<%= image_path("meeple/meeple-#{current_user.meeple.color}.png") %>',
+        meeple_cosmetics: equippedCosmetics
+      }
+    };
+    
+    console.log('User data:', userData);
+    
+    <% if Flipper.enabled?(:preparation_phase, current_user) %>
+      // Preparation phase - render to container 1
+      const container1 = document.getElementById('home-meeple-container');
+      console.log('Preparation phase - Container 1:', container1);
+      if (container1) {
+        console.log('Rendering to container 1 (preparation phase)');
+        const meepleDisplay1 = new MeepleDisplay(userData, 40, 40);
+        meepleDisplay1.renderToHTML(container1);
+      }
+    <% else %>
+      // Regular phase - render to container 2
+      const container2 = document.getElementById('home-meeple-container-2');
+      console.log('Regular phase - Container 2:', container2);
+      if (container2) {
+        console.log('Rendering to container 2 (regular phase)');
+        const meepleDisplay2 = new MeepleDisplay(userData, 84, 84);
+        meepleDisplay2.renderToHTML(container2);
+      }
+    <% end %>
+  <% end %>
+}
 </script>

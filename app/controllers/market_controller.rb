@@ -16,9 +16,10 @@ class MarketController < ApplicationController
                                           .pluck(:item_name)
     @purchasable_cosmetics = Cosmetic.purchasable
                                     .where.not(name: purchased_cosmetic_names)
+                                    .includes(image_attachment: :blob)
     
     # Get all purchasable physical items (can be bought multiple times)
-    @purchasable_physical_items = PhysicalItem.purchasable
+    @purchasable_physical_items = PhysicalItem.purchasable.includes(image_attachment: :blob)
     
     # Check if user is in supported region for regular tech tree
     @user_in_supported_region = user_in_supported_region?
@@ -151,6 +152,13 @@ class MarketController < ApplicationController
       unlocked_colors = current_user.meeple.unlocked_colors || []
       unlocked_colors << "orange" unless unlocked_colors.include?("orange")
       current_user.meeple.update!(unlocked_colors: unlocked_colors)
+    else
+      # Check if it's a cosmetic and unlock it for the user's meeple
+      cosmetic = Cosmetic.purchasable.find_by(name: item_name)
+      if cosmetic
+        current_user.meeple ||= current_user.create_meeple(color: "blue", cosmetics: [])
+        current_user.meeple.unlock_cosmetic(cosmetic)
+      end
     end
 
     # Calculate remaining mercenary purchases for response

@@ -1930,4 +1930,94 @@ class AdminController < ApplicationController
       users_with_birthdays
     end
   end
+
+  def add_cosmetic
+    return unless find_user_safely
+    cosmetic_id = params[:cosmetic_id]
+    
+    cosmetic = Cosmetic.find_by(id: cosmetic_id)
+    if cosmetic.nil?
+      render json: { success: false, error: "Cosmetic not found" }
+      return
+    end
+    
+    # Ensure user has a meeple
+    meeple = @user.meeple || @user.create_meeple(color: "blue", cosmetics: [])
+    
+    # Check if cosmetic is already unlocked
+    if meeple.unlocked_cosmetics.exists?(cosmetic: cosmetic)
+      render json: { success: false, error: "User already has this cosmetic unlocked" }
+      return
+    end
+    
+    # Unlock the cosmetic
+    meeple.unlock_cosmetic(cosmetic)
+    
+    # Log the action
+    @user.add_audit_log(
+      action: "Cosmetic unlocked by admin",
+      actor: current_user,
+      details: {
+        "cosmetic_name" => cosmetic.name,
+        "cosmetic_id" => cosmetic.id,
+        "cosmetic_type" => cosmetic.type
+      }
+    )
+    
+    render json: { 
+      success: true, 
+      message: "Successfully unlocked #{cosmetic.name} for #{@user.name}" 
+    }
+  rescue => e
+    Rails.logger.error "Error adding cosmetic: #{e.message}"
+    render json: { success: false, error: "Failed to add cosmetic" }
+  end
+
+  def remove_cosmetic
+    return unless find_user_safely
+    cosmetic_id = params[:cosmetic_id]
+    
+    cosmetic = Cosmetic.find_by(id: cosmetic_id)
+    if cosmetic.nil?
+      render json: { success: false, error: "Cosmetic not found" }
+      return
+    end
+    
+    # Check if user has a meeple
+    if @user.meeple.nil?
+      render json: { success: false, error: "User has no meeple" }
+      return
+    end
+    
+    # Find and remove the meeple cosmetic
+    meeple_cosmetic = @user.meeple.meeple_cosmetics.find_by(cosmetic: cosmetic)
+    if meeple_cosmetic.nil?
+      render json: { success: false, error: "User doesn't have this cosmetic" }
+      return
+    end
+    
+    # Remove the cosmetic
+    meeple_cosmetic.destroy!
+    
+    # Log the action
+    @user.add_audit_log(
+      action: "Cosmetic removed by admin",
+      actor: current_user,
+      details: {
+        "cosmetic_name" => cosmetic.name,
+        "cosmetic_id" => cosmetic.id,
+        "cosmetic_type" => cosmetic.type
+      }
+    )
+    
+    render json: { 
+      success: true, 
+      message: "Successfully removed #{cosmetic.name} from #{@user.name}",
+      cosmetic_name: cosmetic.name,
+      cosmetic_type: cosmetic.type.capitalize
+    }
+  rescue => e
+    Rails.logger.error "Error removing cosmetic: #{e.message}"
+    render json: { success: false, error: "Failed to remove cosmetic" }
+  end
 end

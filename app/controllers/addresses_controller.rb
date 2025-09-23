@@ -9,6 +9,10 @@ class AddressesController < ApplicationController
     # Ensure meeple exists for all users
     @meeple = current_user.meeple || current_user.create_meeple(color: "blue", cosmetics: [])
 
+    # Get unlocked cosmetics grouped by type (with proper eager loading)
+    @unlocked_cosmetics = @meeple.unlocked_cosmetics.includes(cosmetic: { image_attachment: :blob }).group_by { |mc| mc.cosmetic.type }
+    @equipped_cosmetics = @meeple.equipped_cosmetics.includes(cosmetic: { image_attachment: :blob }).index_by { |mc| mc.cosmetic.type }
+
     # Get user's referral count
     @user_referral_count = current_user.referrals.count
 
@@ -62,11 +66,39 @@ class AddressesController < ApplicationController
       Rails.logger.info "Meeple params: #{meeple_params_data.inspect}"
       Rails.logger.info "Current meeple cosmetics: #{@meeple.cosmetics.inspect}"
 
-      if @meeple.update(meeple_params_data)
+      success = true
+      errors = []
+
+      # Handle cosmetic equipping/unequipping
+      if meeple_params_data[:equip_cosmetic_id].present?
+        cosmetic = Cosmetic.find_by(id: meeple_params_data[:equip_cosmetic_id])
+        if cosmetic && @meeple.unlocked_cosmetics.exists?(cosmetic: cosmetic)
+          @meeple.equip_cosmetic(cosmetic)
+        else
+          success = false
+          errors << "Cosmetic not found or not unlocked"
+        end
+      end
+
+      if meeple_params_data[:unequip_cosmetic_id].present?
+        cosmetic = Cosmetic.find_by(id: meeple_params_data[:unequip_cosmetic_id])
+        if cosmetic
+          @meeple.unequip_cosmetic(cosmetic)
+        end
+      end
+
+      # Handle color updates
+      color_params = meeple_params_data.except(:equip_cosmetic_id, :unequip_cosmetic_id)
+      if color_params.present?
+        success &= @meeple.update(color_params)
+        errors += @meeple.errors.full_messages if @meeple.errors.any?
+      end
+
+      if success && errors.empty?
         render json: { success: true }
       else
-        Rails.logger.error "Meeple update failed: #{@meeple.errors.full_messages}"
-        render json: { success: false, errors: @meeple.errors.full_messages }, status: :unprocessable_entity
+        Rails.logger.error "Meeple update failed: #{errors}"
+        render json: { success: false, errors: errors }, status: :unprocessable_entity
       end
     else
       address_success = address_params.empty? ? true : @address.update(address_params)
@@ -120,7 +152,7 @@ class AddressesController < ApplicationController
 
   def meeple_params
     return {} unless params[:meeple]&.present?
-    params.require(:meeple).permit(:color)
+    params.require(:meeple).permit(:color, :equip_cosmetic_id, :unequip_cosmetic_id)
   rescue ActionController::ParameterMissing
     {}
   end

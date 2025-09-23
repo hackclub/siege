@@ -31,10 +31,16 @@
         <%= form.label :type, class: 'form-label' %>
         <%= form.select :type, 
             options_for_select([
+              ['Back', 'back'],
               ['Hat', 'hat'],
-              ['Accessory', 'accessory'],
-              ['Background', 'background'],
-              ['Effect', 'effect']
+              ['Eyes', 'eyes'],
+              ['Front', 'front'],
+              ['Neck', 'neck'],
+              ['Feet', 'feet'],
+              ['Cloak', 'cloak'],
+              ['Face', 'face'],
+              ['Left', 'left'],
+              ['Right', 'right']
             ], @cosmetic.type), 
             { prompt: 'Select a type' }, 
             { class: 'form-control', required: true } %>

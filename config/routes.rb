@@ -90,6 +90,8 @@ Rails.application.routes.draw do
   post "/admin/users/:id/clear_main_device", to: "admin#clear_main_device", as: :admin_clear_main_device
   post "/admin/users/:id/set_out", to: "admin#set_out", as: :admin_set_out
   post "/admin/users/:id/set_active", to: "admin#set_active", as: :admin_set_active
+  post "/admin/users/:id/add_cosmetic", to: "admin#add_cosmetic", as: :admin_add_cosmetic
+  delete "/admin/users/:id/remove_cosmetic", to: "admin#remove_cosmetic", as: :admin_remove_cosmetic
   post "/admin/users/:id/set_banned", to: "admin#set_banned", as: :admin_set_banned
   post "/admin/users/:id/toggle_fraud_team", to: "admin#toggle_fraud_team", as: :admin_toggle_fraud_team
   delete "/admin/users/:id/delete", to: "admin#destroy_user", as: :admin_destroy_user

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_09_21_120000) do
+ActiveRecord::Schema[8.0].define(version: 2025_09_22_201400) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -173,7 +173,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_21_120000) do
     t.index ["user_id", "item_name"], name: "index_shop_purchases_unique_one_time", unique: true, where: "((item_name)::text = ANY ((ARRAY['Unlock Orange Meeple'::character varying, 'Random Sticker'::character varying])::text[]))"
     t.index ["user_id", "purchased_at"], name: "index_shop_purchases_on_user_id_and_purchased_at"
     t.index ["user_id"], name: "index_shop_purchases_on_user_id"
-    t.check_constraint "coins_spent > 0", name: "check_positive_purchase_amount"
+    t.check_constraint "coins_spent >= 0", name: "check_non_negative_purchase_amount"
   end
 
   create_table "users", force: :cascade do |t|

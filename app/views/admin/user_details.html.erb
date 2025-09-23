@@ -993,6 +993,71 @@
   </div>
 </div>
 
+<!-- Cosmetics Manager Section -->
+<div class="meeple-section">
+  <div class="meeple-header">Cosmetics Manager</div>
+  
+  <% if @user.meeple %>
+    <!-- Unlocked Cosmetics -->
+    <div style="margin-bottom: 2rem;">
+      <h3 style="font-size: 1.1rem; font-weight: 600; color: #402b20; margin-bottom: 1rem;">Unlocked Cosmetics (<%= @user.meeple.unlocked_cosmetics.count %>)</h3>
+      
+      <% if @user.meeple.unlocked_cosmetics.any? %>
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+          <% @user.meeple.unlocked_cosmetics.includes(:cosmetic).each do |meeple_cosmetic| %>
+            <% cosmetic = meeple_cosmetic.cosmetic %>
+            <div class="cosmetic-card" data-cosmetic-id="<%= cosmetic.id %>">
+              <div style="display: flex; align-items: center; gap: 1rem; padding: 1rem; border: 1px solid rgba(64, 43, 32, 0.1); border-radius: 8px; background: <%= meeple_cosmetic.equipped? ? 'rgba(5, 150, 105, 0.1)' : 'white' %>;">
+                <% if cosmetic.image.attached? %>
+                  <%= image_tag cosmetic.image, style: "width: 40px; height: 40px; object-fit: contain;" %>
+                <% end %>
+                <div style="flex: 1;">
+                  <h4 style="margin: 0; font-size: 0.9rem; color: #402b20;"><%= cosmetic.name %></h4>
+                  <p style="margin: 0.25rem 0 0 0; font-size: 0.8rem; color: #6b5b4a;"><%= cosmetic.type.capitalize %></p>
+                  <% if meeple_cosmetic.equipped? %>
+                    <span style="font-size: 0.7rem; color: #059669; font-weight: 500;">EQUIPPED</span>
+                  <% end %>
+                </div>
+                <button onclick="removeCosmetic(<%= cosmetic.id %>)" 
+                        style="background: #dc2626; color: white; border: none; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem; cursor: pointer;">
+                  Remove
+                </button>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      <% else %>
+        <p style="color: #6b5b4a; font-style: italic;">No cosmetics unlocked yet.</p>
+      <% end %>
+    </div>
+    
+    <!-- Add Cosmetic Form -->
+    <div style="background: rgba(64, 43, 32, 0.02); border: 1px solid rgba(64, 43, 32, 0.1); border-radius: 8px; padding: 1.5rem;">
+      <h3 style="font-size: 1.1rem; font-weight: 600; color: #402b20; margin-bottom: 1rem;">Add Cosmetic</h3>
+      
+      <div style="display: flex; gap: 1rem; align-items: end;">
+        <div style="flex: 1;">
+          <label for="cosmetic-select" style="display: block; font-weight: 500; color: #402b20; margin-bottom: 0.5rem;">Select Cosmetic:</label>
+          <select id="cosmetic-select" style="width: 100%; padding: 0.5rem; border: 1px solid rgba(64, 43, 32, 0.3); border-radius: 4px;">
+            <option value="">Choose a cosmetic...</option>
+            <% Cosmetic.all.each do |cosmetic| %>
+              <% unless @user.meeple.unlocked_cosmetics.exists?(cosmetic: cosmetic) %>
+                <option value="<%= cosmetic.id %>"><%= cosmetic.name %> (<%= cosmetic.type.capitalize %>)</option>
+              <% end %>
+            <% end %>
+          </select>
+        </div>
+        <button onclick="addCosmetic()" 
+                style="background: #059669; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 6px; font-weight: 500; cursor: pointer;">
+          Add Cosmetic
+        </button>
+      </div>
+    </div>
+  <% else %>
+    <p style="color: #6b5b4a; font-style: italic;">User has no meeple yet.</p>
+  <% end %>
+</div>
+
 <!-- Audit Logs Section (Super Admin Only) -->
 <% if current_user&.super_admin? %>
   <div class="meeple-section">
@@ -1338,3 +1403,85 @@ function showDeleteVerification(userId, userName) {
     </div>
   </div>
 </div>
+
+<script>
+function addCosmetic() {
+  const select = document.getElementById('cosmetic-select');
+  const cosmeticId = select.value;
+  
+  if (!cosmeticId) {
+    alert('Please select a cosmetic first.');
+    return;
+  }
+  
+  const cosmeticName = select.options[select.selectedIndex].text;
+  
+  fetch('/admin/users/<%= @user.id %>/add_cosmetic', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+    },
+    body: JSON.stringify({ cosmetic_id: cosmeticId })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      location.reload(); // Refresh to show updated cosmetics
+    } else {
+      alert('Failed to add cosmetic: ' + (data.error || 'Unknown error'));
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    alert('Failed to add cosmetic. Please try again.');
+  });
+}
+
+function removeCosmetic(cosmeticId) {
+  if (!confirm('Are you sure you want to remove this cosmetic from the user?')) {
+    return;
+  }
+  
+  fetch('/admin/users/<%= @user.id %>/remove_cosmetic', {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+    },
+    body: JSON.stringify({ cosmetic_id: cosmeticId })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      // Remove the cosmetic card from the UI
+      const card = document.querySelector(`[data-cosmetic-id="${cosmeticId}"]`);
+      if (card) card.remove();
+      
+      // Update the count in the header
+      const header = document.querySelector('.meeple-section:last-of-type .meeple-header');
+      if (header) {
+        const currentCount = header.textContent.match(/\((\d+)\)/);
+        if (currentCount) {
+          const newCount = parseInt(currentCount[1]) - 1;
+          header.textContent = header.textContent.replace(/\(\d+\)/, `(${newCount})`);
+        }
+      }
+      
+      // Add the cosmetic back to the dropdown
+      const select = document.getElementById('cosmetic-select');
+      const option = document.createElement('option');
+      option.value = cosmeticId;
+      option.textContent = data.cosmetic_name + ' (' + data.cosmetic_type + ')';
+      select.appendChild(option);
+      
+    } else {
+      alert('Failed to remove cosmetic: ' + (data.error || 'Unknown error'));
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    alert('Failed to remove cosmetic. Please try again.');
+  });
+}
+</script>

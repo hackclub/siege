@@ -23,14 +23,23 @@ class MeepleDisplay {
     return null;
   }
 
-  // Get equipped cosmetics (you'll need to implement this based on your data structure)
+  // Get equipped cosmetics sorted by render order
   getEquippedCosmetics() {
     // This assumes you have a way to get equipped cosmetics
     // You might need to adjust this based on your actual data structure
     if (this.user.meeple && this.user.meeple.meeple_cosmetics) {
-      return this.user.meeple.meeple_cosmetics
+      const cosmetics = this.user.meeple.meeple_cosmetics
         .filter((mc) => mc.equipped)
         .map((mc) => mc.cosmetic);
+      
+      // Sort by proper render order: Back, Hat, Eyes, Front, Neck, Feet, Cloak, Face, Left, Right
+      const renderOrder = ['back', 'hat', 'eyes', 'front', 'neck', 'feet', 'cloak', 'face', 'left', 'right'];
+      
+      return cosmetics.sort((a, b) => {
+        const aIndex = renderOrder.indexOf(a.type) !== -1 ? renderOrder.indexOf(a.type) : 999;
+        const bIndex = renderOrder.indexOf(b.type) !== -1 ? renderOrder.indexOf(b.type) : 999;
+        return aIndex - bIndex;
+      });
     }
     return [];
   }
@@ -125,6 +134,40 @@ class MeepleDisplay {
     return new MeepleDisplay(user, boxSize, visualSize);
   }
 }
+
+// Unified meeple rendering function that works with both HTML and Canvas
+window.renderUnifiedMeeple = function(userData, containerOrCtx, x, y, boxSize = 80, visualSize = 100) {
+  console.log('renderUnifiedMeeple called with:', { userData, containerOrCtx, x, y, boxSize, visualSize });
+  
+  if (!userData || !userData.meeple) {
+    console.error('Invalid userData provided to renderUnifiedMeeple');
+    return false;
+  }
+
+  try {
+    const meepleDisplay = new MeepleDisplay(userData, boxSize, visualSize);
+    
+    // Check if it's a canvas context (has drawImage method) or HTML container
+    if (containerOrCtx && typeof containerOrCtx.drawImage === 'function') {
+      // Canvas rendering
+      console.log('Using canvas rendering');
+      meepleDisplay.drawToCanvas(containerOrCtx, x, y);
+    } else if (containerOrCtx && containerOrCtx.nodeType) {
+      // HTML container rendering
+      console.log('Using HTML rendering');
+      meepleDisplay.renderToHTML(containerOrCtx);
+    } else {
+      console.error('Invalid container or context provided to renderUnifiedMeeple');
+      return false;
+    }
+    
+    console.log('Successfully rendered unified meeple');
+    return true;
+  } catch (error) {
+    console.error('Error in renderUnifiedMeeple:', error);
+    return false;
+  }
+};
 
 // Make it globally available
 window.MeepleDisplay = MeepleDisplay;

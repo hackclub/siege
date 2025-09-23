@@ -608,38 +608,10 @@ const cache = {
   }
 };
 
-// Consolidated background drawing function
+// Legacy function - now redirects to master renderer for consistency
 function drawBackground() {
-  if (!canvasManager.isValid() || !imageManager.images.background) return false;
-  
-  cache.updateLayout();
-  if (!cache.backgroundLayout) return false;
-  
-  const { bgX, bgY, bgWidth, bgHeight } = cache.backgroundLayout;
-  
-  // Draw background
-  canvasManager.ctx.drawImage(imageManager.images.background, bgX, bgY, bgWidth, bgHeight);
-  
-  // Draw user meeple on throne
-  canvasManager.ctx.save();
-  canvasManager.ctx.translate(cache.userMeeplePos.x, cache.userMeeplePos.y);
-  
-  if (imageManager.images.meeple && imageManager.images.meeple.complete && imageManager.images.meeple.naturalWidth > 0 && imageManager.images.meeple.src !== imageManager.images.redMeeple.src) {
-    canvasManager.ctx.drawImage(imageManager.images.meeple, 
-      -cache.userMeeplePos.size/2, -cache.userMeeplePos.size/2, 
-      cache.userMeeplePos.size, cache.userMeeplePos.size);
-  } else if (imageManager.images.redMeeple && imageManager.images.redMeeple.complete) {
-    canvasManager.ctx.drawImage(imageManager.images.redMeeple, 
-      -cache.userMeeplePos.size/2, -cache.userMeeplePos.size/2, 
-      cache.userMeeplePos.size, cache.userMeeplePos.size);
-  }
-  canvasManager.ctx.restore();
-  
-  // Draw throne
-  if (imageManager.images.throne && imageManager.images.throne.complete) {
-    canvasManager.ctx.drawImage(imageManager.images.throne, bgX, bgY, bgWidth, bgHeight);
-  }
-  
+  console.log('drawBackground: Redirecting to master renderer');
+  scheduleRender();
   return true;
 }
 
@@ -1213,7 +1185,7 @@ function showMeepleMessage(message) {
     // Draw dialogue box
     drawDialogueBox();
     
-    // Continue animation
+    // Continue animation (RESTORED - this keeps the scene alive)
     votingState.set('animationFrame', requestAnimationFrame(animateMeepleMessage));
   }
   
@@ -1320,8 +1292,11 @@ function getMeepleForStep(step) {
 
 // Animation function
 function animate() {
+  console.log('animate() function called');
+  
   // Ensure context exists
   if (!canvasManager.isValid()) {
+    console.log('animate(): canvasManager not valid, trying to initialize');
     if (!canvasManager.initialize()) {
       console.error('Failed to initialize canvas');
       return;
@@ -1344,11 +1319,22 @@ function animate() {
   
   // Only continue animation if we're in an active phase
   if (votingState.get('phase') === 'exited' || votingState.get('phase') === 'idle') {
+    console.log('animate(): In static phase', votingState.get('phase'), 'drawing static background');
+    
     // Clean up animation frame
     if (votingState.get('animationFrame')) {
       cancelAnimationFrame(votingState.get('animationFrame'));
       votingState.set('animationFrame', null);
     }
+    
+    // Draw static background scene once
+    canvasManager.clear();
+    if (!drawBackground()) {
+      console.log('animate(): static drawBackground failed');
+      return;
+    }
+    
+    console.log('animate(): static background drawn successfully');
     return;
   }
   
@@ -1550,6 +1536,78 @@ function getUserMeeplePosition(bgX, bgWidth, bgY, bgHeight) {
     y: bgY + bgHeight * 0.40, // Moved up from 0.46 to 0.40
     size: 475
   };
+}
+
+// Pre-loaded cosmetic images cache
+window.cosmeticImageCache = window.cosmeticImageCache || {};
+
+// Simple function to draw user meeple with cosmetics (fixed timing)
+function drawUserMeepleSimple(x, y, size) {
+  canvasManager.ctx.save();
+  canvasManager.ctx.translate(x, y);
+  
+  // First draw the base meeple (same as original)
+  if (imageManager.images.meeple && imageManager.images.meeple.complete && imageManager.images.meeple.naturalWidth > 0 && imageManager.images.meeple.src !== imageManager.images.redMeeple.src) {
+    canvasManager.ctx.drawImage(imageManager.images.meeple, 
+      -size/2, 
+      -size/2, 
+      size, 
+      size);
+    console.log('drawUserMeepleSimple: Drew base meeple');
+    
+    // Draw cosmetics in proper render order
+    <% if current_user&.meeple %>
+      <% 
+        # Sort equipped cosmetics by render order
+        render_order = ['back', 'hat', 'eyes', 'front', 'neck', 'feet', 'cloak', 'face', 'left', 'right']
+        sorted_cosmetics = current_user.meeple.equipped_cosmetics.includes(cosmetic: { image_attachment: :blob })
+                           .sort_by { |mc| render_order.index(mc.cosmetic.type) || 999 }
+      %>
+      <% sorted_cosmetics.each do |meeple_cosmetic| %>
+        <% if meeple_cosmetic.cosmetic.image.attached? %>
+          // Cosmetic: <%= meeple_cosmetic.cosmetic.name %> (<%= meeple_cosmetic.cosmetic.type %>)
+          if (window.cosmeticImageCache && window.cosmeticImageCache['<%= meeple_cosmetic.cosmetic.id %>']) {
+            const img = window.cosmeticImageCache['<%= meeple_cosmetic.cosmetic.id %>'];
+            if (img.complete && img.naturalWidth > 0) {
+              canvasManager.ctx.drawImage(img, -size/2, -size/2, size, size);
+            }
+          }
+        <% end %>
+      <% end %>
+    <% end %>
+    
+  } else if (imageManager.images.redMeeple && imageManager.images.redMeeple.complete && imageManager.images.redMeeple.naturalWidth > 0) {
+    // Fallback to red meeple if user meeple not ready
+    canvasManager.ctx.drawImage(imageManager.images.redMeeple, 
+      -size/2, 
+      -size/2, 
+      size, 
+      size);
+    console.log('drawUserMeepleSimple: Drew fallback red meeple');
+  }
+  
+  canvasManager.ctx.restore();
+}
+
+// Lazy-load cosmetic images in render order
+function ensureCosmeticImagesLoaded() {
+  <% if current_user&.meeple %>
+    <% 
+      # Load cosmetics in render order
+      render_order = ['back', 'hat', 'eyes', 'front', 'neck', 'feet', 'cloak', 'face', 'left', 'right']
+      sorted_cosmetics = current_user.meeple.equipped_cosmetics.includes(cosmetic: { image_attachment: :blob })
+                         .sort_by { |mc| render_order.index(mc.cosmetic.type) || 999 }
+    %>
+    <% sorted_cosmetics.each do |meeple_cosmetic| %>
+      <% if meeple_cosmetic.cosmetic.image.attached? %>
+        if (!window.cosmeticImageCache['<%= meeple_cosmetic.cosmetic.id %>']) {
+          const cosmetic<%= meeple_cosmetic.cosmetic.id %> = new Image();
+          cosmetic<%= meeple_cosmetic.cosmetic.id %>.src = '<%= url_for(meeple_cosmetic.cosmetic.image) %>';
+          window.cosmeticImageCache['<%= meeple_cosmetic.cosmetic.id %>'] = cosmetic<%= meeple_cosmetic.cosmetic.id %>;
+        }
+      <% end %>
+    <% end %>
+  <% end %>
 }
 
 // Function to draw a meeple with proper fallback logic
@@ -2077,23 +2135,12 @@ function startAnimation() {
   animate();
 }
 
-// Draw static scene (background, throne, user meeple)
-function drawStaticScene() {
-  // Ensure canvas context is available
-  if (!canvasManager.isValid()) {
-    if (!canvasManager.initialize()) {
-      console.error('Failed to initialize canvas for static scene');
-      return;
-    }
-  }
-  
+// Simplified background drawing - just like the original
+function drawBackgroundAndThrone() {
   // Check if images are available
   if (!imageManager.images.background || !imageManager.images.throne) {
-    return;
+    return false;
   }
-  
-  // Clear canvas
-  canvasManager.clear();
   
   // Calculate aspect ratios
   const bgAspect = imageManager.images.background.width / imageManager.images.background.height;
@@ -2120,27 +2167,52 @@ function drawStaticScene() {
     canvasManager.ctx.drawImage(imageManager.images.background, bgX, bgY, bgWidth, bgHeight);
   }
   
-  // Draw user's meeple on throne (between background and throne)
-  const userMeeplePos = getUserMeeplePosition(bgX, bgWidth, bgY, bgHeight);
-  canvasManager.ctx.save();
-  canvasManager.ctx.translate(userMeeplePos.x, userMeeplePos.y);
+  // Store layout for meeple positioning
+  window.greatHallLayout = { bgX, bgY, bgWidth, bgHeight };
   
-  // Always try to draw user meeple, with fallback
-  if (imageManager.images.meeple && imageManager.images.meeple.complete && imageManager.images.meeple.naturalWidth > 0 && imageManager.images.meeple.src !== imageManager.images.redMeeple.src) {
-    canvasManager.ctx.drawImage(imageManager.images.meeple, 
-      -userMeeplePos.size/2, 
-      -userMeeplePos.size/2, 
-      userMeeplePos.size, 
-      userMeeplePos.size);
-  } else if (imageManager.images.redMeeple && imageManager.images.redMeeple.complete && imageManager.images.redMeeple.naturalWidth > 0) {
-    // Fallback to red meeple if user meeple not ready
-    canvasManager.ctx.drawImage(imageManager.images.redMeeple, 
-      -userMeeplePos.size/2, 
-      -userMeeplePos.size/2, 
-      userMeeplePos.size, 
-      userMeeplePos.size);
+  // Draw throne (on top of user meeple)
+  if (imageManager.images.throne && imageManager.images.throne.complete && imageManager.images.throne.naturalWidth > 0) {
+    canvasManager.ctx.drawImage(imageManager.images.throne, bgX, bgY, bgWidth, bgHeight);
   }
-  canvasManager.ctx.restore();
+  
+  return true;
+}
+
+// Restored original drawStaticScene with cosmetics added  
+function drawStaticScene() {
+  // Check if images are available
+  if (!imageManager.images.background || !imageManager.images.throne) {
+    return;
+  }
+  
+  // Calculate aspect ratios (same as original)
+  const bgAspect = imageManager.images.background.width / imageManager.images.background.height;
+  const displayWidth = canvasManager.canvas.offsetWidth;
+  const displayHeight = canvasManager.canvas.offsetHeight;
+  const canvasAspect = displayWidth / displayHeight;
+  
+  let bgWidth, bgHeight, bgX, bgY;
+  
+  if (canvasAspect > bgAspect) {
+    bgHeight = displayHeight;
+    bgWidth = bgHeight * bgAspect;
+    bgX = (displayWidth - bgWidth) / 2;
+    bgY = 0;
+  } else {
+    bgWidth = displayWidth;
+    bgHeight = bgWidth / bgAspect;
+    bgX = 0;
+    bgY = (displayHeight - bgHeight) / 2;
+  }
+  
+  // Draw background
+  if (imageManager.images.background && imageManager.images.background.complete && imageManager.images.background.naturalWidth > 0) {
+    canvasManager.ctx.drawImage(imageManager.images.background, bgX, bgY, bgWidth, bgHeight);
+  }
+  
+  // Draw user's meeple with cosmetics on throne (ONLY change from original)
+  const userMeeplePos = getUserMeeplePosition(bgX, bgWidth, bgY, bgHeight);
+  drawUserMeepleSimple(userMeeplePos.x, userMeeplePos.y, userMeeplePos.size);
   
   // Draw throne (on top of user meeple)
   if (imageManager.images.throne && imageManager.images.throne.complete && imageManager.images.throne.naturalWidth > 0) {
@@ -3053,6 +3125,9 @@ document.addEventListener('DOMContentLoaded', function() {
     canvasManager.attachEventListeners();
   }
   
+  // Load cosmetic images only when needed (no blocking)
+  setTimeout(() => ensureCosmeticImagesLoaded(), 100);
+  
   // Handle different voting states
   if (serverVotingState === 'closed' || serverVotingState === 'already_voted' || serverVotingState === 'thanks') {
     // Clear any existing voting progress when user has already voted or voting is closed
@@ -3104,6 +3179,8 @@ document.addEventListener('visibilitychange', function() {
 document.addEventListener('turbo:load', function() {
   // Check if we're on the voting summary page
   if (document.querySelector('#voting-canvas')) {
+    // Load cosmetic images for turbo navigation
+    setTimeout(() => ensureCosmeticImagesLoaded(), 100);
     // Handle different voting states
     if (serverVotingState === 'closed' || serverVotingState === 'already_voted' || serverVotingState === 'thanks') {
       // Clear any existing voting progress when user has already voted or voting is closed
