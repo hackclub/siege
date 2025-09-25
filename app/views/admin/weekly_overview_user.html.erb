@@ -763,8 +763,7 @@
               'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
             },
             body: JSON.stringify({ 
-              multiplier: multiplier,
-              week: <%= @selected_week %>
+              multiplier: multiplier
             })
           })
           .then(response => response.json())
@@ -792,8 +791,7 @@
             'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
           },
           body: JSON.stringify({ 
-            reviewer_feedback: feedback,
-            week: <%= @selected_week %>
+            reviewer_feedback: feedback
           })
         })
         .then(response => response.json())
@@ -828,9 +826,8 @@
             'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
           },
           body: JSON.stringify({ 
-            coins: useCalculated ? null : coinBalance, // null means use calculated
-            use_calculated: useCalculated,
-            week: <%= @selected_week %>
+            coins: parseInt(coinBalance),
+            use_calculated: useCalculated.toString()
           })
         })
         .then(response => response.json())
@@ -863,8 +860,7 @@
               'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
             },
             body: JSON.stringify({ 
-              status: newStatus,
-              week: <%= @selected_week %>
+              status: newStatus
             })
           })
           .then(response => response.json())
@@ -882,6 +878,68 @@
             console.error('Error:', error);
             alert('Error updating project status. Please try again.');
             // Revert the select
+            location.reload();
+          });
+        } else {
+          // Revert the select if user cancels
+          location.reload();
+        }
+      }
+
+      function updateUserStatus(newStatus) {
+        const currentStatus = '<%= @user.status %>';
+        
+        if (newStatus === currentStatus) {
+          return; // No change needed
+        }
+
+        const statusMessages = {
+          'working': 'mark this user as active/working',
+          'out': 'mark this user as out (siege failed)',
+          'banned': 'ban this user',
+          'new': 'mark this user as new'
+        };
+
+        const message = `Are you sure you want to ${statusMessages[newStatus] || 'change user status'}?`;
+        
+        if (confirm(message)) {
+          let endpoint = '';
+          switch(newStatus) {
+            case 'working':
+              endpoint = 'set_active';
+              break;
+            case 'out':
+              endpoint = 'set_out';
+              break;
+            case 'banned':
+              endpoint = 'set_banned';
+              break;
+            default:
+              alert('Invalid status selected');
+              location.reload();
+              return;
+          }
+
+          fetch(`/admin/users/<%= @user.id %>/${endpoint}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+            }
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              alert('User status updated successfully!');
+              location.reload();
+            } else {
+              alert('Error updating user status: ' + (data.error || 'Unknown error'));
+              location.reload();
+            }
+          })
+          .catch(error => {
+            console.error('Error:', error);
+            alert('Error updating user status. Please try again.');
             location.reload();
           });
         } else {
@@ -947,7 +1005,7 @@
               'Content-Type': 'application/json',
               'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
             },
-            body: JSON.stringify({ reviewer_multiplier: parseFloat(reviewerMultiplier) })
+            body: JSON.stringify({ multiplier: parseFloat(reviewerMultiplier) })
           })
         ])
         .then(responses => Promise.all(responses.map(r => r.json())))
@@ -991,7 +1049,7 @@
               'Content-Type': 'application/json',
               'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
             },
-            body: JSON.stringify({ reviewer_multiplier: parseFloat(reviewerMultiplier) })
+            body: JSON.stringify({ multiplier: parseFloat(reviewerMultiplier) })
           })
         ])
         .then(responses => Promise.all(responses.map(r => r.json())))
