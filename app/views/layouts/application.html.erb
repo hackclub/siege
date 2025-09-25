@@ -60,6 +60,8 @@
     <script>
       console.log("Layout loaded at:", new Date().toISOString());
 
+
+
       // Submit Authorizer for headless identity verification
       class SubmitAuthorizer {
         constructor() {
@@ -136,7 +138,7 @@
   <body<%= " class=\"#{content_for(:body_class)}\"".html_safe if content_for?(:body_class) %>>
     <div class="app-container">
       <% unless (controller_name == "sessions" && action_name == "new") ||
-      (controller_name == "addresses" && (action_name == "new" || action_name == "create")) ||
+      (controller_name == "addresses" && (action_name == "new" || action_name == "create" || action_name == "show")) ||
       (controller_name == "welcome") ||
                  (controller_name == "castle") %>
         <%= render "application/navbar" %>

@@ -1,9 +1,162 @@
+<% content_for :body_class, "chambers-page" %>
+
 <% content_for :head do %>
   <style>
+    html, body {
+      overflow: hidden;
+    }
+    
+    .chambers-container {
+      width: 100vw;
+      background: transparent;
+      overflow: hidden;
+    }
+    
+    .chambers {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 100vw;
+      height: 100vh;
+    }
+    
+    .chambers-layer {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+      object-fit: cover;
+      transition: filter 0.3s ease;
+    }
+
+    .chambers-layer:nth-child(1) { z-index: 1; }
+    .chambers-layer:nth-child(2) { z-index: 2; }
+    .chambers-layer:nth-child(3) { z-index: 3; }
+    .chambers-layer:nth-child(4) { z-index: 4; }
+
+    .chambers-layer.highlighted {
+      filter: drop-shadow(4px 0 0 rgba(245, 231, 183, 0.8)) drop-shadow(-4px 0 0 rgba(245, 231, 183, 0.8)) drop-shadow(0 4px 0 rgba(245, 231, 183, 0.8)) drop-shadow(0 -4px 0 rgba(245, 231, 183, 0.8));
+    }
+
+    .hover-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 300;
+    }
+    
+    .hover-box {
+      position: absolute;
+      pointer-events: none;
+    }
+    
+    .hover-box svg {
+      width: 100%;
+      height: 100%;
+      pointer-events: auto;
+    }
+    
+    .hover-box svg path,
+    .hover-box svg circle,
+    .hover-box svg rect,
+    .hover-box svg polygon {
+      cursor: pointer;
+      transition: opacity 0.2s ease;
+    }
+    
+    .hover-box svg path:hover,
+    .hover-box svg circle:hover,
+    .hover-box svg rect:hover,
+    .hover-box svg polygon:hover {
+      opacity: 0.8;
+    }
+
+    .left-meeple-display {
+      position: fixed;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      cursor: pointer;
+      z-index: 150;
+      pointer-events: auto;
+    }
+
+    .left-meeple-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .customization-sidebar {
+      position: fixed;
+      top: 0;
+      right: -500px;
+      width: 450px;
+      height: 100vh;
+      background: rgba(246, 236, 206, 0.98);
+      border-left: 3px solid rgba(64, 43, 32, 0.75);
+      backdrop-filter: blur(10px);
+      z-index: 1001;
+      transition: right 0.3s ease;
+      overflow-y: auto;
+      padding: 2rem;
+      box-sizing: border-box;
+    }
+
+    .customization-sidebar.open {
+      right: 0;
+    }
+
+    .sidebar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      padding-bottom: 1rem;
+      border-bottom: 2px solid rgba(64, 43, 32, 0.3);
+    }
+
+    .sidebar-close {
+      cursor: pointer;
+      font-size: 1.5rem;
+      color: #3b2a1a;
+      padding: 0.5rem;
+      border: none;
+      background: none;
+    }
+
+    .sidebar-close:hover {
+      opacity: 0.7;
+    }
+
+    .sidebar-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: transparent;
+      z-index: 1000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+
+    .sidebar-overlay.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
     .details-title {
       font-weight: 700;
       font-size: 2.25rem;
       margin-bottom: 1.5rem;
+      color: #3b2a1a;
     }
 
     .details-content {
@@ -23,13 +176,13 @@
 
     .details-label {
       display: block;
-      color: inherit;
+      color: #3b2a1a;
       font-weight: 700;
       margin-bottom: 0.5rem;
     }
 
     .details-value {
-      color: inherit;
+      color: #3b2a1a;
       font-size: 1.125rem;
     }
 
@@ -37,25 +190,6 @@
       display: flex;
       align-items: center;
       justify-content: flex-start;
-    }
-
-    .chambers-layout {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 2rem;
-      align-items: flex-start;
-    }
-
-    .meeple-section {
-      grid-column: 1;
-    }
-
-    .address-section {
-      grid-column: 2;
-    }
-
-    .referral-section {
-      grid-column: 3;
     }
 
     .meeple-preview {
@@ -171,177 +305,95 @@
       font-weight: 500;
       letter-spacing: 0.5px;
     }
-
-    @media (max-width: 768px) {
-      .chambers-layout {
-        grid-template-columns: 1fr;
-        gap: 1.5rem;
-      }
-      
-      .meeple-section,
-      .address-section,
-      .referral-section {
-        grid-column: 1;
-      }
-    }
   </style>
 <% end %>
 
-<div class="details-show">
-  <h1 class="details-title">The Chambers</h1>
-  
-  <div class="chambers-layout">
-    <div class="meeple-section">
-      <h2 class="details-label">Your Meeple</h2>
-      <div class="meeple-preview" id="meeple-display-container">
-        <!-- MeepleDisplay will render here -->
-      </div>
-      <div class="color-options">
-        <% @meeple.unlocked_colors.each do |color| %>
-          <div class="color-option <%= color %> <%= 'active' if @meeple.color == color %>" 
-               data-color="<%= color %>" 
-               onclick="updateMeepleColor('<%= color %>')">
-            <img src="<%= image_path("meeple/meeple-#{color}.png") %>" alt="<%= color.capitalize %>" />
-          </div>
-        <% end %>
-      </div>
-      <div class="details-field">
-        <strong class="details-label">Cosmetics:</strong>
-        <% if @unlocked_cosmetics.any? %>
-          <div class="cosmetics-grid">
-            <div class="cosmetic-items">
-              <% 
-                # Flatten all cosmetics and sort by render order
-                render_order = ['back', 'hat', 'eyes', 'front', 'neck', 'feet', 'cloak', 'face', 'left', 'right']
-                all_cosmetics = []
-                @unlocked_cosmetics.each do |cosmetic_type, meeple_cosmetics|
-                  meeple_cosmetics.each do |meeple_cosmetic|
-                    cosmetic = meeple_cosmetic.cosmetic
-                    is_equipped = @equipped_cosmetics[cosmetic_type]&.cosmetic == cosmetic
-                    all_cosmetics << {
-                      meeple_cosmetic: meeple_cosmetic,
-                      cosmetic: cosmetic,
-                      cosmetic_type: cosmetic_type,
-                      is_equipped: is_equipped,
-                      sort_order: render_order.index(cosmetic_type) || 999
-                    }
-                  end
-                end
-                all_cosmetics.sort_by! { |item| item[:sort_order] }
-              %>
-              
-              <% all_cosmetics.each do |item| %>
-                <div class="cosmetic-item <%= 'equipped' if item[:is_equipped] %>" 
-                     data-cosmetic-id="<%= item[:cosmetic].id %>" 
-                     data-cosmetic-type="<%= item[:cosmetic_type] %>"
-                     onclick="toggleCosmetic(<%= item[:cosmetic].id %>, '<%= item[:cosmetic_type] %>')">
-                  <% if item[:cosmetic].image.attached? %>
-                    <%= image_tag item[:cosmetic].image, alt: item[:cosmetic].name, class: "cosmetic-image" %>
-                  <% end %>
-                  <span class="cosmetic-name"><%= item[:cosmetic].name %></span>
-                </div>
-              <% end %>
-            </div>
-          </div>
-        <% else %>
-          <p class="details-value">No cosmetics unlocked yet</p>
-        <% end %>
-      </div>
-    </div>
-    
-    <div class="address-section">
-      <h2 class="details-label">Your Details</h2>
-      <div class="details-content">
-        <% if @address.present? %>
-          <div class="details-field">
-            <strong class="details-label">Name:</strong>
-            <p class="details-value"><%= @address.first_name %> <%= @address.last_name %></p>
-          </div>
-          <div class="details-field">
-            <strong class="details-label">Birthday:</strong>
-            <p class="details-value"><%= @address.birthday.strftime("%B %d, %Y") if @address.birthday %></p>
-          </div>
-          <% if @address.shipping_name.present? %>
-            <div class="details-field">
-              <strong class="details-label">Preferred Shipping Name:</strong>
-              <p class="details-value"><%= @address.shipping_name %></p>
-            </div>
-          <% end %>
-          <div class="details-field">
-            <strong class="details-label">Address:</strong>
-            <div class="details-value" style="white-space: pre-line;">
-<%= @address.line_one %>
-<% if @address.line_two.present? %><%= @address.line_two %>
-<% end %><%= @address.city %>, <%= @address.state %> <%= @address.postcode %>
-<%= @address.human_country %></div>
-          </div>
-          <div class="details-actions">
-            <%= link_to "Edit Details", edit_chambers_path, class: "submit-button" %>
-          </div>
-        <% else %>
-          <div class="details-field">
-            <p class="details-value">Complete your account setup to participate fully in Siege.</p>
-          </div>
-          <div class="details-actions">
-            <button onclick="startAddressSetup()" class="submit-button">Finish setting up your account</button>
-          </div>
-        <% end %>
-      </div>
-    </div>
-    
-    <div class="referral-section">
-      <h2 class="details-label">Referrals</h2>
-      <div class="details-content">
-        <div class="details-field">
-          <strong class="details-label">Your Referral ID:</strong>
-          <p class="details-value">
-            <%= current_user.id %>
-            <br>
-            <small>
-              Share this link to refer others: 
-              <%= link_to root_url(ref: current_user.id), root_url(ref: current_user.id), target: "_blank" %>
-            </small>
-          </p>
-        </div>
-        <% if current_user.referrer.present? %>
-          <div class="details-field">
-            <strong class="details-label">Referred by:</strong>
-            <p class="details-value"><%= current_user.referrer.name %> (ID: <%= current_user.referrer.id %>)</p>
-          </div>
-        <% end %>
-        
-        <div class="details-field">
-          <strong class="details-label">Your Referrals:</strong>
-          <p class="details-value">
-            <%= @user_referral_count %> <%= @user_referral_count == 1 ? 'referral' : 'referrals' %>
-            <% if @user_referral_count == 0 %>
-              <br><small style="color: #666;">Share your referral link to start referring others!</small>
-            <% end %>
-          </p>
-        </div>
-        
-        <% if @top_referrers.any? %>
-          <div class="details-field">
-            <strong class="details-label">Top Referrers:</strong>
-            <div class="details-value">
-              <ol style="margin: 0.5rem 0; padding-left: 1.5rem; font-size: 0.9rem;">
-                <% @top_referrers.each_with_index do |(user_id, name, count), index| %>
-                  <li style="margin-bottom: 0.25rem;">
-                    <%= name %> - <%= count %> <%= count == 1 ? 'referral' : 'referrals' %>
-                  </li>
-                <% end %>
-              </ol>
-            </div>
-          </div>
-        <% end %>
-        
-        <div class="details-actions">
-          <%= button_to "Sign out", logout_path, method: :delete, class: "submit-button signout-button" %>
-        </div>
-      </div>
-    </div>
+<div class="chambers-container">
+  <div class="chambers">
+    <%= image_tag "chambers/chambers-background.webp", class: "chambers-layer" %>
+    <%= image_tag "chambers/customize-character.webp", class: "chambers-layer customize-character" %>
+    <%= image_tag "chambers/details.webp", class: "chambers-layer details" %>
+		<%= image_tag "chambers/referrals.webp", class: "chambers-layer" %>
   </div>
 </div>
+<div class="hover-overlay">
+  <!-- Hover boxes will be generated by JavaScript -->
+</div>
+
+<%= render 'chambers_navbar' %>
+
+
+<div class="left-meeple-display" onclick="openCustomizationSidebar()">
+	<div class="left-meeple-container" id="left-meeple-display-container">
+		<!-- MeepleDisplay will render here -->
+	</div>
+</div>
+
+<!-- Sidebar Overlay -->
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="closeCustomizationSidebar()"></div>
+
+<!-- Customization Sidebar -->
+<div class="customization-sidebar" id="customization-sidebar">
+  <div class="sidebar-header">
+    <h2 class="details-label">Customize Your Meeple</h2>
+    <button class="sidebar-close" onclick="closeCustomizationSidebar()">&times;</button>
+  </div>
+  
+  <div class="color-options">
+    <% @meeple.unlocked_colors.each do |color| %>
+      <div class="color-option <%= color %> <%= 'active' if @meeple.color == color %>" 
+           data-color="<%= color %>" 
+           onclick="updateMeepleColor('<%= color %>')">
+        <img src="<%= image_path("meeple/meeple-#{color}.png") %>" alt="<%= color.capitalize %>" />
+      </div>
+    <% end %>
+  </div>
+  
+  <div class="details-field">
+    <strong class="details-label">Cosmetics:</strong>
+    <% if @unlocked_cosmetics.any? %>
+      <div class="cosmetics-grid">
+        <div class="cosmetic-items">
+          <% 
+            # Flatten all cosmetics and sort by render order
+            render_order = ['back', 'hat', 'eyes', 'front', 'neck', 'feet', 'cloak', 'face', 'left', 'right']
+            all_cosmetics = []
+            @unlocked_cosmetics.each do |cosmetic_type, meeple_cosmetics|
+              meeple_cosmetics.each do |meeple_cosmetic|
+                cosmetic = meeple_cosmetic.cosmetic
+                is_equipped = @equipped_cosmetics[cosmetic_type]&.cosmetic == cosmetic
+                all_cosmetics << {
+                  meeple_cosmetic: meeple_cosmetic,
+                  cosmetic: cosmetic,
+                  cosmetic_type: cosmetic_type,
+                  is_equipped: is_equipped,
+                  sort_order: render_order.index(cosmetic_type) || 999
+                }
+              end
+            end
+            all_cosmetics.sort_by! { |item| item[:sort_order] }
+          %>
+          
+          <% all_cosmetics.each do |item| %>
+            <div class="cosmetic-item <%= 'equipped' if item[:is_equipped] %>" 
+                 data-cosmetic-id="<%= item[:cosmetic].id %>" 
+                 data-cosmetic-type="<%= item[:cosmetic_type] %>"
+                 onclick="toggleCosmetic(<%= item[:cosmetic].id %>, '<%= item[:cosmetic_type] %>')">
+              <% if item[:cosmetic].image.attached? %>
+                <%= image_tag item[:cosmetic].image, alt: item[:cosmetic].name, class: "cosmetic-image" %>
+              <% end %>
+              <span class="cosmetic-name"><%= item[:cosmetic].name %></span>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    <% else %>
+      <p class="details-value">No cosmetics unlocked yet</p>
+    <% end %>
+  </div>
+</div>
+
+
 
 <script>
 function startAddressSetup() {
@@ -746,27 +798,52 @@ function updateMeepleDisplay() {
   
   console.log('Update - user data:', userData);
   
-  const container = document.getElementById('meeple-display-container');
+  const container = document.getElementById('left-meeple-display-container');
   console.log('Update - container:', container);
   
   if (container) {
-    console.log('Update - rendering meeple');
+    // Get current scaled dimensions
+    const meepleContainer = document.querySelector('.left-meeple-container');
+    const currentWidth = meepleContainer ? parseInt(meepleContainer.style.width) || 380 : 380;
+    const currentHeight = meepleContainer ? parseInt(meepleContainer.style.height) || 440 : 440;
+    
+    console.log('Update - rendering meeple with dimensions:', currentWidth, currentHeight);
     if (typeof window.renderUnifiedMeeple === 'function') {
-      const success = renderUnifiedMeeple(userData, container, null, null, 150, 180);
+      const success = renderUnifiedMeeple(userData, container, null, null, currentWidth, currentHeight);
       if (success) {
         console.log('Update - meeple rendering complete using unified renderer');
       } else {
         console.log('Update - unified renderer failed, using direct MeepleDisplay');
-        const meepleDisplay = new MeepleDisplay(userData, 150, 180);
+        const meepleDisplay = new MeepleDisplay(userData, currentWidth, currentHeight);
         meepleDisplay.renderToHTML(container);
       }
     } else {
-      const meepleDisplay = new MeepleDisplay(userData, 150, 180);
+      const meepleDisplay = new MeepleDisplay(userData, currentWidth, currentHeight);
       meepleDisplay.renderToHTML(container);
       console.log('Update - meeple rendering complete using direct MeepleDisplay');
     }
   } else {
     console.error('Update - container not found!');
+  }
+
+  // Also update navbar meeple if it exists
+  const navbarContainer = document.getElementById('navbar-meeple-container');
+  if (navbarContainer) {
+    console.log('Update - rendering navbar meeple');
+    if (typeof window.renderUnifiedMeeple === 'function') {
+      const success = renderUnifiedMeeple(userData, navbarContainer, null, null, 88, 105);
+      if (success) {
+        console.log('Update - navbar meeple rendering complete using unified renderer');
+      } else {
+        console.log('Update - navbar unified renderer failed, using direct MeepleDisplay');
+        const navbarMeepleDisplay = new MeepleDisplay(userData, 88, 105);
+        navbarMeepleDisplay.renderToHTML(navbarContainer);
+      }
+    } else {
+      const navbarMeepleDisplay = new MeepleDisplay(userData, 88, 105);
+      navbarMeepleDisplay.renderToHTML(navbarContainer);
+      console.log('Update - navbar meeple rendering complete using direct MeepleDisplay');
+    }
   }
 }
 
@@ -775,8 +852,8 @@ function initializeChambersMeepleDisplay() {
   console.log('initializeChambersMeepleDisplay called');
   console.log('MeepleDisplay available:', typeof window.MeepleDisplay);
   
-  const container = document.getElementById('meeple-display-container');
-  console.log('Chambers container:', container);
+  const container = document.getElementById('left-meeple-display-container');
+  console.log('Left meeple container:', container);
   
   if (typeof window.MeepleDisplay === 'undefined') {
     console.log('MeepleDisplay not loaded yet, retrying in 100ms');
@@ -812,23 +889,50 @@ function initializeChambersMeepleDisplay() {
   console.log('Chambers user data:', userData);
   
   if (container) {
-    console.log('Rendering to chambers container');
+    console.log('Rendering to left meeple container');
+    
+    // Get current scaled dimensions
+    const meepleContainer = document.querySelector('.left-meeple-container');
+    const currentWidth = meepleContainer ? parseInt(meepleContainer.style.width) || 200 : 200;
+    const currentHeight = meepleContainer ? parseInt(meepleContainer.style.height) || 240 : 240;
+    
+    console.log('Initialize - rendering meeple with dimensions:', currentWidth, currentHeight);
     if (typeof window.renderUnifiedMeeple === 'function') {
-      const success = renderUnifiedMeeple(userData, container, null, null, 150, 180);
+      const success = renderUnifiedMeeple(userData, container, null, null, currentWidth, currentHeight);
       if (success) {
-        console.log('Chambers meeple rendering complete using unified renderer');
+        console.log('Left meeple rendering complete using unified renderer');
       } else {
-        console.log('Chambers unified renderer failed, using direct MeepleDisplay');
-        const meepleDisplay = new MeepleDisplay(userData, 150, 180);
+        console.log('Left unified renderer failed, using direct MeepleDisplay');
+        const meepleDisplay = new MeepleDisplay(userData, currentWidth, currentHeight);
         meepleDisplay.renderToHTML(container);
       }
     } else {
-      const meepleDisplay = new MeepleDisplay(userData, 150, 180);
+      const meepleDisplay = new MeepleDisplay(userData, currentWidth, currentHeight);
       meepleDisplay.renderToHTML(container);
-      console.log('Chambers meeple rendering complete using direct MeepleDisplay');
+      console.log('Left meeple rendering complete using direct MeepleDisplay');
     }
   } else {
-    console.error('Chambers container not found!');
+    console.error('Left meeple container not found!');
+  }
+
+  // Also render meeple in navbar if it exists
+  const navbarContainer = document.getElementById('navbar-meeple-container');
+  if (navbarContainer) {
+    console.log('Rendering to navbar container');
+    if (typeof window.renderUnifiedMeeple === 'function') {
+      const success = renderUnifiedMeeple(userData, navbarContainer, null, null, 88, 105);
+      if (success) {
+        console.log('Navbar meeple rendering complete using unified renderer');
+      } else {
+        console.log('Navbar unified renderer failed, using direct MeepleDisplay');
+        const navbarMeepleDisplay = new MeepleDisplay(userData, 88, 105);
+        navbarMeepleDisplay.renderToHTML(navbarContainer);
+      }
+    } else {
+      const navbarMeepleDisplay = new MeepleDisplay(userData, 88, 105);
+      navbarMeepleDisplay.renderToHTML(navbarContainer);
+      console.log('Navbar meeple rendering complete using direct MeepleDisplay');
+    }
   }
 }
 
@@ -840,4 +944,274 @@ document.addEventListener('turbo:load', function() {
   console.log('turbo:load fired on chambers page');
   initializeChambersMeepleDisplay();
 });
+
+// Sidebar Functions
+function openCustomizationSidebar() {
+  const sidebar = document.getElementById('customization-sidebar');
+  const overlay = document.getElementById('sidebar-overlay');
+  
+  if (sidebar) sidebar.classList.add('open');
+  if (overlay) overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeCustomizationSidebar() {
+  const sidebar = document.getElementById('customization-sidebar');
+  const overlay = document.getElementById('sidebar-overlay');
+  
+  if (sidebar) sidebar.classList.remove('open');
+  if (overlay) overlay.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// Details Modal Functions
+function showDetailsModal() {
+  <% if @address.present? %>
+    let message = `<div style="text-align: left; font-size: 1.1rem; line-height: 1.6;">
+      <div style="margin-bottom: 1rem;"><strong>Name:</strong> <%= @address.first_name %> <%= @address.last_name %></div>
+      <div style="margin-bottom: 1rem;"><strong>Birthday:</strong> <%= @address.birthday.strftime("%B %d, %Y") if @address.birthday %></div>
+      <% if @address.shipping_name.present? %>
+        <div style="margin-bottom: 1rem;"><strong>Preferred Shipping Name:</strong> <%= @address.shipping_name %></div>
+      <% end %>
+      <div style="margin-bottom: 1rem;"><strong>Address:</strong><br>
+        <%= @address.line_one %><br>
+        <% if @address.line_two.present? %><%= @address.line_two %><br><% end %>
+        <%= @address.city %>, <%= @address.state %> <%= @address.postcode %><br>
+        <%= @address.human_country %>
+      </div>
+    </div>`;
+    
+    showModal('Your Details', '', [
+      { text: 'Edit Details', primary: true, action: () => { window.location.href = '<%= edit_chambers_path %>'; } },
+      { text: 'Close', action: () => {} }
+    ]);
+    
+    // Set the message as HTML
+    const modalMessage = document.getElementById('modal-message');
+    if (modalMessage) {
+      modalMessage.innerHTML = message;
+    }
+  <% else %>
+    showModal('Your Details', 'Complete your account setup to participate fully in Siege.', [
+      { text: 'Finish Setup', primary: true, action: () => { startAddressSetup(); } },
+      { text: 'Close', action: () => {} }
+    ]);
+  <% end %>
+}
+
+// Chambers page initialization handled by ChambersManager
+
+// Register Chambers Manager
+(function() {
+  const chambersElement = document.querySelector('.chambers');
+  if (!chambersElement) return; // Not on chambers page
+
+  class ChambersManager extends SiegeBaseManager {
+    constructor() {
+      super('Chambers');
+      this.originalWidth = 1920;
+      this.originalHeight = 1080;
+      this.meepleConfig = {
+        x: 350,
+        y: 330,
+        width: 200,
+        height: 240,
+        scale: 1.8
+      };
+    }
+
+    initialize() {
+      console.log('Chambers: Initializing...');
+      
+      try {
+        this.setupClickSystem();
+        this.setupMeepleSystem();
+        
+        this.isValid = true;
+        return true;
+      } catch (error) {
+        console.error('Chambers: Initialization failed:', error);
+        return false;
+      }
+    }
+
+    validate() {
+      return this.isValid && 
+             document.querySelector('.chambers') &&
+             document.querySelector('.hover-overlay');
+    }
+
+    setupClickSystem() {
+      const hoverOverlay = document.querySelector('.hover-overlay');
+      if (!hoverOverlay) return;
+      
+      hoverOverlay.innerHTML = ''; // Clear existing
+      
+      this.createHoverSVG();
+      this.updateHoverSVGPosition();
+      
+      this.addEventListener(window, 'resize', () => {
+        this.updateHoverSVGPosition();
+        this.updateMeeplePosition();
+      });
+    }
+
+    setupMeepleSystem() {
+      this.updateMeeplePosition();
+      
+      if (typeof initializeChambersMeepleDisplay === 'function') {
+        initializeChambersMeepleDisplay();
+      }
+    }
+
+    createHoverSVG() {
+      const hoverOverlay = document.querySelector('.hover-overlay');
+      const svgElement = document.createElement('div');
+      svgElement.className = 'hover-box';
+      
+      const clickAreas = [
+        {
+          id: 'details',
+          path: `M57.5 58L1 119.5V165L40 175L52 198.5H66V282L57.5 299.5L79.5 316L113.5 309.5L265 322L311.5 332L327.5 322L316.5 309.5L327.5 221L362.5 207L356.5 182.5L392.5 175L386 126L321 15.5L135 1L57.5 58Z`,
+          fill: "#E40000",
+          fillOpacity: "0",
+          stroke: "",
+          x: 1085,
+          y: 645,
+          scale: 1,
+          targetLayer: 'details',
+          action: 'showDetailsModal'
+        },
+        {
+          id: 'customization',
+          path: `M78.5 365.5L1 356.5V337.5L29 316.5L18 240.5H50.5L43.5 119L34.5 56.5L56 47L74 12.5L105 1.5L155.5 89L187.5 56.5L226 47L293.5 6L327 1.5L371.5 52V250.5L341 292.5L327 379.5H226L78.5 365.5Z`,
+          fill: "#0000E4",
+          fillOpacity: "0",
+          stroke: "",
+          x: 510,
+          y: 525,
+          scale: 1,
+          targetLayer: 'customize-character',
+          action: 'openCustomizationSidebar'
+        }
+      ];
+      
+      let svgContent = `<svg width="100%" height="100%" viewBox="0 0 ${this.originalWidth} ${this.originalHeight}" xmlns="http://www.w3.org/2000/svg">`;
+      
+      clickAreas.forEach(area => {
+        let transform = '';
+        if (area.x !== 0 || area.y !== 0) {
+          transform += `translate(${area.x}, ${area.y}) `;
+        }
+        if (area.scale !== 1.0) {
+          transform += `scale(${area.scale}) `;
+        }
+        
+        svgContent += `<path id="${area.id}" d="${area.path}" fill="${area.fill}" fill-opacity="${area.fillOpacity}" stroke="${area.stroke}" stroke-width="2" cursor="pointer"`;
+        if (transform) {
+          svgContent += ` transform="${transform.trim()}"`;
+        }
+        svgContent += ` />`;
+      });
+      
+      svgContent += '</svg>';
+      svgElement.innerHTML = svgContent;
+      
+      clickAreas.forEach(area => {
+        const pathElement = svgElement.querySelector(`#${area.id}`);
+        if (pathElement && window[area.action]) {
+          const targetLayer = document.querySelector('.chambers-layer.' + area.targetLayer);
+          
+          this.addEventListener(pathElement, 'mouseenter', () => {
+            if (targetLayer) targetLayer.classList.add('highlighted');
+            pathElement.style.opacity = '0.8';
+          });
+          
+          this.addEventListener(pathElement, 'mouseleave', () => {
+            if (targetLayer) targetLayer.classList.remove('highlighted');
+            pathElement.style.opacity = '1';
+          });
+          
+          this.addEventListener(pathElement, 'click', () => {
+            window[area.action]();
+          });
+        }
+      });
+      
+      hoverOverlay.appendChild(svgElement);
+    }
+
+    updateHoverSVGPosition() {
+      const hoverBox = document.querySelector('.hover-box');
+      if (!hoverBox) return;
+      
+      const scaleX = window.innerWidth / this.originalWidth;
+      const scaleY = window.innerHeight / this.originalHeight;
+      const baseScale = Math.max(scaleX, scaleY);
+      
+      const scaledWidth = this.originalWidth * baseScale;
+      const scaledHeight = this.originalHeight * baseScale;
+      
+      const chambersOffsetX = (window.innerWidth - scaledWidth) / 2;
+      const chambersOffsetY = (window.innerHeight - scaledHeight) / 2;
+      
+      hoverBox.style.left = chambersOffsetX + 'px';
+      hoverBox.style.top = chambersOffsetY + 'px';
+      hoverBox.style.width = scaledWidth + 'px';
+      hoverBox.style.height = scaledHeight + 'px';
+    }
+
+    updateMeeplePosition() {
+      const meepleDisplay = document.querySelector('.left-meeple-display');
+      const meepleContainer = document.querySelector('.left-meeple-container');
+      if (!meepleDisplay || !meepleContainer) return;
+      
+      const scaleX = window.innerWidth / this.originalWidth;
+      const scaleY = window.innerHeight / this.originalHeight;
+      const baseScale = Math.max(scaleX, scaleY);
+      
+      const scaledWidth = this.originalWidth * baseScale;
+      const scaledHeight = this.originalHeight * baseScale;
+      
+      const chambersOffsetX = (window.innerWidth - scaledWidth) / 2;
+      const chambersOffsetY = (window.innerHeight - scaledHeight) / 2;
+      
+      const scaledMeepleX = (this.meepleConfig.x * baseScale * this.meepleConfig.scale) + chambersOffsetX;
+      const scaledMeepleY = (this.meepleConfig.y * baseScale * this.meepleConfig.scale) + chambersOffsetY;
+      const scaledMeepleWidth = this.meepleConfig.width * baseScale * this.meepleConfig.scale;
+      const scaledMeepleHeight = this.meepleConfig.height * baseScale * this.meepleConfig.scale;
+      
+      meepleDisplay.style.left = scaledMeepleX + 'px';
+      meepleDisplay.style.top = scaledMeepleY + 'px';
+      
+      meepleContainer.style.width = scaledMeepleWidth + 'px';
+      meepleContainer.style.height = scaledMeepleHeight + 'px';
+      
+      // Re-render meeple with new dimensions
+      if (typeof updateMeepleDisplay === 'function') {
+        updateMeepleDisplay();
+      }
+    }
+  }
+
+  // Register the manager
+  function registerChambersManager() {
+    if (window.SiegeApp && typeof window.SiegeBaseManager !== 'undefined') {
+      SiegeApp.registerManager('chambers', new ChambersManager());
+    } else {
+      // Wait for SiegeApp to be available
+      setTimeout(registerChambersManager, 50);
+    }
+  }
+
+  registerChambersManager();
+})();
+
+// Legacy wrapper for existing code
+window.updateMeeplePosition = function() {
+  const manager = SiegeApp?.managers?.get('chambers');
+  if (manager && typeof manager.updateMeeplePosition === 'function') {
+    manager.updateMeeplePosition();
+  }
+};
 </script>

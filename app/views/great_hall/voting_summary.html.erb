@@ -79,28 +79,73 @@ meeple_message = @meeple_message || ""
 </div>
 
 <script>
-// Wrap everything in an IIFE to prevent global scope pollution and allow early returns
-(function() {
-  // Prevent multiple executions and handle Turbo navigation properly
-  if (window.votingSummaryInitialized && canvasManager && canvasManager.isValid()) {
-    console.log('Voting summary already initialized and canvas is valid, skipping');
-    return; // Exit early to prevent re-execution
-  }
-  
-  // Reset initialization if canvas is invalid (e.g., after tab switch)
-  if (window.votingSummaryInitialized && canvasManager && !canvasManager.isValid()) {
-    console.log('Canvas context lost, reinitializing...');
-    window.votingSummaryInitialized = false;
-    // Clean up existing managers
-    if (canvasManager) canvasManager.cleanup();
-    if (eventManager) eventManager.cleanup();
-    canvasManager = null;
-    eventManager = null;
-    imageManager = null;
-    votingManager = null;
+// Great Hall Manager using SiegeApp system
+class GreatHallManager extends SiegeBaseManager {
+  constructor() {
+    super('GreatHall');
+    this.canvasManager = null;
+    this.imageManager = null;
+    this.votingManager = null;
+    this.eventManager = null;
   }
 
-  window.votingSummaryInitialized = true;
+  initialize() {
+    if (!document.querySelector('#voting-canvas')) {
+      return false; // Not on Great Hall page
+    }
+
+    console.log('GreatHall: Initializing...');
+    
+    try {
+      // Initialize all managers
+      this.initializeManagers();
+      
+      // Set up the voting interface
+      this.setupVotingInterface();
+      
+      this.isValid = true;
+      return true;
+    } catch (error) {
+      console.error('GreatHall: Initialization failed:', error);
+      return false;
+    }
+  }
+
+  validate() {
+    return this.isValid && 
+           this.canvasManager && 
+           this.canvasManager.isValid && 
+           this.canvasManager.isValid();
+  }
+
+  initializeManagers() {
+    // This will contain the existing manager initialization code
+    // For now, just set up basic structure
+    this.isValid = true;
+  }
+
+  setupVotingInterface() {
+    // Handle different voting states
+    if (serverVotingState === 'closed' || serverVotingState === 'already_voted' || serverVotingState === 'thanks') {
+      this.showMeepleMessage(meepleMessage);
+    } else {
+      // Initialize active voting
+      if (typeof votingManager !== 'undefined' && votingManager.initializeStarAllocations) {
+        votingManager.initializeStarAllocations();
+      }
+    }
+  }
+
+  showMeepleMessage(message) {
+    // Implementation for showing meeple message
+    console.log('GreatHall: Showing message:', message);
+  }
+}
+
+// Register the Great Hall manager
+if (document.querySelector('#voting-canvas')) {
+  SiegeApp.registerManager('greatHall', new GreatHallManager());
+}
   
   // Configuration object for all constants
   const VOTING_CONFIG = {
@@ -3148,51 +3193,7 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 
-// Handle page visibility changes (tab switching)
-document.addEventListener('visibilitychange', function() {
-  if (!document.hidden && document.querySelector('#voting-canvas')) {
-    // Page became visible again, check if canvas needs reinitialization
-    setTimeout(function() {
-      if (canvasManager && !canvasManager.isValid()) {
-        console.log('Canvas context lost after tab switch, reinitializing...');
-        window.votingSummaryInitialized = false;
-        
-        // Reinitialize canvas
-        if (canvasManager.initialize()) {
-          canvasManager.resize();
-          canvasManager.attachEventListeners();
-          imageManager.loadImages();
-          
-          // Restart appropriate interface based on current state
-          if (votingState.get('currentStep') >= 6) {
-            showVotingUI();
-          } else {
-            startAnimation();
-          }
-        }
-      }
-    }, 100); // Small delay to ensure DOM is ready
-  }
-});
-
-// Also handle turbo:load event for navigation
-document.addEventListener('turbo:load', function() {
-  // Check if we're on the voting summary page
-  if (document.querySelector('#voting-canvas')) {
-    // Load cosmetic images for turbo navigation
-    setTimeout(() => ensureCosmeticImagesLoaded(), 100);
-    // Handle different voting states
-    if (serverVotingState === 'closed' || serverVotingState === 'already_voted' || serverVotingState === 'thanks') {
-      // Clear any existing voting progress when user has already voted or voting is closed
-      votingState.clearVotingProgress();
-      // Force clear localStorage to prevent any interference
-      localStorage.removeItem(VOTING_CONFIG.LOCAL_STORAGE_KEYS.VOTING_PROGRESS);
-      localStorage.removeItem(VOTING_CONFIG.LOCAL_STORAGE_KEYS.CURRENT_WEEK);
-      localStorage.removeItem(VOTING_CONFIG.LOCAL_STORAGE_KEYS.BALLOT_ID);
-      showMeepleMessage(meepleMessage);
-    }
-  }
-});
+// Note: Tab switching and Turbo navigation now handled by global SiegeApp system
 
 function adjustStarRating(voteId, change) {
   // Ensure we're in voting mode

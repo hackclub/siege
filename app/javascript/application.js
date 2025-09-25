@@ -2,3 +2,4 @@
 import "@hotwired/turbo-rails";
 import "controllers";
 import "meeple_display";
+import "siege_app";
