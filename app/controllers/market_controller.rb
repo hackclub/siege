@@ -53,9 +53,6 @@ class MarketController < ApplicationController
         return
       end
       coins_spent = 50
-    when "Random Sticker"
-      # No special validation needed
-      coins_spent = 15
     else
       # Check if it's a tech tree item
       tech_tree_item = get_tech_tree_item(item_name)

@@ -145,8 +145,7 @@
   const allShopItems = {
     other: [
       { id: 1, title: "Mercenary", price: 35, description: "This meeple will fight for you for an hour. Purchase to skip a required hour of sieging!", image: '<%= asset_path("meeple/mercenary.png") %>', maxPerWeek: 10, priceIncreases: true, oneTime: false },
-      { id: 2, title: "Unlock Orange Meeple", price: 50, description: "Not feeling your color? Try orange!", image: '<%= asset_path("meeple/meeple-orange.png") %>', oneTime: true },
-      { id: 3, title: "Random Sticker", price: 30, description: "Some random sticker from around hq. This will be sent with your next round of prizes.", image: '<%= asset_path("meeple/meeple-red.png") %>', oneTime: false }
+      { id: 2, title: "Unlock Orange Meeple", price: 50, description: "Not feeling your color? Try orange!", image: '<%= asset_path("meeple/meeple-orange.png") %>', oneTime: true }
       <% @purchasable_cosmetics.each_with_index do |cosmetic, index| %>
       ,{ id: <%= 100 + index %>, title: "<%= cosmetic.name %>", price: <%= cosmetic.cost %>, description: "<%= (cosmetic.description.present? ? cosmetic.description : 'A cosmetic item for your meeple!').html_safe %>", image: "<%= cosmetic.image.attached? ? rails_blob_path(cosmetic.image, only_path: false) : asset_path('meeple/meeple-red.png') %>", oneTime: true, isCosmetic: true }
       <% end %>

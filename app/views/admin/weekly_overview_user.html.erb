@@ -540,46 +540,54 @@
       
       <!-- Panel 1: Review & Airtable Submission -->
       <div class="review-panel">
+        <h2 class="card-title">Review & Airtable Submission</h2>
+        <p style="color: #6b5b4a; margin-bottom: 1.5rem;">
+          Complete the review and submit to Airtable in one action.
+        </p>
+
         <% if @submitted_to_airtable %>
-          <div class="submitted-notice">
+          <div class="submitted-notice" style="margin-bottom: 1.5rem;">
             ✓ This project has already been submitted to Airtable
           </div>
-        <% else %>
-          <h2 class="card-title">Review & Airtable Submission</h2>
-          <p style="color: #6b5b4a; margin-bottom: 1.5rem;">
-            Complete the review and submit to Airtable in one action.
-          </p>
-
-          <div class="form-group">
-            <label class="form-label">Hour Override (optional):</label>
-            <input type="number" id="hour-override" step="any" min="0" value="<%= @raw_hours %>" placeholder="Leave blank for no override" class="form-input">
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">Airtable Comments:</label>
-            <textarea id="airtable-comments" class="form-textarea" placeholder="Add any comments or justification for this submission..."></textarea>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">Reviewer Feedback for <%= @user.name %>:</label>
-            <textarea id="reviewer-feedback" class="form-textarea reviewer-feedback-textarea" placeholder="Add feedback for the project creator..."><%= @project.reviewer_feedback %></textarea>
-            <small class="reviewer-feedback-help">
-              This feedback will be shown to the user only when the project status is "finished".
-            </small>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">Reviewer Multiplier:</label>
-            <input type="number" id="reviewer-multiplier" value="<%= @project&.reviewer_multiplier || 2.0 %>" min="0" step="0.1" class="form-input" placeholder="Reviewer multiplier (default: 2)" oninput="updateSuggestedCoins()">
-            <small class="reviewer-feedback-help">
-              This multiplier affects the suggested coin calculation.
-            </small>
-          </div>
-
-          <button type="button" onclick="submitReviewAndAirtable()" class="submit-button" style="width: 100%; padding: 1rem; font-size: 1rem; font-weight: 600;">
-            Save Review & Submit to Airtable
-          </button>
         <% end %>
+
+        <div class="form-group">
+          <label class="form-label">Hour Override (optional):</label>
+          <input type="number" id="hour-override" step="any" min="0" value="<%= @raw_hours %>" placeholder="Leave blank for no override" class="form-input" <%= 'disabled' if @submitted_to_airtable %>>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Airtable Comments:</label>
+          <textarea id="airtable-comments" class="form-textarea" placeholder="Add any comments or justification for this submission..." <%= 'disabled' if @submitted_to_airtable %>></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Reviewer Feedback for <%= @user.name %>:</label>
+          <textarea id="reviewer-feedback" class="form-textarea reviewer-feedback-textarea" placeholder="Add feedback for the project creator..."><%= @project.reviewer_feedback %></textarea>
+          <small class="reviewer-feedback-help">
+            This feedback will be shown to the user only when the project status is "finished".
+          </small>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Reviewer Multiplier:</label>
+          <input type="number" id="reviewer-multiplier" value="<%= @project&.reviewer_multiplier || 2.0 %>" min="0" step="0.1" class="form-input" placeholder="Reviewer multiplier (default: 2)" oninput="updateSuggestedCoins()">
+          <small class="reviewer-feedback-help">
+            This multiplier affects the suggested coin calculation.
+          </small>
+        </div>
+
+        <div style="display: flex; gap: 0.5rem;">
+          <% unless @submitted_to_airtable %>
+            <button type="button" onclick="submitReviewAndAirtable()" class="submit-button" style="flex: 1; padding: 1rem; font-size: 1rem; font-weight: 600;">
+              Save Review & Submit to Airtable
+            </button>
+          <% end %>
+          
+          <button type="button" onclick="saveReviewData()" class="submit-button" style="<%= @submitted_to_airtable ? 'width: 100%;' : 'flex: 1;' %> padding: 1rem; font-size: 1rem; font-weight: 600; background: #059669;">
+            Save Review Data
+          </button>
+        </div>
         
         <!-- Display Existing Review Video if Present -->
         <% if @project&.reviewer_video&.attached? %>
@@ -720,11 +728,11 @@
 
       function updateSuggestedCoins() {
         // Update the calculated amount display when multiplier changes
-        const multiplier = parseFloat(document.getElementById('reviewer-multiplier').value) || 0;
+        const multiplier = parseFloat(document.getElementById('reviewer-multiplier').value) || 2.0;
         const newCalculatedAmount = Math.round(baseSuggestedCoins * multiplier);
         
         document.getElementById('calculated-coins-display').textContent = newCalculatedAmount;
-        document.getElementById('saved-multiplier-display').textContent = storedMultiplier;
+        document.getElementById('saved-multiplier-display').textContent = multiplier;
         
         // Only update the input if not manually edited
         if (!isManuallyEdited) {
@@ -738,7 +746,9 @@
 
       function resetToCalculated() {
         isManuallyEdited = false;
-        document.getElementById('coin-balance').value = calculatedAmount;
+        const multiplier = parseFloat(document.getElementById('reviewer-multiplier').value) || 2.0;
+        const newCalculatedAmount = Math.round(baseSuggestedCoins * multiplier);
+        document.getElementById('coin-balance').value = newCalculatedAmount;
         updateSuggestedCoins();
       }
 
@@ -753,8 +763,7 @@
               'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
             },
             body: JSON.stringify({ 
-              multiplier: multiplier,
-              week: <%= @selected_week %>
+              multiplier: multiplier
             })
           })
           .then(response => response.json())
@@ -782,8 +791,7 @@
             'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
           },
           body: JSON.stringify({ 
-            reviewer_feedback: feedback,
-            week: <%= @selected_week %>
+            reviewer_feedback: feedback
           })
         })
         .then(response => response.json())
@@ -818,9 +826,8 @@
             'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
           },
           body: JSON.stringify({ 
-            coins: useCalculated ? null : coinBalance, // null means use calculated
-            use_calculated: useCalculated,
-            week: <%= @selected_week %>
+            coins: parseInt(coinBalance),
+            use_calculated: useCalculated.toString()
           })
         })
         .then(response => response.json())
@@ -853,8 +860,7 @@
               'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
             },
             body: JSON.stringify({ 
-              status: newStatus,
-              week: <%= @selected_week %>
+              status: newStatus
             })
           })
           .then(response => response.json())
@@ -872,6 +878,68 @@
             console.error('Error:', error);
             alert('Error updating project status. Please try again.');
             // Revert the select
+            location.reload();
+          });
+        } else {
+          // Revert the select if user cancels
+          location.reload();
+        }
+      }
+
+      function updateUserStatus(newStatus) {
+        const currentStatus = '<%= @user.status %>';
+        
+        if (newStatus === currentStatus) {
+          return; // No change needed
+        }
+
+        const statusMessages = {
+          'working': 'mark this user as active/working',
+          'out': 'mark this user as out (siege failed)',
+          'banned': 'ban this user',
+          'new': 'mark this user as new'
+        };
+
+        const message = `Are you sure you want to ${statusMessages[newStatus] || 'change user status'}?`;
+        
+        if (confirm(message)) {
+          let endpoint = '';
+          switch(newStatus) {
+            case 'working':
+              endpoint = 'set_active';
+              break;
+            case 'out':
+              endpoint = 'set_out';
+              break;
+            case 'banned':
+              endpoint = 'set_banned';
+              break;
+            default:
+              alert('Invalid status selected');
+              location.reload();
+              return;
+          }
+
+          fetch(`/admin/users/<%= @user.id %>/${endpoint}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+            }
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              alert('User status updated successfully!');
+              location.reload();
+            } else {
+              alert('Error updating user status: ' + (data.error || 'Unknown error'));
+              location.reload();
+            }
+          })
+          .catch(error => {
+            console.error('Error:', error);
+            alert('Error updating user status. Please try again.');
             location.reload();
           });
         } else {
@@ -917,6 +985,44 @@
       }
 
       // New combined functions for refactored panels
+      function saveReviewData() {
+        const reviewerFeedback = document.getElementById('reviewer-feedback').value;
+        const reviewerMultiplier = document.getElementById('reviewer-multiplier').value;
+
+        // Save reviewer feedback and multiplier
+        Promise.all([
+          fetch(`<%= admin_update_reviewer_feedback_path(@selected_week, @user.id) %>`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify({ reviewer_feedback: reviewerFeedback })
+          }),
+          fetch(`<%= admin_save_reviewer_multiplier_path(@selected_week, @user.id) %>`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify({ multiplier: parseFloat(reviewerMultiplier) })
+          })
+        ])
+        .then(responses => Promise.all(responses.map(r => r.json())))
+        .then(results => {
+          if (results.every(r => r.success)) {
+            alert('Review data saved successfully!');
+            updateSuggestedCoins(); // Refresh the calculated amounts
+          } else {
+            alert('Error saving review data. Please try again.');
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert('Error saving review data. Please try again.');
+        });
+      }
+
       function submitReviewAndAirtable() {
         const hourOverride = document.getElementById('hour-override').value;
         const airtableComments = document.getElementById('airtable-comments').value;
@@ -943,7 +1049,7 @@
               'Content-Type': 'application/json',
               'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
             },
-            body: JSON.stringify({ reviewer_multiplier: parseFloat(reviewerMultiplier) })
+            body: JSON.stringify({ multiplier: parseFloat(reviewerMultiplier) })
           })
         ])
         .then(responses => Promise.all(responses.map(r => r.json())))
@@ -1008,8 +1114,8 @@
             'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
           },
           body: JSON.stringify({ 
-            coin_amount: parseFloat(coinAmount),
-            mark_finished: true
+            coins: parseFloat(coinAmount),
+            use_calculated: 'false'
           })
         })
         .then(response => response.json())
@@ -1022,7 +1128,7 @@
                 'Content-Type': 'application/json',
                 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
               },
-              body: JSON.stringify({ project_status: 'finished' })
+              body: JSON.stringify({ status: 'finished' })
             });
           } else {
             throw new Error(data.error || 'Failed to award coins');

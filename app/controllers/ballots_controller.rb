@@ -11,11 +11,35 @@ class BallotsController < ApplicationController
       return
     end
 
+    # Check if ballot has already been submitted
+    if @ballot.voted?
+      render json: { success: false, errors: [ "This ballot has already been submitted" ] }
+      return
+    end
+
     ActiveRecord::Base.transaction do
+      # Double-check ballot hasn't been submitted during the request
+      @ballot.reload
+      if @ballot.voted?
+        render json: { success: false, errors: [ "This ballot has already been submitted" ] }
+        return
+      end
+
       # Update the ballot
       if @ballot.update(voted: true, reasoning: reasoning)
         # Mark all associated votes as voted
         @ballot.votes.update_all(voted: true)
+
+        # Check if coins have already been awarded for this ballot
+        existing_audit = current_user.audit_logs.find do |log|
+          log["action"] == "Ballot submitted" && 
+          log.dig("details", "ballot_id") == @ballot.id
+        end
+
+        if existing_audit
+          render json: { success: false, errors: [ "Coins have already been awarded for this ballot" ] }
+          return
+        end
 
         # Add 3 coins to user's balance for casting the ballot
         old_balance = current_user.coins || 0

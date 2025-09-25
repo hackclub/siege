@@ -973,6 +973,11 @@ class AdminController < ApplicationController
         new_coin_value = current_coin_value + coins_to_add
         project.update!(coin_value: new_coin_value)
 
+        # Send Slack notification if project has reviewer feedback and coins were added
+        if coins_to_add > 0 && project.reviewer_feedback.present?
+          SlackNotificationService.new.send_reviewer_feedback_notification(project)
+        end
+
         action_word = coins_to_add > 0 ? "Added" : "Removed"
         calculation_note = use_calculated_amount ? 
           " (calculated: #{raw_hours}h × #{average_score} score × #{multiplier} multiplier)" : 
@@ -1110,8 +1115,7 @@ class AdminController < ApplicationController
           }
         )
         
-        # Send Slack notification
-        SlackNotificationService.new.send_reviewer_feedback_notification(project)
+        # Don't send Slack notification here - it will be sent when coins are awarded
         
         render json: {
           success: true,
