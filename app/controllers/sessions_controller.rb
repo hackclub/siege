@@ -1,8 +1,14 @@
 class SessionsController < ApplicationController
   skip_before_action :require_authentication, only: [ :new, :create, :failure ]
-  before_action :require_no_authentication, only: [ :new, :create ]
+  before_action :require_no_authentication, only: [ :create ]
 
   def new
+    # If user is already signed in, redirect to castle
+    if user_signed_in?
+      redirect_to castle_path
+      return
+    end
+    
     # Store referral ID in cookie if present in params
     if params[:ref].present?
       cookies[:referrer_id] = {

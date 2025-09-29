@@ -20,8 +20,9 @@ Rails.application.routes.draw do
   delete "/logout", to: "sessions#destroy"
   get "/welcome", to: "welcome#index", as: :welcome
   post "/welcome/complete", to: "welcome#complete", as: :welcome_complete
-  get "/keep", to: "home#index", as: :keep
+  get "/keep", to: "castle#index", as: :keep
   get "/great-hall", to: "great_hall#index", as: :great_hall
+  get "/map", to: "map#index", as: :map
   get "/great-hall/thanks", to: "great_hall#thanks", as: :great_hall_thanks
   get "/market", to: "market#index", as: :market
   post "/market/purchase", to: "market#purchase", as: :market_purchase
@@ -100,9 +101,9 @@ Rails.application.routes.draw do
   patch "/review/projects/:id/status", to: "review#update_status", as: :review_project_status
   post "/review/projects/:id/submit_review", to: "review#submit_review", as: :review_submit_review
   delete "/review/projects/:id/remove_video", to: "review#remove_video", as: :review_remove_video
-  get "/greg", to: "greg#index", as: :greg
-  get "/greg/projects/:id", to: "greg#show", as: :greg_project
-  post "/greg/projects/:id/fraud_status", to: "greg#update_fraud_status", as: :greg_update_fraud_status
+  get "/fraud", to: "greg#index", as: :fraud
+  get "/fraud/projects/:id", to: "greg#show", as: :fraud_project
+  post "/fraud/projects/:id/fraud_status", to: "greg#update_fraud_status", as: :fraud_update_fraud_status
   get "/admin/flipper", to: "admin/flipper#index", as: :admin_flipper
   post "/admin/refresh-hackatime-cache", to: "admin#refresh_hackatime_cache", as: :admin_refresh_hackatime_cache
 

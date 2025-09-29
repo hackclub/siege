@@ -46,9 +46,9 @@
 </div>
 
 <script>
-// Wrap everything in an IIFE to prevent global scope pollution and handle Turbo navigation
+// Wrap everything in an IIFE to prevent global scope pollution
 (function() {
-  // Prevent multiple executions and handle Turbo navigation properly
+// Prevent multiple executions
   if (window.marketPageInitialized) {
     console.log('Market page already initialized, skipping');
     return; // Exit early to prevent re-execution
@@ -3409,17 +3409,17 @@
   // Initial setup
   setupMarket();
   
-  // Handle Turbo navigation
-  document.addEventListener('turbo:load', function() {
+  // Handle page navigation
+  document.addEventListener('DOMContentLoaded', function() {
     if (document.body.classList.contains('market-page')) {
-      console.log('Market page loaded via Turbo');
+      console.log('Market page loaded');
       // Small delay to ensure DOM is ready
       setTimeout(setupMarket, 10);
     }
   });
   
-  // Handle Turbo before-cache to clean up
-  document.addEventListener('turbo:before-cache', function() {
+  // Handle page unload to clean up
+  window.addEventListener('beforeunload', function() {
     if (window.resizeTimeout) {
       clearTimeout(window.resizeTimeout);
     }

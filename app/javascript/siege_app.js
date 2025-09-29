@@ -116,14 +116,9 @@
         }
       });
 
-      // Turbo navigation handling
-      document.addEventListener('turbo:before-visit', () => {
-        if (this.debugMode) console.log('SiegeApp: Before Turbo visit, cleaning up');
-        this.cleanup();
-      });
-
-      document.addEventListener('turbo:load', () => {
-        if (this.debugMode) console.log('SiegeApp: Turbo load, reinitializing');
+      // Page navigation handling
+      window.addEventListener('popstate', () => {
+        if (this.debugMode) console.log('SiegeApp: Popstate event, reinitializing');
         
         // Small delay to ensure DOM is ready
         setTimeout(() => {

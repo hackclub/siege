@@ -603,9 +603,9 @@ document.addEventListener('visibilitychange', function() {
   }
 });
 
-// Update meeple on Turbo navigation
-document.addEventListener('turbo:load', function() {
-  console.log('turbo:load event fired on home page');
+// Update meeple on page load
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('DOMContentLoaded event fired on home page');
   updateHomeMeepleImage();
   
   // Initialize MeepleDisplay for cosmetics rendering

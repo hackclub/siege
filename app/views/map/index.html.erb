@@ -1,0 +1,33 @@
+<% content_for :title, "Map" %>
+
+<% content_for :head do %>
+  <style>
+    .map-container {
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f5f5f4 url('<%= asset_path("parchment-texture.jpg") %>') repeat;
+    }
+    
+    .map-message {
+      text-align: center;
+      font-family: "Jaini", "IM Fell English", serif;
+      font-size: 3rem;
+      font-weight: 700;
+      color: var(--text-brown, #3b2a1a);
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    @media (max-width: 640px) {
+      .map-message {
+        font-size: 2rem;
+        padding: 0 2rem;
+      }
+    }
+  </style>
+<% end %>
+
+<div class="map-container">
+  <h1 class="map-message">Map coming soon...</h1>
+</div>

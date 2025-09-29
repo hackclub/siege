@@ -72,6 +72,6 @@ Rails.application.configure do
 
   Prosopite.rails_logger = true
 
-  config.hotwire_livereload.listen_options[:force_polling] = true
-  config.hotwire_livereload.reload_method = :turbo_stream
+  # config.hotwire_livereload.listen_options[:force_polling] = true
+  # config.hotwire_livereload.reload_method = :page_reload
 end

@@ -70,7 +70,7 @@ class GregController < ApplicationController
     @project = Project.includes(:user).find(params[:id])
 
     unless @project.fraud_reviewable?
-      redirect_to greg_index_path, alert: "Project is not available for fraud review."
+      redirect_to fraud_path, alert: "Project is not available for fraud review."
       return
     end
 

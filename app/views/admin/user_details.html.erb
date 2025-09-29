@@ -454,7 +454,7 @@
               </label>
             </div>
             <div style="font-size: 0.8rem; color: #6b5b4a; margin-top: 0.5rem;">
-              Fraud team members can access the Greg fraud checking dashboard to review projects for suspicious activity.
+              Fraud team members can access the fraud checking dashboard to review projects for suspicious activity.
             </div>
           </div>
         <% end %>
@@ -909,8 +909,7 @@
             <%= link_to "Clear Main Device", admin_clear_main_device_path(@user), 
                 method: :post,
                 data: { 
-                  confirm: "Are you sure you want to clear this user's main device selection?",
-                  turbo_method: :post
+                  confirm: "Are you sure you want to clear this user's main device selection?"
                 },
                 style: "display: inline-block; padding: 0.5rem 1rem; background: #dc2626; color: white; text-decoration: none; border-radius: 6px; font-size: 0.9rem; font-weight: 500; transition: background 0.2s;" %>
           </div>
@@ -1268,8 +1267,8 @@ function clearVerification(userId) {
 
 function toggleFraudTeam(userId, isOnTeam) {
   const message = isOnTeam ? 
-    'Are you sure you want to add this user to the fraud team? They will be able to access the Greg fraud dashboard.' :
-    'Are you sure you want to remove this user from the fraud team? They will lose access to the Greg fraud dashboard.';
+    'Are you sure you want to add this user to the fraud team? They will be able to access the fraud dashboard.' :
+    'Are you sure you want to remove this user from the fraud team? They will lose access to the fraud dashboard.';
     
   if (confirm(message)) {
     fetch(`/admin/users/${userId}/toggle_fraud_team`, {

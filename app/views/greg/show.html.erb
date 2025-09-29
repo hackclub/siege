@@ -1,4 +1,4 @@
-<% content_for :title, "Greg - #{@project.name}" %>
+<% content_for :title, "Fraud - #{@project.name}" %>
 
 <% content_for :head do %>
   <style>
@@ -383,7 +383,7 @@
 
     <div class="navigation-controls">
       <% if @navigation[:previous_project_id] %>
-        <%= link_to greg_project_path(@navigation[:previous_project_id], @navigation[:filter_params]), class: "nav-button" do %>
+        <%= link_to fraud_project_path(@navigation[:previous_project_id], @navigation[:filter_params]), class: "nav-button" do %>
           ← Previous
         <% end %>
       <% else %>
@@ -397,7 +397,7 @@
       <% end %>
 
       <% if @navigation[:next_project_id] %>
-        <%= link_to greg_project_path(@navigation[:next_project_id], @navigation[:filter_params]), class: "nav-button" do %>
+        <%= link_to fraud_project_path(@navigation[:next_project_id], @navigation[:filter_params]), class: "nav-button" do %>
           Next →
         <% end %>
       <% else %>

@@ -1,4 +1,4 @@
-<% content_for :title, "Greg - Fraud Dashboard" %>
+<% content_for :title, "Fraud Dashboard" %>
 
 <% content_for :head do %>
   <style>
@@ -435,7 +435,7 @@
   <div class="page-header">
     <div class="header-content">
       <div class="header-text">
-        <h1 class="page-title">Greg Fraud Dashboard</h1>
+        <h1 class="page-title">Fraud Dashboard</h1>
         <p class="page-subtitle">Review and manage project fraud status</p>
       </div>
       <div class="header-controls">
@@ -450,7 +450,7 @@
   <div class="filters-and-fraud-leaderboard-container">
     <!-- Filters Section -->
     <div class="filters-section">
-      <%= form_with url: greg_path, method: :get, local: true do |form| %>
+      <%= form_with url: fraud_path, method: :get, local: true do |form| %>
         <div class="filters-grid">
           <div class="filter-group">
             <label class="filter-label">Project Name</label>
@@ -501,7 +501,7 @@
         
         <div class="filter-actions">
           <%= form.submit "Apply Filters", class: "greg-btn greg-btn-primary" %>
-          <%= link_to "Clear Filters", greg_path, class: "greg-btn greg-btn-secondary" %>
+          <%= link_to "Clear Filters", fraud_path, class: "greg-btn greg-btn-secondary" %>
         </div>
       <% end %>
     </div>
@@ -512,7 +512,7 @@
         <h3 class="fraud-leaderboard-title">🔍 Fraud Review Activity Leaderboard</h3>
         <div class="fraud-leaderboard-week-selector">
           <label for="fraud_leaderboard_week">Week:</label>
-          <%= form_with url: greg_path, method: :get, local: true, id: "fraud-leaderboard-form" do |form| %>
+          <%= form_with url: fraud_path, method: :get, local: true, id: "fraud-leaderboard-form" do |form| %>
             <%= form.hidden_field :name, value: params[:name] %>
             <%= form.hidden_field :author, value: params[:author] %>
             <%= form.hidden_field :week, value: params[:week] %>
@@ -557,7 +557,7 @@
     <% if @projects.any? %>
       <div class="greg-projects-grid">
         <% @projects.each do |project| %>
-          <div class="greg-project-card" onclick="window.location.href='<%= greg_project_path(project) %>'">
+          <div class="greg-project-card" onclick="window.location.href='<%= fraud_project_path(project) %>'">
             <div class="greg-project-header">
               <h3 class="greg-project-title"><%= project.name %></h3>
               <div class="project-badges">

@@ -298,7 +298,7 @@
 
 <!-- Top Right Sign-in Button -->
 <div class="top-right-button">
-  <%= form_tag('/auth/slack_openid', method: 'post', data: {turbo: false}) do %>
+  <%= form_tag('/auth/slack_openid', method: 'post') do %>
     <button type='submit' class="sign-in-button">
       Sign in with Slack
     </button>
@@ -330,7 +330,7 @@
   
   <p>Are you ready to take up the challenge?</p>
   
-  <%= form_tag('/auth/slack_openid', method: 'post', data: {turbo: false}) do %>
+  <%= form_tag('/auth/slack_openid', method: 'post') do %>
     <button type='submit' class="sign-in-button">
       Sign in with Slack
     </button>

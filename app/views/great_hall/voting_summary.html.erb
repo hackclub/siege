@@ -79,10 +79,9 @@ meeple_message = @meeple_message || ""
 </div>
 
 <script>
-// Great Hall Manager using SiegeApp system
-class GreatHallManager extends SiegeBaseManager {
+// Great Hall Manager
+class GreatHallManager {
   constructor() {
-    super('GreatHall');
     this.canvasManager = null;
     this.imageManager = null;
     this.votingManager = null;
@@ -142,10 +141,8 @@ class GreatHallManager extends SiegeBaseManager {
   }
 }
 
-// Register the Great Hall manager
-if (document.querySelector('#voting-canvas')) {
-  SiegeApp.registerManager('greatHall', new GreatHallManager());
-}
+// Great Hall manager available globally
+window.greatHallManager = new GreatHallManager();
   
   // Configuration object for all constants
   const VOTING_CONFIG = {
@@ -295,8 +292,8 @@ if (document.querySelector('#voting-canvas')) {
     }
   }
   
-  // Initialize state management
-  const votingState = new VotingState();
+// Initialize state management
+const votingState = new VotingState();
 
 // Canvas Management Module
 class CanvasManager {
@@ -829,8 +826,7 @@ class EventManager {
     window.addEventListener('resize', debouncedResize);
     window.addEventListener('focus', () => this.handleWindowFocus());
     document.addEventListener('visibilitychange', () => this.handleVisibilityChange());
-    document.addEventListener('turbo:before-cache', () => this.handleTurboBeforeCache());
-    document.addEventListener('turbo:load', () => this.handleTurboLoad());
+    document.addEventListener('DOMContentLoaded', () => this.handlePageLoad());
     window.addEventListener('beforeunload', () => this.handleBeforeUnload());
   }
   
@@ -918,7 +914,7 @@ class EventManager {
     animateVotingInterface();
   }
   
-  handleTurboBeforeCache() {
+  handleBeforeUnload() {
     canvasManager.cleanup();
     if (votingState.get('animationFrame')) {
       cancelAnimationFrame(votingState.get('animationFrame'));
@@ -926,7 +922,7 @@ class EventManager {
     window.votingSummaryInitialized = false;
   }
   
-  handleTurboLoad() {
+  handlePageLoad() {
     window.votingSummaryInitialized = false;
     
     // Check server voting state first before any initialization
@@ -938,7 +934,7 @@ class EventManager {
       localStorage.removeItem(VOTING_CONFIG.LOCAL_STORAGE_KEYS.BALLOT_ID);
       
       if (!canvasManager.initialize()) {
-        console.error('Failed to initialize canvas on turbo:load');
+        console.error('Failed to initialize canvas on page load');
         return;
       }
       
@@ -949,7 +945,7 @@ class EventManager {
     }
     
     if (!canvasManager.initialize()) {
-      console.error('Failed to initialize canvas on turbo:load');
+      console.error('Failed to initialize canvas on page load');
       return;
     }
     
@@ -3193,7 +3189,7 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 
-// Note: Tab switching and Turbo navigation now handled by global SiegeApp system
+// Note: Tab switching now handled by global SiegeApp system
 
 function adjustStarRating(voteId, change) {
   // Ensure we're in voting mode
@@ -3275,8 +3271,6 @@ function adjustStarRating(voteId, change) {
   });
 }
 
- // End of initialization check
-})(); // End of IIFE
 </script>
 
 

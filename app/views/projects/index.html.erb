@@ -110,7 +110,6 @@
   <% end %>
 
   <div class="projects-header">
-    <h1 class="projects-title">Projects</h1>
     <div class="projects-actions">
       <% can_create = !@current_user.has_project_this_week?(Date.current) %>
       <% if not can_create %>
