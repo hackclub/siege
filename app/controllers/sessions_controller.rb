@@ -57,7 +57,7 @@ class SessionsController < ApplicationController
         # The cookie will be cleared after the address is successfully created
 
         if user.address.present?
-          redirect_to keep_path, notice: "Successfully signed in!"
+          redirect_to castle_path, notice: "Successfully signed in!"
         else
           # Check if this is a new user (just created)
           if existing_user.nil?

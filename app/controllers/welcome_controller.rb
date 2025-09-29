@@ -19,7 +19,7 @@ class WelcomeController < ApplicationController
         current_user.update(status: "working")
       end
 
-      redirect_to keep_path, notice: "Welcome to Siege! Your account is now set up."
+      redirect_to castle_path, notice: "Welcome to Siege! Your account is now set up."
     else
       redirect_to welcome_path, alert: "You must agree to the hackatime terms to continue."
     end

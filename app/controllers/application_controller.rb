@@ -47,7 +47,7 @@ class ApplicationController < ActionController::Base
   end
 
   def require_no_authentication
-    redirect_to keep_path if user_signed_in?
+    redirect_to castle_path if user_signed_in?
   end
 
   def require_address

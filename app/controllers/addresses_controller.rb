@@ -44,7 +44,7 @@ class AddressesController < ApplicationController
       elsif return_path.present?
         redirect_to return_path, notice: "Address set up successfully! Please continue with your submission."
       else
-        redirect_to keep_path, notice: "Details created successfully!"
+        redirect_to castle_path, notice: "Details created successfully!"
       end
     else
       @detected_country = request.location&.country_code.presence || "US"

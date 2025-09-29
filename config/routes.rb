@@ -20,7 +20,7 @@ Rails.application.routes.draw do
   delete "/logout", to: "sessions#destroy"
   get "/welcome", to: "welcome#index", as: :welcome
   post "/welcome/complete", to: "welcome#complete", as: :welcome_complete
-  get "/keep", to: "castle#index", as: :keep
+  get "/keep", to: "home#index", as: :keep
   get "/great-hall", to: "great_hall#index", as: :great_hall
   get "/map", to: "map#index", as: :map
   get "/great-hall/thanks", to: "great_hall#thanks", as: :great_hall_thanks

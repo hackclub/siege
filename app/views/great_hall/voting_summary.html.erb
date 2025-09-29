@@ -1332,7 +1332,8 @@ function getMeepleForStep(step) {
 
 // Animation function
 function animate() {
-  console.log('animate() function called');
+  try {
+    console.log('animate() function called');
   
   // Ensure context exists
   if (!canvasManager.isValid()) {
@@ -1393,8 +1394,16 @@ function animate() {
     return;
   }
   
+  // Ensure cache is updated before accessing positions
+  cache.updateLayout();
+  
   // Get cached positions
   const { presentingPos } = cache;
+  if (!presentingPos) {
+    console.error('presentingPos is null, cannot continue animation');
+    return;
+  }
+  
   const presentingX = presentingPos.x;
   const presentingY = presentingPos.y;
   
@@ -1544,6 +1553,17 @@ function animate() {
   // Draw back button in dialogue box if there's a stage to go back to
   if (votingState.get('dialogueVisible') && canGoBack()) {
     drawBackButtonInDialogue();
+  }
+  
+  } catch (error) {
+    console.error('Error in animate() function:', error);
+    // Cancel animation frame to prevent infinite error loops
+    if (votingState.get('animationFrame')) {
+      cancelAnimationFrame(votingState.get('animationFrame'));
+      votingState.set('animationFrame', null);
+    }
+    // Don't continue the animation loop on error
+    return;
   }
 }
 
@@ -2307,7 +2327,12 @@ function drawVotingBackground() {
   }
   
   // Draw presenting red meeple (static position)
+  cache.updateLayout();
   const { presentingPos } = cache;
+  if (!presentingPos) {
+    console.error('presentingPos is null in drawVotingBackground');
+    return;
+  }
   
   canvasManager.ctx.save();
   canvasManager.ctx.translate(presentingPos.x, presentingPos.y);
