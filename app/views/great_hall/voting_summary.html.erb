@@ -653,8 +653,7 @@ const cache = {
 // Legacy function - now redirects to master renderer for consistency
 function drawBackground() {
   console.log('drawBackground: Redirecting to master renderer');
-  scheduleRender();
-  return true;
+  return drawBackgroundAndThrone();
 }
 
 // Image Management Module

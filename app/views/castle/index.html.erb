@@ -139,6 +139,8 @@
 		align-items: center;
 		z-index: 200;
 		pointer-events: none;
+		visibility: hidden;
+		opacity: 0;
 	}
 
 	.castle-logo-container {
@@ -272,6 +274,10 @@
         
         logoContainer.style.width = scaledLogoWidth + 'px';
         logoContainer.style.height = scaledLogoHeight + 'px';
+        
+        // Show the logo now that it's positioned correctly
+        logoDisplay.style.visibility = 'visible';
+        logoDisplay.style.opacity = '1';
       }
 
       createHoverSVG() {
