@@ -2,10 +2,10 @@ class WelcomeController < ApplicationController
   def index
     # Show welcome page for new users
     @current_week = helpers.current_week_number
-    @week_type = @current_week <= 3 ? "prep" : "siege"
+    @week_type = @current_week <= 4 ? "prep" : "siege"
     @is_prep_week = @week_type == "prep"
-    @siege_started = @current_week >= 4
-    @can_get_framework = @current_week == 4
+    @siege_started = @current_week >= 5
+    @can_get_framework = @current_week == 5
   end
 
   def complete

@@ -680,6 +680,12 @@ class ImageManager {
     <% if current_user.try(:meeple) && current_user.meeple.color.present? %>
     this.images.meeple = new Image();
     this.images.meeple.src = '<%= asset_path("meeple/meeple-#{current_user.meeple.color}.png") %>';
+    console.log('Loading user meeple with color: <%= current_user.meeple.color %>', this.images.meeple.src);
+    <% else %>
+    // Create default meeple if user doesn't have one
+    this.images.meeple = new Image();
+    this.images.meeple.src = '<%= asset_path("meeple/meeple-red.png") %>';
+    console.log('Loading default red meeple for user without meeple');
     <% end %>
     
     // Set up load handlers
@@ -1309,7 +1315,11 @@ function getMeepleForStep(step) {
           console.log('Meeple data found:', meepleData);
           return {
             color: meepleData.color,
-            project: vote.project
+            project: vote.project,
+            meepleData: meepleData,
+            userData: {
+              meeple: meepleData
+            }
           };
         } else {
           console.log('No meeple data for user, using blue fallback');
@@ -1505,7 +1515,8 @@ function animate() {
     canvasManager.ctx.translate(votingState.get('meepleX'), votingState.get('meepleY'));
     canvasManager.ctx.rotate(votingState.get('rotation'));
     
-    // Determine meeple color based on current step
+    // Determine meeple data based on current step
+    let meepleUserData = null;
     let meepleColor = 'royal_advisor'; // Default to royal advisor for announcements
     
     if (votingState.get('currentStep') >= 2 && votingState.get('currentStep') <= 5) {
@@ -1513,12 +1524,23 @@ function animate() {
       const stepMeeple = getMeepleForStep(votingState.get('currentStep'));
       if (stepMeeple && stepMeeple.color) {
         meepleColor = stepMeeple.color;
+        meepleUserData = stepMeeple.userData;
         console.log('Using meeple color:', meepleColor, 'for step:', votingState.get('currentStep'));
+        console.log('Meeple user data:', meepleUserData);
       }
     }
     
-    // Draw meeple using generic function with proper fallback logic
-    drawMeepleWithFallback(meepleColor, VOTING_CONFIG.MEEPLE_SIZE);
+    // Draw meeple using unified renderer if we have user data, otherwise fallback
+    if (meepleUserData && typeof window.renderUnifiedMeeple === 'function') {
+      const success = renderUnifiedMeeple(meepleUserData, canvasManager.ctx, 0, 0, VOTING_CONFIG.MEEPLE_SIZE, VOTING_CONFIG.MEEPLE_SIZE);
+      if (!success) {
+        console.log('Unified renderer failed for presenting meeple, using fallback');
+        drawMeepleWithFallback(meepleColor, VOTING_CONFIG.MEEPLE_SIZE);
+      }
+    } else {
+      // Fallback for royal advisor or when unified renderer not available
+      drawMeepleWithFallback(meepleColor, VOTING_CONFIG.MEEPLE_SIZE);
+    }
     
     canvasManager.ctx.restore();
   }
@@ -1603,11 +1625,14 @@ window.cosmeticImageCache = window.cosmeticImageCache || {};
 
 // Simple function to draw user meeple with cosmetics (fixed timing)
 function drawUserMeepleSimple(x, y, size) {
+  console.log('drawUserMeepleSimple called at position:', x, y, 'size:', size);
+  console.log('imageManager.images.meeple:', imageManager.images.meeple);
+  
   canvasManager.ctx.save();
   canvasManager.ctx.translate(x, y);
   
   // First draw the base meeple (same as original)
-  if (imageManager.images.meeple && imageManager.images.meeple.complete && imageManager.images.meeple.naturalWidth > 0 && imageManager.images.meeple.src !== imageManager.images.redMeeple.src) {
+  if (imageManager.images.meeple && imageManager.images.meeple.complete && imageManager.images.meeple.naturalWidth > 0) {
     canvasManager.ctx.drawImage(imageManager.images.meeple, 
       -size/2, 
       -size/2, 
@@ -2270,9 +2295,53 @@ function drawStaticScene() {
     canvasManager.ctx.drawImage(imageManager.images.background, bgX, bgY, bgWidth, bgHeight);
   }
   
-  // Draw user's meeple with cosmetics on throne (ONLY change from original)
+  // Draw user's meeple with cosmetics on throne using unified renderer
   const userMeeplePos = getUserMeeplePosition(bgX, bgWidth, bgY, bgHeight);
-  drawUserMeepleSimple(userMeeplePos.x, userMeeplePos.y, userMeeplePos.size);
+  console.log('Drawing user meeple at position:', userMeeplePos);
+  
+  // Get current user data for unified renderer
+  const currentUserData = {
+    meeple: {
+      <% if current_user.try(:meeple) && current_user.meeple.color.present? %>
+      color: '<%= current_user.meeple.color %>',
+      meeple_cosmetics: [
+        <% current_user.meeple.equipped_cosmetics.includes(cosmetic: { image_attachment: :blob }).each_with_index do |mc, index| %>
+        {
+          equipped: true,
+          cosmetic: {
+            id: <%= mc.cosmetic.id %>,
+            name: '<%= mc.cosmetic.name %>',
+            type: '<%= mc.cosmetic.type %>',
+            <% if mc.cosmetic.image.attached? %>
+            image: {
+              attached: true,
+              url: '<%= url_for(mc.cosmetic.image) %>'
+            }
+            <% else %>
+            image: { attached: false }
+            <% end %>
+          }
+        }<%= index < current_user.meeple.equipped_cosmetics.length - 1 ? ',' : '' %>
+        <% end %>
+      ]
+      <% else %>
+      color: 'red',
+      meeple_cosmetics: []
+      <% end %>
+    }
+  };
+  
+  // Use unified renderer for canvas drawing
+  if (typeof window.renderUnifiedMeeple === 'function') {
+    const success = renderUnifiedMeeple(currentUserData, canvasManager.ctx, userMeeplePos.x, userMeeplePos.y, userMeeplePos.size, userMeeplePos.size);
+    if (!success) {
+      console.log('Unified renderer failed, falling back to drawUserMeepleSimple');
+      drawUserMeepleSimple(userMeeplePos.x, userMeeplePos.y, userMeeplePos.size);
+    }
+  } else {
+    console.log('Unified renderer not available, using drawUserMeepleSimple');
+    drawUserMeepleSimple(userMeeplePos.x, userMeeplePos.y, userMeeplePos.size);
+  }
   
   // Draw throne (on top of user meeple)
   if (imageManager.images.throne && imageManager.images.throne.complete && imageManager.images.throne.naturalWidth > 0) {

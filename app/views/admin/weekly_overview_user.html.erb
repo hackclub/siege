@@ -5,8 +5,15 @@
     .admin-container {
       max-width: 1200px;
       margin: 0 auto;
+      margin-left: 20rem; /* Account for navbar */
       padding: 2rem;
     }
+
+@media (max-width: 768px) {
+  .admin-container {
+    margin-left: auto; /* Reset to auto on mobile */
+  }
+}
     
     .back-link {
       display: inline-flex;

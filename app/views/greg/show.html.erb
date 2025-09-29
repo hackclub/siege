@@ -29,8 +29,15 @@
     .greg-container {
       max-width: 1200px;
       margin: 0 auto;
+      margin-left: 20rem; /* Account for navbar */
       padding: 2rem;
       transition: color 0.3s ease;
+    }
+    
+    @media (max-width: 768px) {
+      .greg-container {
+        margin-left: auto; /* Reset to auto on mobile */
+      }
     }
     .navigation-header {
       display: flex;

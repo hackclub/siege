@@ -5,7 +5,14 @@
     .review-detail-container {
       max-width: 1000px;
       margin: 0 auto;
+      margin-left: 20rem; /* Account for navbar */
       padding: 2rem;
+    }
+    
+    @media (max-width: 768px) {
+      .review-detail-container {
+        margin-left: auto; /* Reset to auto on mobile */
+      }
     }
     .review-detail-header {
       margin-bottom: 2rem;

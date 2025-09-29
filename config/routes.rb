@@ -5,6 +5,15 @@ Rails.application.routes.draw do
       patch :update_status
     end
   end
+  
+  # Legacy redirect for old project URLs
+  get "/projects", to: redirect("/armory")
+  get "/projects/new", to: redirect("/armory/new")
+  get "/projects/:id", to: redirect("/armory/%{id}")
+  get "/projects/:id/edit", to: redirect("/armory/%{id}/edit")
+  post "/projects/:id/submit", to: redirect("/armory/%{id}/submit", status: 307)
+  patch "/projects/:id/update_status", to: redirect("/armory/%{id}/update_status", status: 307)
+  
   root "sessions#new"
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
 

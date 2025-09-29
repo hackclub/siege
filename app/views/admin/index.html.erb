@@ -2,7 +2,14 @@
   .admin-dashboard {
     max-width: 1200px;
     margin: 0 auto;
+    margin-left: 20rem; /* Account for navbar */
     padding: 2rem;
+  }
+  
+  @media (max-width: 768px) {
+    .admin-dashboard {
+      margin-left: auto; /* Reset to auto on mobile */
+    }
   }
   .admin-title {
     font-size: 2.5rem;

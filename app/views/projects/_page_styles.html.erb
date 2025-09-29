@@ -6,7 +6,14 @@
       flex-direction: column;
       justify-content: center;
       margin-bottom: 3rem;
+      margin-left: 18rem; /* Account for navbar */
       position: relative;
+    }
+    
+    @media (max-width: 768px) {
+      .projects-new {
+        margin-left: 0; /* Remove left margin on mobile */
+      }
     }
 
     .projects-new-header {
