@@ -21,7 +21,7 @@ class ShopPurchase < ApplicationRecord
   end
 
   def self.mercenary_price(user)
-    base_price = 35
+    base_price = 30
     purchased_this_week = weekly_purchases_count(user, "Mercenary")
     base_price + purchased_this_week
   end

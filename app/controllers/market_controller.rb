@@ -57,19 +57,27 @@ class MarketController < ApplicationController
       # Check if it's a tech tree item
       tech_tree_item = get_tech_tree_item(item_name)
       if tech_tree_item
-        # Check if user already purchased this tech tree item
-        if tech_tree_item[:maxPurchases].nil?
+        # Check purchase limits (static, dynamic, or infinite)
+        purchased_count = current_user.shop_purchases.where(item_name: item_name).count
+        
+        if tech_tree_item[:dynamicMaxPurchases]
+          # Dynamic purchase limit
+          max_purchases = calculate_dynamic_max_purchases(tech_tree_item[:dynamicMaxPurchases], current_user)
+          if purchased_count >= max_purchases
+            render json: { success: false, error: "You've already purchased the maximum amount of this item! (#{purchased_count}/#{max_purchases})" }
+            return
+          end
+        elsif tech_tree_item[:maxPurchases].nil?
           # Infinite purchases (like grants) - no purchase limit
         elsif tech_tree_item[:maxPurchases] && tech_tree_item[:maxPurchases] > 1
-          # Multi-purchase item with limit
-          purchased_count = current_user.shop_purchases.where(item_name: item_name).count
+          # Multi-purchase item with static limit
           if purchased_count >= tech_tree_item[:maxPurchases]
             render json: { success: false, error: "You've already purchased the maximum amount of this item!" }
             return
           end
         else
           # Single purchase item
-          if current_user.shop_purchases.exists?(item_name: item_name)
+          if purchased_count > 0
             render json: { success: false, error: "You already own this item!" }
             return
           end
@@ -287,6 +295,7 @@ class MarketController < ApplicationController
             return {
               price: item["price"] || 0,
               maxPurchases: item["maxPurchases"],
+              dynamicMaxPurchases: item["dynamicMaxPurchases"],
               requires: item["requires"]
             }.compact
           end
@@ -295,6 +304,22 @@ class MarketController < ApplicationController
     end
 
     nil
+  end
+
+  def calculate_dynamic_max_purchases(dynamic_formula, user)
+    return nil unless dynamic_formula
+
+    # Parse the dynamic formula (e.g., "USB Expansion Card + 4")
+    match = dynamic_formula.match(/^(.+)\s*\+\s*(\d+)$/)
+    return nil unless match
+
+    base_item_name = match[1].strip
+    additional_count = match[2].to_i
+
+    # Count how many of the base item the user has purchased
+    base_purchases = user.shop_purchases.where(item_name: base_item_name).count
+    
+    base_purchases + additional_count
   end
 
   def user_in_supported_region?

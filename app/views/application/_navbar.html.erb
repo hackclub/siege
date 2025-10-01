@@ -236,6 +236,22 @@
   }
   <% end %>
   
+  /* Add left margin on individual project pages to account for navbar */
+  <% if controller_name == "projects" && action_name == "show" %>
+  .app-main {
+    margin-left: 20rem;
+    margin-right: 1rem;
+    margin-top: 2rem;
+  }
+  @media (max-width: 768px) {
+    .app-main {
+      margin-left: 0;
+      margin-top: 12rem; /* Position content below navbar */
+      margin-right: 0.5rem;
+    }
+  }
+  <% end %>
+  
   /* Add left margin on armory page to account for navbar */
   <% if current_page?(projects_path) %>
   .app-main {

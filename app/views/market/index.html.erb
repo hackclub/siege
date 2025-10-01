@@ -17,6 +17,11 @@
       padding: 0 !important;
       margin: 0 !important;
     }
+    
+    /* Canvas takes full space, but UI elements account for navbar */
+    body.market-page .market-container {
+      /* Canvas stays fullscreen */
+    }
   </style>
 <% end %>
 
@@ -61,7 +66,7 @@
   let meepleImages = {};
   let imagesLoaded = 0;
   const totalImages = 3;
-  let mercenaryPrice = 35; // Default price, will be updated
+  let mercenaryPrice = 30; // Default price, will be updated
   let mercenaryCount = 0; // Current mercenary count for this week
   let userInSupportedRegion = <%= @user_in_supported_region ? 'true' : 'false' %>;
   let totalGrantAmount = 650; // Will be updated from server
@@ -90,20 +95,23 @@
     },
     multipliers: {
       'left': [-1.5, 0],
-      'left2': [-1.5, -1],
-      'left3': [-1.5, -2],
-      'left4': [-1.5, -3],
+      'left1': [-1.5, -1],
+      'left2': [-1.5, -2],
+      'left3': [-1.5, -3],
       'right': [1.5, 0],
-      'right2': [1.5, -1],
-      'right3': [1.5, -2],
-      'right4': [1.5, -3],
+      'right1': [1.5, -1],
+      'right2': [1.5, -2],
+      'right3': [1.5, -3],
       'up': [0, -1],
       'up2': [0, -2],
       'up3': [0, -3],
       'up4': [0, -4],
       'up5': [0, -5],
-      'rightright2': [2.5, -1],
-      'leftleft2': [-2.5, -1]
+      'rightright1': [2.5, -1],
+      'leftleft1': [-2.5, -1],
+			'right-1': [1.5, 1],
+			'left-1': [-1.5, 1],
+			'down': [0, 1],
     }
   };
   
@@ -181,6 +189,19 @@
       return !item.oneTime || !purchasedOneTimeItems.includes(item.title);
     });
   });
+  
+  // Navbar offset constants
+  const NAVBAR_WIDTH = 272; // 13rem + 2.5rem margin = 17rem = 272px
+  const MOBILE_NAVBAR_HEIGHT = 192; // 12rem = 192px
+  
+  // Helper function to get navbar offset based on screen size
+  function getNavbarOffset() {
+    const isMobile = window.innerWidth <= 768;
+    return {
+      left: isMobile ? 0 : NAVBAR_WIDTH,
+      top: isMobile ? MOBILE_NAVBAR_HEIGHT : 0
+    };
+  }
   
   // Market state management
   const marketState = {
@@ -279,7 +300,7 @@
     })
     .catch(error => {
       console.warn('Failed to load mercenary price:', error);
-      mercenaryPrice = 35; // Fallback to default
+      mercenaryPrice = 30; // Fallback to default
       mercenaryCount = 0;
     });
   }
@@ -398,10 +419,11 @@
   function isPointInTechTreeArea(x, y) {
     const displayWidth = canvas.offsetWidth;
     const displayHeight = canvas.offsetHeight;
-    const treeX = 50;
-    const treeY = 50;
-    const treeWidth = displayWidth - 100;
-    const treeHeight = displayHeight - 100;
+    const navbarOffset = getNavbarOffset();
+    const treeX = navbarOffset.left + 50;
+    const treeY = navbarOffset.top + 50;
+    const treeWidth = displayWidth - navbarOffset.left - 100;
+    const treeHeight = displayHeight - navbarOffset.top - 100;
     
     return x >= treeX && x <= treeX + treeWidth && 
            y >= treeY && y <= treeY + treeHeight;
@@ -693,11 +715,12 @@
     
     const displayWidth = canvas.offsetWidth;
     const displayHeight = canvas.offsetHeight;
+    const navbarOffset = getNavbarOffset();
     
     const boxWidth = 600;
     const boxHeight = 200;
-    const boxX = (displayWidth - boxWidth) / 2;
-    const boxY = 50; // Position at top of canvas with 50px margin
+    const boxX = navbarOffset.left + (displayWidth - navbarOffset.left - boxWidth) / 2;
+    const boxY = navbarOffset.top + 50; // Position with navbar offset plus margin
     
     // Draw background
     ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
@@ -724,14 +747,14 @@
       const metrics = ctx.measureText(testLine);
       
       if (metrics.width > boxWidth - 40 && currentLine !== '') {
-        ctx.fillText(currentLine, displayWidth / 2, currentY);
+        ctx.fillText(currentLine, boxX + boxWidth / 2, currentY);
         currentLine = word + ' ';
         currentY += lineHeight;
       } else {
         currentLine = testLine;
       }
     }
-    ctx.fillText(currentLine, displayWidth / 2, currentY);
+    ctx.fillText(currentLine, boxX + boxWidth / 2, currentY);
     
     // Draw buttons
     const buttonY = boxY + boxHeight - 50;
@@ -740,7 +763,7 @@
     const spacing = 20;
     
     const totalButtonWidth = marketState.dialogueButtons.length * buttonWidth + (marketState.dialogueButtons.length - 1) * spacing;
-    let buttonX = (displayWidth - totalButtonWidth) / 2;
+    let buttonX = boxX + (boxWidth - totalButtonWidth) / 2;
     
     marketState.dialogueButtons.forEach((button, index) => {
       // Check if mouse is hovering over this button
@@ -769,11 +792,12 @@
     
     const displayWidth = canvas.offsetWidth;
     const displayHeight = canvas.offsetHeight;
+    const navbarOffset = getNavbarOffset();
     
     const boxWidth = 600;
     const boxHeight = 200;
-    const boxX = (displayWidth - boxWidth) / 2;
-    const boxY = 50;
+    const boxX = navbarOffset.left + (displayWidth - navbarOffset.left - boxWidth) / 2;
+    const boxY = navbarOffset.top + 50;
     
     // Draw background
     ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
@@ -842,12 +866,13 @@
     
     const displayWidth = canvas.offsetWidth;
     const displayHeight = canvas.offsetHeight;
+    const navbarOffset = getNavbarOffset();
     
-    // Tech tree container
-    const treeWidth = displayWidth - 100;
-    const treeHeight = displayHeight - 100;
-    const treeX = 50;
-    const treeY = 50;
+    // Tech tree container - account for navbar space
+    const treeWidth = displayWidth - navbarOffset.left - 100;
+    const treeHeight = displayHeight - navbarOffset.top - 100;
+    const treeX = navbarOffset.left + 50;
+    const treeY = navbarOffset.top + 50;
     
     // Draw tech tree background
     ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
@@ -922,14 +947,14 @@
         categoryTitle = 'Unknown Shop';
     }
     
-    ctx.fillText(categoryTitle, displayWidth / 2, treeY + 60);
+    ctx.fillText(categoryTitle, treeX + treeWidth / 2, treeY + 60);
     
     // For laptop grant, draw the grant counter below the title only if it's their main device
     if (marketState.currentCategory === 'laptop_grant' && marketState.selectedBaseOption === 'laptop_grant_base') {
       ctx.fillStyle = '#8b4513';
       ctx.font = 'bold 28px "IM Fell English", serif';
       ctx.textAlign = 'center';
-      ctx.fillText(`Total Grant: $${totalGrantAmount}`, displayWidth / 2, treeY + 105);
+      ctx.fillText(`Total Grant: $${totalGrantAmount}`, treeX + treeWidth / 2, treeY + 105);
     }
     
     // Draw coin balance in top right
@@ -1471,17 +1496,18 @@
         // Position price below the title, accounting for title height
         const priceY = titleStartY + titleHeight + 8;
         
-        if (node.maxPurchases === null) {
+        const maxPurchases = getDynamicMaxPurchases(node);
+        
+        if (maxPurchases === null) {
           // Show purchase count for infinite purchase items (like grants)
           const current = node.currentPurchases || 0;
           ctx.fillText(`${node.price} 🪙 (${current} purchased)`, x, priceY);
           ctx.fillText(`${node.price} 🪙 (${current} purchased)`, x, priceY);
-        } else if (node.maxPurchases && node.maxPurchases > 1) {
-          // Show purchase count for multi-purchase items
+        } else if (maxPurchases && maxPurchases > 1) {
+          // Show purchase count for multi-purchase items (including dynamic limits)
           const current = node.currentPurchases || 0;
-          const max = node.maxPurchases;
-          ctx.fillText(`${node.price} 🪙 (${current}/${max})`, x, priceY);
-          ctx.fillText(`${node.price} 🪙 (${current}/${max})`, x, priceY);
+          ctx.fillText(`${node.price} 🪙 (${current}/${maxPurchases})`, x, priceY);
+          ctx.fillText(`${node.price} 🪙 (${current}/${maxPurchases})`, x, priceY);
         } else {
           // Show just price for single purchase items
           ctx.fillText(`${node.price} 🪙`, x, priceY);
@@ -1646,11 +1672,18 @@
             
             if (absDirectionX > absDirectionY) {
               // More horizontal - use left/right edges
-              startX = startX + Math.sign(dirX) * (centerWidth / 2);
-              startY = startY + dirY * (centerWidth / 2) / absDirectionX;
+              if (Math.abs(dirY) < 0.1) {
+                // Purely horizontal connections
+                startX = startX + Math.sign(dirX) * (centerWidth / 2);
+                startY = startY + dirY * (centerHeight / 2) / absDirectionX;
+              } else {
+                // Diagonal connections - account for rounded corners
+                startX = startX + Math.sign(dirX) * (centerWidth / 2 - centerRadius * 0.25);
+                startY = startY + dirY * (centerHeight / 2) / absDirectionX;
+              }
             } else {
               // More vertical - use top/bottom edges
-              startX = startX + dirX * (centerHeight / 2) / absDirectionY;
+              startX = startX + dirX * (centerWidth / 2) / absDirectionY;
               startY = startY + Math.sign(dirY) * (centerHeight / 2);
             }
           }
@@ -1762,12 +1795,13 @@
     
     const displayWidth = canvas.offsetWidth;
     const displayHeight = canvas.offsetHeight;
+    const navbarOffset = getNavbarOffset();
     
     // Smaller shop panel
     const shopWidth = 800;
     const shopHeight = 600;
-    const shopX = (displayWidth - shopWidth) / 2;
-    const shopY = (displayHeight - shopHeight) / 2;
+    const shopX = navbarOffset.left + (displayWidth - navbarOffset.left - shopWidth) / 2;
+    const shopY = navbarOffset.top + (displayHeight - navbarOffset.top - shopHeight) / 2;
     
     // Draw shop background
     ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
@@ -1816,7 +1850,7 @@
         categoryTitle = 'Unknown Shop';
     }
     
-    ctx.fillText(categoryTitle, displayWidth / 2, shopY + 60);
+    ctx.fillText(categoryTitle, shopX + shopWidth / 2, shopY + 60);
     
     // Draw coin balance in top right
     ctx.fillStyle = '#8b4513';
@@ -1926,12 +1960,13 @@
     
     const displayWidth = canvas.offsetWidth;
     const displayHeight = canvas.offsetHeight;
+    const navbarOffset = getNavbarOffset();
     
     const item = marketState.currentItem;
     const popupWidth = 400;
     const popupHeight = 500;
-    const popupX = (displayWidth - popupWidth) / 2;
-    const popupY = (displayHeight - popupHeight) / 2;
+    const popupX = navbarOffset.left + (displayWidth - navbarOffset.left - popupWidth) / 2;
+    const popupY = navbarOffset.top + (displayHeight - navbarOffset.top - popupHeight) / 2;
     
     // Draw popup background
     ctx.fillStyle = 'rgba(255, 255, 255, 0.98)';
@@ -2086,11 +2121,12 @@
     
     const displayWidth = canvas.offsetWidth;
     const displayHeight = canvas.offsetHeight;
+    const navbarOffset = getNavbarOffset();
     
     const popupWidth = 400;
     const popupHeight = 200;
-    const popupX = (displayWidth - popupWidth) / 2;
-    const popupY = (displayHeight - popupHeight) / 2;
+    const popupX = navbarOffset.left + (displayWidth - navbarOffset.left - popupWidth) / 2;
+    const popupY = navbarOffset.top + (displayHeight - navbarOffset.top - popupHeight) / 2;
     
     // Draw popup background
     ctx.fillStyle = 'rgba(255, 255, 255, 0.98)';
@@ -2198,11 +2234,12 @@
     
     const displayWidth = canvas.offsetWidth;
     const displayHeight = canvas.offsetHeight;
+    const navbarOffset = getNavbarOffset();
     
     const popupWidth = 500;
     const popupHeight = 250;
-    const popupX = (displayWidth - popupWidth) / 2;
-    const popupY = (displayHeight - popupHeight) / 2;
+    const popupX = navbarOffset.left + (displayWidth - navbarOffset.left - popupWidth) / 2;
+    const popupY = navbarOffset.top + (displayHeight - navbarOffset.top - popupHeight) / 2;
     
     // Draw popup background
     ctx.fillStyle = 'rgba(255, 255, 255, 0.98)';
@@ -2622,6 +2659,29 @@
     return { adjustedStartX, adjustedStartY, adjustedEndX, adjustedEndY };
   }
 
+  // Function to calculate dynamic max purchases for a node
+  function getDynamicMaxPurchases(node) {
+    if (!node.dynamicMaxPurchases) return node.maxPurchases;
+    
+    // Parse the dynamic formula (e.g., "USB Expansion Card + 4")
+    const formula = node.dynamicMaxPurchases;
+    const match = formula.match(/^(.+)\s*\+\s*(\d+)$/);
+    
+    if (match) {
+      const baseItemName = match[1].trim();
+      const additionalCount = parseInt(match[2]);
+      
+      // Find how many of the base item the user has purchased
+      const basePurchases = marketState.userPurchases.filter(p => 
+        p.item_name === baseItemName
+      ).length;
+      
+      return basePurchases + additionalCount;
+    }
+    
+    return node.maxPurchases || 1;
+  }
+
   // Function to check if a node is affordable (has coins and prerequisites)
   function isNodeAffordable(node) {
     if (!node.price || node.price === 0) return true; // Free items are always affordable
@@ -2635,7 +2695,13 @@
     // Check if user has enough coins AND prerequisites are met
     const hasCoins = marketState.userCoins >= node.price;
     const meetsPrereqs = hasPrerequisites(node);
-    const result = hasCoins && meetsPrereqs;
+    
+    // Check if not maxed out (including dynamic limits)
+    const currentPurchases = node.currentPurchases || 0;
+    const maxPurchases = getDynamicMaxPurchases(node);
+    const notMaxedOut = maxPurchases === null || currentPurchases < maxPurchases;
+    
+    const result = hasCoins && meetsPrereqs && notMaxedOut;
     
     // Cache the result
     affordabilityCache.set(cacheKey, result);
@@ -2742,10 +2808,11 @@
       // Check if click is within the popup area
       const displayWidth = canvas.offsetWidth;
       const displayHeight = canvas.offsetHeight;
+      const navbarOffset = getNavbarOffset();
       const popupWidth = 400;
       const popupHeight = 500;
-      const popupX = (displayWidth - popupWidth) / 2;
-      const popupY = (displayHeight - popupHeight) / 2;
+      const popupX = navbarOffset.left + (displayWidth - navbarOffset.left - popupWidth) / 2;
+      const popupY = navbarOffset.top + (displayHeight - navbarOffset.top - popupHeight) / 2;
       
       // If click is outside popup, ignore it (block clicks to shop behind)
       if (x < popupX || x > popupX + popupWidth || y < popupY || y > popupY + popupHeight) {
@@ -2939,10 +3006,11 @@
     
     const displayWidth = canvas.offsetWidth;
     const displayHeight = canvas.offsetHeight;
-    const treeWidth = displayWidth - 100;
-    const treeHeight = displayHeight - 100;
-    const centerX = 50 + treeWidth / 2;
-    const centerY = 50 + treeHeight / 2;
+    const navbarOffset = getNavbarOffset();
+    const treeWidth = displayWidth - navbarOffset.left - 100;
+    const treeHeight = displayHeight - navbarOffset.top - 100;
+    const centerX = navbarOffset.left + 50 + treeWidth / 2;
+    const centerY = navbarOffset.top + 50 + treeHeight / 2;
     
     // Check if clicking on initial node
     const initialNode = treeData.initialNode;
@@ -3064,10 +3132,11 @@
     
     const displayWidth = canvas.offsetWidth;
     const displayHeight = canvas.offsetHeight;
-    const treeWidth = displayWidth - 100;
-    const treeHeight = displayHeight - 100;
-    const treeX = 50;
-    const treeY = 50;
+    const navbarOffset = getNavbarOffset();
+    const treeWidth = displayWidth - navbarOffset.left - 100;
+    const treeHeight = displayHeight - navbarOffset.top - 100;
+    const treeX = navbarOffset.left + 50;
+    const treeY = navbarOffset.top + 50;
     
     // Check if click is within the tech tree area, excluding header space
     const headerHeight = 80; // Space for title and buttons
@@ -3078,8 +3147,8 @@
       return false;
     }
     
-    const centerX = 50 + treeWidth / 2;
-    const centerY = 50 + treeHeight / 2;
+    const centerX = navbarOffset.left + 50 + treeWidth / 2;
+    const centerY = navbarOffset.top + 50 + treeHeight / 2;
     
     // Check initial node
     if (isNodeHovered(centerX, centerY, true)) {
