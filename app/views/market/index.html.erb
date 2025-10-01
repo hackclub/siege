@@ -1882,7 +1882,14 @@
         imageSize = 80;
       }
       const imageX = itemX + (itemSize - imageSize) / 2;
-      const imageY = itemY + (itemSize - imageSize) / 2 - 35; // Move up 35px from center
+      
+      // Adjust image positioning based on item type
+      let imageY;
+      if (item.isPhysicalItem) {
+        imageY = itemY + (itemSize - imageSize) / 2 - 15; // Move physical items down more (less upward offset)
+      } else {
+        imageY = itemY + (itemSize - imageSize) / 2 - 35; // Original positioning for other items
+      }
       
       // Check if mouse is hovering over the container box (consistent for all items)
       const isHovered = marketState.mouseX >= itemX && 
@@ -1924,7 +1931,31 @@
         // Draw actual item image if available, otherwise colored rectangle
         const itemImage = getItemImage(item.image);
         if (itemImage && itemImage.complete) {
-          ctx.drawImage(itemImage, imageX, imageY, imageSize, imageSize);
+          if (item.isPhysicalItem) {
+            // For physical items, maintain aspect ratio with smaller dimension at max size
+            const maxSize = imageSize;
+            const aspectRatio = itemImage.width / itemImage.height;
+            let drawWidth, drawHeight;
+            
+            if (aspectRatio > 1) {
+              // Image is wider than tall - set height to max, let width extend
+              drawHeight = maxSize;
+              drawWidth = maxSize * aspectRatio;
+            } else {
+              // Image is taller than wide (or square) - set width to max, let height extend
+              drawWidth = maxSize;
+              drawHeight = maxSize / aspectRatio;
+            }
+            
+            // Center the image within the available space
+            const drawX = itemX + (itemSize - drawWidth) / 2;
+            const drawY = imageY + (maxSize - drawHeight) / 2;
+            
+            ctx.drawImage(itemImage, drawX, drawY, drawWidth, drawHeight);
+          } else {
+            // Keep square for non-physical items
+            ctx.drawImage(itemImage, imageX, imageY, imageSize, imageSize);
+          }
         } else {
           // Fallback to colored rectangle
           ctx.fillStyle = getMeepleColor(item.image);
@@ -2006,7 +2037,14 @@
       imageSize = 120;
     }
     const imageX = popupX + (popupWidth - imageSize) / 2;
-    const imageY = popupY + (popupHeight - imageSize) / 2 - 100; // Center and move up 100px
+    
+    // Adjust image positioning based on item type
+    let imageY;
+    if (item.isPhysicalItem) {
+      imageY = popupY + (popupHeight - imageSize) / 2 - 80; // Move physical items down in popup
+    } else {
+      imageY = popupY + (popupHeight - imageSize) / 2 - 100; // Original positioning for other items
+    }
     
     // For cosmetics, draw a meeple base first, then the cosmetic on top
     if (item.isCosmetic) {
@@ -2025,7 +2063,31 @@
       // Draw actual item image if available, otherwise colored rectangle
       const itemImage = getItemImage(item.image);
       if (itemImage && itemImage.complete) {
-        ctx.drawImage(itemImage, imageX, imageY, imageSize, imageSize);
+        if (item.isPhysicalItem) {
+          // For physical items, maintain aspect ratio with smaller dimension at max size
+          const maxSize = imageSize;
+          const aspectRatio = itemImage.width / itemImage.height;
+          let drawWidth, drawHeight;
+          
+          if (aspectRatio > 1) {
+            // Image is wider than tall - set height to max, let width extend
+            drawHeight = maxSize;
+            drawWidth = maxSize * aspectRatio;
+          } else {
+            // Image is taller than wide (or square) - set width to max, let height extend
+            drawWidth = maxSize;
+            drawHeight = maxSize / aspectRatio;
+          }
+          
+          // Center the image within the available space
+          const drawX = popupX + (popupWidth - drawWidth) / 2;
+          const drawY = imageY + (maxSize - drawHeight) / 2;
+          
+          ctx.drawImage(itemImage, drawX, drawY, drawWidth, drawHeight);
+        } else {
+          // Keep square for non-physical items
+          ctx.drawImage(itemImage, imageX, imageY, imageSize, imageSize);
+        }
       } else {
         // Fallback to colored rectangle
         ctx.fillStyle = getMeepleColor(item.image);
