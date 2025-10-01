@@ -37,6 +37,7 @@
     @media (max-width: 768px) {
       .greg-container {
         margin-left: auto; /* Reset to auto on mobile */
+        margin-top: 12rem; /* Position content below navbar */
       }
     }
     .page-header {
@@ -612,21 +613,21 @@
       <% if @total_pages > 1 %>
         <div class="pagination">
           <% if @current_page > 1 %>
-            <%= link_to "← Previous", greg_path(params.permit(:name, :author, :week, :fraud_status, :reasoning).merge(page: @current_page - 1)), class: "pagination-link" %>
+            <%= link_to "← Previous", fraud_path(params.permit(:name, :author, :week, :fraud_status, :reasoning).merge(page: @current_page - 1)), class: "pagination-link" %>
           <% end %>
           
           <% (1..@total_pages).each do |page| %>
             <% if page == @current_page %>
               <span class="pagination-link current"><%= page %></span>
             <% elsif (page - @current_page).abs <= 2 || page == 1 || page == @total_pages %>
-              <%= link_to page, greg_path(params.permit(:name, :author, :week, :fraud_status, :reasoning).merge(page: page)), class: "pagination-link" %>
+              <%= link_to page, fraud_path(params.permit(:name, :author, :week, :fraud_status, :reasoning).merge(page: page)), class: "pagination-link" %>
             <% elsif (page - @current_page).abs == 3 %>
               <span class="pagination-link">...</span>
             <% end %>
           <% end %>
           
           <% if @current_page < @total_pages %>
-            <%= link_to "Next →", greg_path(params.permit(:name, :author, :week, :fraud_status, :reasoning).merge(page: @current_page + 1)), class: "pagination-link" %>
+            <%= link_to "Next →", fraud_path(params.permit(:name, :author, :week, :fraud_status, :reasoning).merge(page: @current_page + 1)), class: "pagination-link" %>
           <% end %>
         </div>
       <% end %>

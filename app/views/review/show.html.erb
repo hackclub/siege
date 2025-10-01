@@ -12,6 +12,7 @@
     @media (max-width: 768px) {
       .review-detail-container {
         margin-left: auto; /* Reset to auto on mobile */
+        margin-top: 12rem; /* Position content below navbar */
       }
     }
     .review-detail-header {
@@ -294,7 +295,7 @@
 
 <div class="review-detail-container">
   <div class="review-detail-header">
-    <%= link_to "← Back to Project Review", review_path, class: "back-link" %>
+
     <h1 class="review-detail-title"><%= @project.name %></h1>
     <div class="review-detail-subtitle">
       <span>by <%= @project.user.name %> • Created <%= @project.created_at.strftime("%B %d, %Y") %></span>

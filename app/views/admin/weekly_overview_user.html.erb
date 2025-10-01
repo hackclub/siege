@@ -12,6 +12,7 @@
 @media (max-width: 768px) {
   .admin-container {
     margin-left: auto; /* Reset to auto on mobile */
+    margin-top: 12rem; /* Position content below navbar */
   }
 }
     
@@ -345,9 +346,7 @@
 <% end %>
 
 <div class="admin-container">
-  <%= link_to admin_weekly_overview_path(week: @selected_week), class: "back-link" do %>
-    ← Back to Weekly Overview
-  <% end %>
+
 
   <div class="page-header">
     <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 2rem;">

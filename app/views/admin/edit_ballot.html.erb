@@ -12,6 +12,7 @@
 @media (max-width: 768px) {
   .admin-container {
     margin-left: auto; /* Reset to auto on mobile */
+    margin-top: 12rem; /* Position content below navbar */
   }
 }
     
@@ -186,9 +187,7 @@
 <div class="admin-container">
   <div class="admin-header">
     <h1 class="admin-title">Edit Ballot</h1>
-    <%= link_to admin_ballot_details_path(@ballot), class: "back-link" do %>
-      ← Back to Ballot Details
-    <% end %>
+
   </div>
   
   <div class="edit-form">

@@ -12,6 +12,7 @@
 @media (max-width: 768px) {
   .admin-container {
     margin-left: auto; /* Reset to auto on mobile */
+    margin-top: 12rem; /* Position content below navbar */
   }
 }
     
@@ -293,9 +294,7 @@
 <% end %>
 
 <div class="admin-container">
-  <%= link_to admin_path, class: "back-link" do %>
-    ← Back to Admin Dashboard
-  <% end %>
+
 
   <div class="admin-header">
     <h1 class="admin-title">Weekly Overview</h1>

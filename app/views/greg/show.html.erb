@@ -37,6 +37,7 @@
     @media (max-width: 768px) {
       .greg-container {
         margin-left: auto; /* Reset to auto on mobile */
+        margin-top: 12rem; /* Position content below navbar */
       }
     }
     .navigation-header {
@@ -384,10 +385,6 @@
 
 <div class="greg-container">
   <div class="navigation-header">
-    <%= link_to greg_path, class: "back-link" do %>
-      ← Back to Fraud Dashboard
-    <% end %>
-
     <div class="navigation-controls">
       <% if @navigation[:previous_project_id] %>
         <%= link_to fraud_project_path(@navigation[:previous_project_id], @navigation[:filter_params]), class: "nav-button" do %>

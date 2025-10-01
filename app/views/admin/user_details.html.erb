@@ -68,6 +68,7 @@
 @media (max-width: 768px) {
   .admin-container {
     margin-left: auto; /* Reset to auto on mobile */
+    margin-top: 12rem; /* Position content below navbar */
   }
 }
     .back-link {
@@ -348,9 +349,7 @@
 <% end %>
 
 <div class="admin-container">
-  <%= link_to admin_users_path, class: "back-link" do %>
-    ← Back to All Users
-  <% end %>
+
 
   <!-- User Profile Section -->
   <div class="user-profile">
