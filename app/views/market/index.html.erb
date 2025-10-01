@@ -149,7 +149,6 @@
     }
   }
 
-  // Sample shop items with actual image paths (keeping other category as-is)
   const allShopItems = {
     other: [
       { id: 1, title: "Mercenary", price: 35, description: "This meeple will fight for you for an hour. Purchase to skip a required hour of sieging!", image: '<%= asset_path("meeple/mercenary.png") %>', maxPerWeek: 10, priceIncreases: true, oneTime: false },
@@ -158,7 +157,7 @@
       ,{ id: <%= 100 + index %>, title: "<%= cosmetic.name %>", price: <%= cosmetic.cost %>, description: "<%= (cosmetic.description.present? ? cosmetic.description : 'A cosmetic item for your meeple!').html_safe %>", image: "<%= cosmetic.image.attached? ? rails_blob_path(cosmetic.image, only_path: false) : asset_path('meeple/meeple-red.png') %>", oneTime: true, isCosmetic: true }
       <% end %>
       <% @purchasable_physical_items.each_with_index do |physical_item, index| %>
-      ,{ id: <%= 200 + index %>, title: "<%= physical_item.name %>", price: <%= physical_item.cost %>, description: "<%= (physical_item.description.present? ? physical_item.description : 'A physical item that will be shipped to you!').html_safe %>", image: "<%= physical_item.image.attached? ? rails_blob_path(physical_item.image, only_path: false) : asset_path('meeple/meeple-red.png') %>", oneTime: false, isPhysicalItem: true }
+      ,{ id: <%= 200 + index %>, title: "<%= physical_item.name %>", price: <%= physical_item.cost %>, description: "<%= (physical_item.description.present? ? physical_item.description : 'A physical item that will be shipped to you!').html_safe %>", image: "<%= physical_item.image.attached? ? rails_blob_path(physical_item.image, only_path: false) : asset_path('meeple/meeple-red.png') %>", oneTime: false, isPhysicalItem: true, digital: <%= physical_item.digital %> }
       <% end %>
     ]
   };
@@ -199,7 +198,7 @@
     const isMobile = window.innerWidth <= 768;
     return {
       left: isMobile ? 0 : NAVBAR_WIDTH,
-      top: isMobile ? MOBILE_NAVBAR_HEIGHT : 0
+      top: isMobile ? MOBILE_NAVBAR_HEIGHT * 1.3 : 0 // 1.3x the left margin equivalent
     };
   }
   
@@ -3208,12 +3207,15 @@
       // Mercenary - show remaining purchases
       const remaining = responseData.remaining_mercenaries || 0;
       return `You can buy up to ${remaining} more Mercenaries this week.`;
-    } else if (item.title === 'Random Sticker' || item.isPhysicalItem) {
-      // Non-instant fulfillment item (Random Sticker or Physical Items) - return both messages
+    } else if (item.title === 'Random Sticker' || (item.isPhysicalItem && !item.digital)) {
+      // Non-instant fulfillment item (Random Sticker or Non-Digital Physical Items) - return both messages
       return {
         main: `Successfully purchased ${item.title} for ${price} coins!`,
         fulfillment: `This item will be fulfilled with your next round of prizes.`
       };
+    } else if (item.isPhysicalItem && item.digital) {
+      // Digital physical items - instant delivery message
+      return `Successfully purchased ${item.title} for ${price} coins! Your item will be sent within a few days.`;
     } else if (item.maxPurchases && item.maxPurchases > 1) {
       // Tech tree items with multiple purchases (like RAM)
       const remaining = item.maxPurchases - (item.currentPurchases || 0);

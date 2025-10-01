@@ -45,6 +45,6 @@ class Admin::PhysicalItemsController < AdminController
   end
 
   def physical_item_params
-    params.require(:physical_item).permit(:name, :description, :cost, :purchasable, :image)
+    params.require(:physical_item).permit(:name, :description, :cost, :purchasable, :digital, :image)
   end
 end

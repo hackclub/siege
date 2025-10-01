@@ -1278,6 +1278,20 @@ class AdminController < ApplicationController
       if params[:item_name].present?
         @purchases = @purchases.by_item(params[:item_name])
       end
+
+      # Filter by digital status if requested
+      if params[:digital].present?
+        if params[:digital] == "true"
+          # Show only digital physical items
+          digital_item_names = PhysicalItem.where(digital: true).pluck(:name)
+          @purchases = @purchases.where(item_name: digital_item_names)
+        elsif params[:digital] == "false"
+          # Show only non-digital items (exclude digital physical items)
+          digital_item_names = PhysicalItem.where(digital: true).pluck(:name)
+          @purchases = @purchases.where.not(item_name: digital_item_names)
+        end
+        # "all" or empty - no filter applied
+      end
     rescue NameError => e
       Rails.logger.error "Could not load ShopPurchase model: #{e.message}"
       @purchases = []

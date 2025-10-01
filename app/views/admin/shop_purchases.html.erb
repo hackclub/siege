@@ -12,7 +12,7 @@
 @media (max-width: 768px) {
   .admin-container {
     margin-left: auto; /* Reset to auto on mobile */
-    margin-top: 12rem; /* Position content below navbar */
+    margin-top: 26rem; /* Position content below navbar (1.3x left margin) */
   }
 }
     
@@ -390,6 +390,14 @@
         <div class="filter-group">
           <label class="filter-label">User Name</label>
           <%= form.text_field :user_name, value: params[:user_name], placeholder: "Search by user...", class: "filter-input" %>
+        </div>
+        
+        <div class="filter-group">
+          <label class="filter-label">Digital Items</label>
+          <%= form.select :digital, 
+              options_for_select([["All", ""], ["Digital Only", "true"], ["Non-Digital Only", "false"]], params[:digital]), 
+              {}, 
+              { class: "filter-select" } %>
         </div>
         
         <div class="filter-group">

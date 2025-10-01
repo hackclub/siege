@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_09_22_201400) do
+ActiveRecord::Schema[8.0].define(version: 2025_10_01_204944) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -127,6 +127,8 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_22_201400) do
     t.boolean "purchasable", default: true, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.boolean "digital", default: false, null: false
+    t.index ["digital"], name: "index_physical_items_on_digital"
     t.index ["name"], name: "index_physical_items_on_name"
     t.index ["purchasable"], name: "index_physical_items_on_purchasable"
   end

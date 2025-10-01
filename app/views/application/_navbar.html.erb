@@ -230,7 +230,7 @@
   @media (max-width: 768px) {
     .app-main {
       margin-left: 0;
-      margin-top: 12rem; /* Position content below navbar */
+      margin-top: 22.1rem; /* Position content below navbar (1.3x left margin) */
       margin-right: 0.5rem;
     }
   }
@@ -246,7 +246,7 @@
   @media (max-width: 768px) {
     .app-main {
       margin-left: 0;
-      margin-top: 12rem; /* Position content below navbar */
+      margin-top: 26rem; /* Position content below navbar (1.3x left margin) */
       margin-right: 0.5rem;
     }
   }
@@ -262,7 +262,71 @@
   @media (max-width: 768px) {
     .app-main {
       margin-left: 0;
-      margin-top: 12rem; /* Position content below navbar */
+      margin-top: 26rem; /* Position content below navbar (1.3x left margin) */
+      margin-right: 0.5rem;
+    }
+  }
+  <% end %>
+  
+  /* Add left margin on admin pages to account for navbar */
+  <% if controller_name == "admin" %>
+  .app-main {
+    margin-left: 20rem;
+    margin-right: 1rem;
+    margin-top: 2rem;
+  }
+  @media (max-width: 768px) {
+    .app-main {
+      margin-left: 0;
+      margin-top: 26rem; /* Position content below navbar (1.3x left margin) */
+      margin-right: 0.5rem;
+    }
+  }
+  <% end %>
+  
+  /* Add left margin on review pages to account for navbar */
+  <% if controller_name == "review" %>
+  .app-main {
+    margin-left: 20rem;
+    margin-right: 1rem;
+    margin-top: 2rem;
+  }
+  @media (max-width: 768px) {
+    .app-main {
+      margin-left: 0;
+      margin-top: 26rem; /* Position content below navbar (1.3x left margin) */
+      margin-right: 0.5rem;
+    }
+  }
+  <% end %>
+  
+  /* Add left margin on fraud pages to account for navbar */
+  <% if controller_name == "greg" %>
+  .app-main {
+    margin-left: 20rem;
+    margin-right: 1rem;
+    margin-top: 2rem;
+  }
+  @media (max-width: 768px) {
+    .app-main {
+      margin-left: 0;
+      margin-top: 26rem; /* Position content below navbar (1.3x left margin) */
+      margin-right: 0.5rem;
+    }
+  }
+  <% end %>
+  
+  /* Add left margin on admin cosmetics and physical items pages */
+  <% if params[:controller]&.start_with?("admin/") %>
+  .app-main {
+    margin-left: 20rem;
+    margin-right: 1rem;
+    margin-top: 2rem;
+  }
+  @media (max-width: 768px) {
+    .app-main {
+      margin-left: 0;
+      margin-top: 26rem; /* Position content below navbar (1.3x left margin) */
       margin-right: 0.5rem;
     }
   }
