@@ -585,7 +585,7 @@ document.getElementById('fraud-status-form').addEventListener('submit', function
     return;
   }
 
-  fetch('<%= greg_update_fraud_status_path(@project) %>', {
+  fetch('<%= fraud_update_fraud_status_path(@project) %>', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

@@ -531,37 +531,47 @@
       }
     });
 
-    // Update node states based on user purchases
+    // Count purchases by item name
+    const purchaseCounts = {};
     marketState.userPurchases.forEach(purchase => {
-      if (purchase.quantity > 0) {
-        // Find the corresponding tech tree node
-        Object.keys(techTreeData).forEach(category => {
-          const treeData = techTreeData[category];
-          if (treeData.branches) {
-            Object.keys(treeData.branches).forEach(deviceId => {
-              const branches = treeData.branches[deviceId];
-              Object.keys(branches).forEach(direction => {
-                const branch = branches[direction];
-                if (branch.title === purchase.item_name) {
-                  if (branch.maxPurchases === null) {
-                    // Infinite purchases (like grants) - set count but never mark as purchased
-                    branch.currentPurchases = purchase.quantity;
-                  } else if (branch.maxPurchases && branch.maxPurchases > 1) {
-                    // Multi-purchase item
-                    branch.currentPurchases = purchase.quantity;
-                    if (branch.currentPurchases >= branch.maxPurchases) {
-                      branch.purchased = true;
-                    }
-                  } else {
-                    // One-time purchase item
+      if (purchase.item_name) {
+        purchaseCounts[purchase.item_name] = (purchaseCounts[purchase.item_name] || 0) + 1;
+      }
+    });
+
+    // Update node states based on purchase counts
+    Object.keys(purchaseCounts).forEach(itemName => {
+      const purchaseCount = purchaseCounts[itemName];
+      
+      // Find the corresponding tech tree node
+      Object.keys(techTreeData).forEach(category => {
+        const treeData = techTreeData[category];
+        if (treeData.branches) {
+          Object.keys(treeData.branches).forEach(deviceId => {
+            const branches = treeData.branches[deviceId];
+            Object.keys(branches).forEach(direction => {
+              const branch = branches[direction];
+              if (branch.title === itemName) {
+                if (branch.maxPurchases === null || branch.dynamicMaxPurchases) {
+                  // Infinite purchases or dynamic purchases - set count but never mark as purchased
+                  branch.currentPurchases = purchaseCount;
+                  branch.purchased = false; // Never mark infinite/dynamic items as purchased
+                } else if (branch.maxPurchases && branch.maxPurchases > 1) {
+                  // Multi-purchase item with static limit
+                  branch.currentPurchases = purchaseCount;
+                  if (branch.currentPurchases >= branch.maxPurchases) {
                     branch.purchased = true;
                   }
+                } else {
+                  // One-time purchase item
+                  branch.purchased = true;
+                  branch.currentPurchases = purchaseCount;
                 }
-              });
+              }
             });
-          }
-        });
-      }
+          });
+        }
+      });
     });
   }
 
@@ -2747,12 +2757,6 @@
   function isNodeAffordable(node) {
     if (!node.price || node.price === 0) return true; // Free items are always affordable
     
-    // Use cache for expensive affordability calculations
-    const cacheKey = `${node.id || node.title}_${marketState.userCoins}`;
-    if (affordabilityCache.has(cacheKey)) {
-      return affordabilityCache.get(cacheKey);
-    }
-    
     // Check if user has enough coins AND prerequisites are met
     const hasCoins = marketState.userCoins >= node.price;
     const meetsPrereqs = hasPrerequisites(node);
@@ -2764,8 +2768,6 @@
     
     const result = hasCoins && meetsPrereqs && notMaxedOut;
     
-    // Cache the result
-    affordabilityCache.set(cacheKey, result);
     return result;
   }
 

@@ -105,6 +105,7 @@ Rails.application.routes.draw do
   post "/admin/users/:id/set_banned", to: "admin#set_banned", as: :admin_set_banned
   post "/admin/users/:id/toggle_fraud_team", to: "admin#toggle_fraud_team", as: :admin_toggle_fraud_team
   delete "/admin/users/:id/delete", to: "admin#destroy_user", as: :admin_destroy_user
+  post "/admin/projects/:id/update_fraud_status", to: "admin#update_fraud_status", as: :admin_update_fraud_status
   get "/review", to: "review#index", as: :review
   get "/review/projects/:id", to: "review#show", as: :review_project
   patch "/review/projects/:id/status", to: "review#update_status", as: :review_project_status

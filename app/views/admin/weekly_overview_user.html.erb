@@ -384,14 +384,12 @@
             </span>
           </div>
           
-          <% if current_user&.can_access_fraud_dashboard? %>
-            <div class="info-item">
-              <span class="info-label">Fraud Status</span>
-              <span class="fraud-status <%= @project.fraud_status %>">
-                <%= @project.fraud_status.humanize %>
-              </span>
-            </div>
-          <% end %>
+					<div class="info-item">
+						<span class="info-label">Fraud Status</span>
+						<span class="fraud-status <%= @project.fraud_status %>">
+							<%= @project.fraud_status.humanize %>
+						</span>
+					</div>
           
           <div class="info-item">
             <span class="info-label">Time Spent</span>
@@ -694,33 +692,31 @@
         </div>
 
         <!-- Fraud Status Section -->
-        <% if current_user&.can_access_fraud_dashboard? && @project %>
-          <div class="form-group">
-            <label class="form-label">Fraud Review:</label>
-            <div style="background: #fef7f7; padding: 1rem; border-radius: 8px; border: 1px solid #fecaca;">
-              <div style="margin-bottom: 0.75rem;">
-                <strong>Current Status:</strong> 
-                <span class="fraud-status-badge <%= @project.fraud_status %>" style="padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem; font-weight: 500;">
-                  <%= @project.fraud_status&.humanize || 'Unchecked' %>
-                </span>
-              </div>
-              
-              <div style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem;">
-                <select id="fraud-status-select" class="form-input" style="flex: 1;">
-                  <option value="unchecked" <%= 'selected' if @project.fraud_status == 'unchecked' %>>Unchecked</option>
-                  <option value="sus" <%= 'selected' if @project.fraud_status == 'sus' %>>Suspicious</option>
-                  <option value="fraud" <%= 'selected' if @project.fraud_status == 'fraud' %>>Confirmed Fraud</option>
-                  <option value="good" <%= 'selected' if @project.fraud_status == 'good' %>>Good/Verified</option>
-                </select>
-                <button type="button" onclick="updateFraudStatus()" class="submit-button" style="background: #dc2626; font-size: 0.8rem; padding: 0.5rem;">
-                  Update Fraud Status
-                </button>
-              </div>
-              
-              <textarea id="fraud-reasoning" class="form-textarea" placeholder="Add reasoning for fraud status change..." style="font-size: 0.85rem; min-height: 60px;"><%= @project.fraud_reasoning %></textarea>
-            </div>
-          </div>
-        <% end %>
+				<div class="form-group">
+					<label class="form-label">Fraud Review:</label>
+					<div style="background: #fef7f7; padding: 1rem; border-radius: 8px; border: 1px solid #fecaca;">
+						<div style="margin-bottom: 0.75rem;">
+							<strong>Current Status:</strong> 
+							<span class="fraud-status-badge <%= @project.fraud_status %>" style="padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem; font-weight: 500;">
+								<%= @project.fraud_status&.humanize || 'Unchecked' %>
+							</span>
+						</div>
+						
+						<div style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem;">
+							<select id="fraud-status-select" class="form-input" style="flex: 1;">
+								<option value="unchecked" <%= 'selected' if @project.fraud_status == 'unchecked' %>>Unchecked</option>
+								<option value="sus" <%= 'selected' if @project.fraud_status == 'sus' %>>Suspicious</option>
+								<option value="fraud" <%= 'selected' if @project.fraud_status == 'fraud' %>>Confirmed Fraud</option>
+								<option value="good" <%= 'selected' if @project.fraud_status == 'good' %>>Good/Verified</option>
+							</select>
+							<button type="button" onclick="updateFraudStatus()" class="submit-button" style="background: #dc2626; font-size: 0.8rem; padding: 0.5rem;">
+								Update Fraud Status
+							</button>
+						</div>
+						
+						<textarea id="fraud-reasoning" class="form-textarea" placeholder="Add reasoning for fraud status change..." style="font-size: 0.85rem; min-height: 60px;"><%= @project.fraud_reasoning %></textarea>
+					</div>
+				</div>
       </div>
     </div>
 
@@ -1163,7 +1159,7 @@
           return;
         }
 
-        fetch(`<%= fraud_update_fraud_status_path(@project) %>`, {
+        fetch(`<%= admin_update_fraud_status_path(@project) %>`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

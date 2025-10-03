@@ -1727,7 +1727,32 @@ class AdminController < ApplicationController
       format.json { render json: { success: false, error: "Project not found" } }
     end
   end
-  
+
+  def update_fraud_status
+    @project = Project.find(params[:id])
+
+    new_fraud_status = params[:fraud_status]
+    new_fraud_reasoning = params[:fraud_reasoning]
+
+    unless %w[unchecked sus fraud good].include?(new_fraud_status)
+      render json: { success: false, error: "Invalid fraud status" }
+      return
+    end
+
+    begin
+      @project.update_fraud_status!(new_fraud_status, new_fraud_reasoning, current_user)
+      render json: {
+        success: true,
+        message: "Fraud status updated to #{new_fraud_status.humanize}"
+      }
+    rescue => e
+      Rails.logger.error "Failed to update fraud status: #{e.message}"
+      render json: { success: false, error: "Failed to update fraud status" }
+    end
+  rescue ActiveRecord::RecordNotFound
+    render json: { success: false, error: "Project not found" }
+  end
+   
   private
 
   def require_admin_access
@@ -2038,4 +2063,5 @@ class AdminController < ApplicationController
     Rails.logger.error "Error removing cosmetic: #{e.message}"
     render json: { success: false, error: "Failed to remove cosmetic" }
   end
+
 end
