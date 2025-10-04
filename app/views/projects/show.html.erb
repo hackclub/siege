@@ -667,6 +667,7 @@
                projectId: <%= @project.id %>,
                 weekHours: <%= @project.week_hours_numeric %>,
                 hasBypassFlag: <%= Flipper.enabled?(:bypass_10_hour_requirement, current_user) %>,
+      hourGoalDisplay: <%= hour_goal_display %>,
                 isPreparationPhase: <%= Flipper.enabled?(:preparation_phase, current_user) %>
               };
              
@@ -740,9 +741,9 @@
                  
                  // Update text for hours item
                  if (projectData.hackatimeProjects && projectData.hackatimeProjects.length > 0) {
-                   hoursItem.text = `At least 10 hrs coded (${hours}h/10h)`;
+                   hoursItem.text = `At least ${projectData.effectiveHourGoal} hrs coded (${hours}h/${projectData.effectiveHourGoal}h)`;
                  } else {
-                   hoursItem.text = 'At least 10 hrs coded (Add Hackatime projects first)';
+                 hoursItem.text = `At least ${projectData.effectiveHourGoal} hrs coded (Add Hackatime projects first)`;
                  }
                }
              }

@@ -166,7 +166,9 @@ class Project < ApplicationRecord
             end
 
             hours = total_seconds / 3600.0
-            errors.add(:base, "Cannot submit project. You need at least 10 hours of coding time. You currently have #{hours.round(1)} hours.")
+            week_number = ApplicationController.helpers.week_number_for_date(created_at)
+            effective_goal = ApplicationController.helpers.effective_hour_goal(user, week_number)
+          errors.add(:base, "Cannot submit project. You need at least #{effective_goal} hours of coding time. You currently have #{hours.round(1)} hours.")
           else
             errors.add(:base, "Cannot submit project. Unable to calculate coding time.")
           end

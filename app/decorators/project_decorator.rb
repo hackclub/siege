@@ -50,7 +50,9 @@ class ProjectDecorator < Draper::Decorator
       total_seconds = helpers.project_total_hackatime_time(object)
       if total_seconds > 0
         hours = total_seconds / 3600.0
-        return "You need at least 10 hours of coding time. You currently have #{hours.round(1)} hours."
+        week_number = helpers.week_number_for_date(object.created_at)
+        effective_goal = helpers.effective_hour_goal(object.user, week_number)
+      return "You need at least #{effective_goal} hours of coding time. You currently have #{hours.round(1)} hours."
       end
 
       "Unable to calculate coding time."

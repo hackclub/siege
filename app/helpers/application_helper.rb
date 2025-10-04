@@ -1,6 +1,57 @@
 require "ostruct"
 
 module ApplicationHelper
+  # Get the display hour goal (9 if flag enabled, 10 otherwise)
+  def hour_goal_display
+    Flipper.enabled?(:nine_hour_display, current_user) ? 9 : 10
+  end
+  
+  # Get effective hour goal for a user in a specific week (accounting for mercenaries)
+  def effective_hour_goal(user, week_number)
+    base_goal = 10
+    
+    # Get week range
+    week_range = week_date_range(week_number)
+    return base_goal unless week_range
+    
+    week_start = Date.parse(week_range[0]).beginning_of_day
+    week_end = Date.parse(week_range[1]).end_of_day
+    
+    # Count mercenaries purchased this week
+    mercenary_count = user.shop_purchases
+      .where(item_name: "Mercenary")
+      .where(purchased_at: week_start..week_end)
+      .count
+    
+    # Each mercenary reduces the goal by 1 hour, minimum 0
+    [base_goal - mercenary_count, 0].max
+  end
+  
+  # Get effective hour goal for current week
+  def current_week_effective_hour_goal
+    return 10 unless current_user
+    effective_hour_goal(current_user, current_week_number)
+  end
+  
+  # Get effective hour goal in seconds
+  def effective_hour_goal_seconds(user, week_number)
+    effective_hour_goal(user, week_number) * 3600
+  end
+  
+  # Get mercenary count for a specific week
+  def mercenary_count_for_week(user, week_number)
+    week_range = week_date_range(week_number)
+    return 0 unless week_range
+    
+    week_start = Date.parse(week_range[0]).beginning_of_day
+    week_end = Date.parse(week_range[1]).end_of_day
+    
+    user.shop_purchases
+      .where(item_name: "Mercenary")
+      .where(purchased_at: week_start..week_end)
+      .count
+  end
+  
   # Fetch Hackatime projects list for a range; returns an array of hashes with name, total_seconds, percent, etc.
   def hackatime_projects_for(start_date_str, end_date_str)
     hackatime_projects_for_user(current_user, start_date_str, end_date_str)

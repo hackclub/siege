@@ -578,7 +578,10 @@
               <div class="progress-fill" style="width: <%= progress_percent %>%;"></div>
             </div>
             <div class="progress-text">
-              <%= progress_percent >= 100 ? "Siege Complete!" : "#{readable_time} / 10h" %>
+              <%= progress_percent >= 100 ? "Siege Complete!" : "#{readable_time} / #{effective_goal}h" %>
+              <% if mercenary_count > 0 %>
+                <span style="font-size: 0.75rem; color: #8b4513; margin-left: 0.25rem;">(🪖 <%= mercenary_count %>)</span>
+              <% end %>
             </div>
           </div>
         </div>

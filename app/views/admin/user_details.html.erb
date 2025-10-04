@@ -583,7 +583,10 @@
           <div class="progress-fill" style="width: <%= [@current_week_progress, 100].min %>%;"></div>
         </div>
         <div class="progress-text">
-          <%= @current_week_progress >= 100 ? "Siege Complete!" : "#{@current_week_readable} / 10h" %>
+          <%= @current_week_progress >= 100 ? "Siege Complete!" : "#{@current_week_readable} / #{@current_week_effective_goal}h" %>
+          <% if @current_week_mercenary_count > 0 %>
+            <span style="font-size: 0.85rem; color: #8b4513; margin-left: 0.5rem;">(🪖 <%= @current_week_mercenary_count %>)</span>
+          <% end %>
         </div>
       </div>
     </div>

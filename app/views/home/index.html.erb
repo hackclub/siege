@@ -504,8 +504,8 @@
                       Siege! (
                       <% if project_exists %>
                         <% if current_project&.hackatime_projects&.any? %>
-                          <% if week_secs >= 36000 %>
-                            10h
+                          <% if week_secs >= effective_goal_secs %>
+                            <%= current_week_effective_hour_goal %>h
                           <% else %>
                             <%= format_time_from_seconds(week_secs) %>
                           <% end %>
@@ -515,7 +515,7 @@
                       <% else %>
                         0h
                       <% end %>
-                      / 10h )
+                      / <%= hour_goal_display %>h )
                     </span>
                   </label>
                 <% end %>
@@ -524,7 +524,7 @@
                   <input type="checkbox" class="home-checkbox" disabled />
                   <span class="home-row-sm">
                     Pillage (
-                    <% if Flipper.enabled?(:preparation_phase, current_user) || week_secs >= 36000 %>
+                    <% if Flipper.enabled?(:preparation_phase, current_user) || week_secs >= effective_goal_secs %>
                       <%= format_time_from_seconds(pillage_secs) %>
                     <% else %>
                       0h

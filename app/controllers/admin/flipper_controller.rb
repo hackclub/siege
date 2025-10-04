@@ -50,6 +50,7 @@ class Admin::FlipperController < ApplicationController
       "ballot_verification_required" => "Require users to be identity verified before they can create a ballot for voting",
       "voting_any_day" => "Allow voting to happen on any day of the week, not just Monday-Wednesday",
       "bypass_10_hour_requirement" => "Allow users to submit projects without reaching 10 hours of coding time",
+      "nine_hour_display" => "Display 9 hours as the goal instead of 10 (visual only, actual requirement unchanged)",
       "preparation_phase" => "Enable preparation phase mode - removes siege requirements and shows coins around castle instead of meeple track",
       "great_hall_closed" => "Close the great hall to all users, preventing voting and showing a closed message",
       "market_enabled" => "Enable the market feature - allows users to access the market page and make purchases"

@@ -393,8 +393,14 @@
           
           <div class="info-item">
             <span class="info-label">Time Spent</span>
-            <span class="info-value"><%= @time_readable %></span>
-          </div>
+            <span class="info-value">
+                <%= @time_readable %>
+          <% mercenary_count = mercenary_count_for_week(@user, @week) %>
+          <% if mercenary_count > 0 %>
+            <span style="font-size: 0.85rem; color: #8b4513; margin-left: 0.5rem;">(🪖 <%= mercenary_count %> - Goal: <%= effective_hour_goal(@user, @week) %>h)</span>
+          <% end %>
+        </span>
+      </div>
           
           <% if @average_score %>
             <div class="info-item">

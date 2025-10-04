@@ -326,7 +326,9 @@ class AdminController < ApplicationController
 
     # Calculate user's current week progress
     @current_week_seconds = @user.decorate.week_seconds(view_context.current_week_number)
-    @current_week_progress = (@current_week_seconds / 36000.0 * 100).round(1)
+    @current_week_mercenary_count = view_context.mercenary_count_for_week(@user, view_context.current_week_number)
+    @current_week_effective_goal = view_context.effective_hour_goal(@user, view_context.current_week_number)
+    @current_week_progress = (@current_week_seconds / (@current_week_effective_goal * 3600.0) * 100).round(1)
     @current_week_readable = view_context.format_time_from_seconds(@current_week_seconds)
 
     # Get user's total coins and project count
@@ -796,6 +798,10 @@ class AdminController < ApplicationController
 
         # Get average score from pre-fetched data
         average_score = project ? vote_averages[project.id] : nil
+        
+        # Get mercenary count and effective hour goal for this week
+        mercenary_count = view_context.mercenary_count_for_week(user, selected_week)
+        effective_goal = view_context.effective_hour_goal(user, selected_week)
 
         @user_data[user.id] = {
           user: user,
@@ -804,7 +810,9 @@ class AdminController < ApplicationController
           time_readable: view_context.format_time_from_seconds(time_seconds),
           average_score: average_score,
           fraud_status: project&.fraud_status,
-          fraud_reasoning: project&.fraud_reasoning
+          fraud_reasoning: project&.fraud_reasoning,
+          mercenary_count: mercenary_count,
+          effective_hour_goal: effective_goal
         }
       end
 

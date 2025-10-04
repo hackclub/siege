@@ -340,6 +340,18 @@
       <div class="detail-value"><%= @project.elo || "Not rated" %></div>
     </div>
     
+    <% week_number = week_number_for_date(@project.created_at) %>
+    <% mercenary_count = mercenary_count_for_week(@project.user, week_number) %>
+    <% if mercenary_count > 0 %>
+      <div class="detail-field">
+        <span class="detail-label">Mercenaries Bought</span>
+        <div class="detail-value">
+          <span style="color: #8b4513; font-weight: 600;"><%= mercenary_count %> this week</span>
+          <span style="font-size: 0.85rem; color: #6b7280; margin-left: 0.5rem;">(Effective goal: <%= effective_hour_goal(@project.user, week_number) %>h)</span>
+        </div>
+      </div>
+    <% end %>
+    
     <div class="detail-field">
       <span class="detail-label">Links</span>
       <div class="project-links">
