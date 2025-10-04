@@ -8,7 +8,7 @@ class Project < ApplicationRecord
   after_initialize :set_time_override_from_flipper, if: :new_record?
 
   validates :name, presence: true
-  validates :status, presence: true, inclusion: { in: %w[building submitted pending_voting finished] }
+  validates :status, presence: true, inclusion: { in: %w[building submitted pending_voting waiting_for_review finished] }
   validates :fraud_status, presence: true, inclusion: { in: %w[unchecked sus fraud good] }
   validates :repo_url, url: { allow_blank: true, no_local: true, schemes: [ "https" ] }
   validates :demo_url, url: { allow_blank: true, no_local: true, schemes: [ "http", "https" ] }
@@ -39,6 +39,10 @@ class Project < ApplicationRecord
 
   def pending_voting?
     status == "pending_voting"
+  end
+
+  def waiting_for_review?
+    status == "waiting_for_review"
   end
 
   def finished?

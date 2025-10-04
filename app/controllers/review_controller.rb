@@ -80,7 +80,7 @@ class ReviewController < ApplicationController
     new_status = params[:new_status]
     message = params[:message]
 
-    unless %w[building submitted pending_voting finished].include?(new_status)
+    unless %w[building submitted pending_voting waiting_for_review finished].include?(new_status)
       redirect_to review_project_path(@project), alert: "Invalid status"
       return
     end
@@ -99,7 +99,7 @@ class ReviewController < ApplicationController
     reviewer_video = params[:reviewer_video]
     include_reviewer_handle = params[:include_reviewer_handle] == true || params[:include_reviewer_handle] == "true"
     
-    unless %w[accept reject add_comment].include?(review_status)
+    unless %w[accept accept_not_following_theme reject add_comment].include?(review_status)
       render json: { success: false, error: "Invalid review status" }
       return
     end

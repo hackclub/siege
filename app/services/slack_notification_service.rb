@@ -54,6 +54,18 @@ class SlackNotificationService
       # Also send pending voting notification for approved projects
       message = "The diplomats have been sent out to preach about #{project.name}! They should be back in a few days to report how it went..."
       send_direct_message(project.user.slack_id, message)
+    when "accept_not_following_theme"
+      # Send approval message for non-themed projects
+      if feedback_changed && project.stonemason_feedback.present?
+        message = "Good news! #{reviewer_mention} approved your #{project.name} project! Here's what they said: #{project.stonemason_feedback}#{video_text}"
+      else
+        message = "Good news! #{reviewer_mention} approved your #{project.name} project!#{video_text}"
+      end
+      send_direct_message(project.user.slack_id, message)
+      
+      # Send waiting for review notification
+      message = "Because your project didn't follow the theme, it'll skip voting and go directly to review."
+      send_direct_message(project.user.slack_id, message)
     end
   rescue => e
     Rails.logger.error "Failed to send review notification for project #{project.id}: #{e.message}"

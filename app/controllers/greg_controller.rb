@@ -3,7 +3,7 @@ class GregController < ApplicationController
 
   def index
     @projects = Project.includes(:user)
-                      .where(status: [ "submitted", "pending_voting", "finished" ])
+                      .where(status: [ "submitted", "pending_voting", "waiting_for_review", "finished" ])
 
     # Default to showing only sus projects
     fraud_status_filter = params[:fraud_status].presence || "sus"
@@ -177,7 +177,7 @@ class GregController < ApplicationController
 
     # Build the same query as index action to get the filtered list
     projects = Project.includes(:user)
-                     .where(status: [ "submitted", "pending_voting", "finished" ])
+                     .where(status: [ "submitted", "pending_voting", "waiting_for_review", "finished" ])
 
     # Apply the same filters as index action
     fraud_status_filter = safe_params[:fraud_status].presence || safe_params["fraud_status"].presence || "sus"

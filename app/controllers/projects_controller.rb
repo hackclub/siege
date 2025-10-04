@@ -472,7 +472,7 @@ class ProjectsController < ApplicationController
       # Admins can always edit projects
       return if can_access_admin?
 
-      # Regular users cannot edit projects once they reach pending_voting or finished status
+      # Regular users cannot edit projects once they reach pending_voting, waiting_for_review, or finished status
       unless @project.editable_by_user?
         redirect_to @project, alert: "This project cannot be edited as it has entered the review phase."
       end

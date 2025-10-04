@@ -53,6 +53,8 @@
           Submitted for review
         <% when 'pending_voting' %>
           Waiting for votes
+        <% when 'waiting_for_review' %>
+          Waiting for review
         <% when 'finished' %>
           <% average_score = @vote_averages&.dig(project.id) %>
           <% if can_access_admin? && (average_score || project.coin_value&.positive?) %>

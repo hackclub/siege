@@ -13,6 +13,7 @@ class AdminController < ApplicationController
     @projects_building = Project.where(status: "building").count
     @projects_submitted = Project.where(status: "submitted").count
     @projects_pending_voting = Project.where(status: "pending_voting").count
+    @projects_waiting_for_review = Project.where(status: "waiting_for_review").count
     @projects_finished = Project.where(status: "finished").count
     @total_projects = Project.count
   end
@@ -807,20 +808,22 @@ class AdminController < ApplicationController
         }
       end
 
-      # Apply status filter - default to pending_voting if no status specified
-      @status_filter = params[:status].present? ? params[:status] : "pending_voting"
+      # Apply status filter - default to pending_voting and waiting_for_review if no status specified
+      @status_filter = params[:status].present? ? params[:status] : "pending_voting_and_waiting"
       status_filter = @status_filter
 
       @user_data = @user_data.select do |user_id, data|
         case status_filter
         when "no_project"
           data[:project].nil?
-        when "building", "submitted", "pending_voting", "finished"
+        when "building", "submitted", "pending_voting", "waiting_for_review", "finished"
           data[:project]&.status == status_filter
+        when "pending_voting_and_waiting"
+          data[:project]&.status.in?(["pending_voting", "waiting_for_review"])
         when "all"
           true
         else
-          data[:project]&.status == "pending_voting" # fallback to pending_voting
+          data[:project]&.status.in?(["pending_voting", "waiting_for_review"]) # fallback to both
         end
       end
 
@@ -1459,7 +1462,7 @@ class AdminController < ApplicationController
 
     # Users who've submitted at least one project
     users_submitted = User.joins(:projects)
-                         .where(projects: { status: [ "submitted", "pending_voting", "finished" ] })
+                         .where(projects: { status: [ "submitted", "pending_voting", "waiting_for_review", "finished" ] })
                          .distinct.count
 
     # Pre-fetch all projects with hackatime data to avoid N+1 queries

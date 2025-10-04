@@ -138,6 +138,8 @@
             Submitted for review
           <% when 'pending_voting' %>
             Waiting for votes
+          <% when 'waiting_for_review' %>
+            Waiting for review
           <% when 'finished' %>
             <% if can_access_admin? && (@average_score || @project.coin_value&.positive?) %>
               Avg. Score: <%= @average_score || 'N/A' %>, Value: <%= @project.coin_value || 0 %><%= image_tag 'coin.png', style: 'width: 16px; height: 16px; vertical-align: middle; margin-left: 4px;' %>
