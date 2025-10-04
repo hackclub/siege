@@ -114,6 +114,8 @@ class ReviewController < ApplicationController
     new_project_status = case review_status
     when "accept"
       "pending_voting"
+    when "accept_not_following_theme"
+      "waiting_for_review"
     when "reject"
       "building"
     when "add_comment"

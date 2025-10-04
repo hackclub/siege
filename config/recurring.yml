@@ -18,6 +18,10 @@ production:
     class: TransitionProjectsToWaitingOnReviewJob
     schedule: every day at 12am
     
+  sync_hackatime_ban_status:
+    class: SyncHackatimeBanStatusJob
+    schedule: every day at 2am
+    
   # storage_maintenance:
   #   command: "rake storage:maintenance"
   #   schedule: daily at 3am
