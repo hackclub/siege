@@ -2161,8 +2161,14 @@
     const hasEnoughCoins = marketState.userCoins >= itemPrice;
     
     // Check if item is available for purchase
-    const isAvailable = !item.purchased && 
-                       (!item.maxPurchases || !item.currentPurchases || item.currentPurchases < item.maxPurchases);
+    let isAvailable;
+    if (item.title === 'Mercenary') {
+      // Special handling for Mercenary - check weekly limit
+      isAvailable = mercenaryCount < 10;
+    } else {
+      isAvailable = !item.purchased && 
+                         (!item.maxPurchases || !item.currentPurchases || item.currentPurchases < item.maxPurchases);
+    }
     
 
     

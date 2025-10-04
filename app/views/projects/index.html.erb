@@ -111,9 +111,9 @@
 
   <div class="projects-header">
     <div class="projects-actions">
-      <% can_create = !@current_user.has_project_this_week?(Date.current) %>
+      <% can_create = current_user&.has_project_this_week?(Date.current) != true %>
       <% if not can_create %>
-        <p class="hint"><%= @current_user.project_creation_error %></p>
+        <p class="hint"><%= current_user&.project_creation_error %></p>
       <% end %>
       <%= link_to "New project", can_create ? new_project_path : "#", class: "submit-button mt #{can_create ? '' : 'is-disabled'}" %>
     </div>
