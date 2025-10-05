@@ -220,7 +220,7 @@
       </div>
     </section>
   <% else %>
-    <% cache(["home","week_progress", current_user&.id, current_user&.meeple&.color, current_user&.meeple&.equipped_cosmetics&.pluck(:cosmetic_id), current_week_number, mercenary_count_for_week(current_user, current_week_number)], expires_in: 5.minutes) do %>
+    <% cache(["home","week_progress", current_user&.id, current_user&.meeple&.color, current_user&.meeple&.equipped_cosmetics&.pluck(:cosmetic_id), current_week_number, mercenary_count_for_week(current_user, current_week_number)], expires_in: 30.seconds) do %>
       <section class="home-progress-standalone">
         <div class="home-full">
                           <% week_secs = @current_user&.week_seconds_time.to_f || 0 %>
@@ -517,7 +517,7 @@
                       <% else %>
                         0h
                       <% end %>
-                      / <%= hour_goal_display %>h )
+                      / <%= current_week_effective_hour_goal %>h )
                     </span>
                   </label>
                 <% end %>

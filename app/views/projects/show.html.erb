@@ -668,6 +668,7 @@
                 weekHours: <%= @project.week_hours_numeric %>,
                 hasBypassFlag: <%= Flipper.enabled?(:bypass_10_hour_requirement, current_user) %>,
       hourGoalDisplay: <%= hour_goal_display %>,
+                effectiveHourGoal: <%= effective_hour_goal(@project.user, week_number_for_date(@project.created_at)) %>,
                 isPreparationPhase: <%= Flipper.enabled?(:preparation_phase, current_user) %>
               };
              
@@ -737,13 +738,13 @@
                const hoursItem = checklistItems.find(item => item.id === 'hours');
                if (hoursItem) {
                  hoursItem.hours = hours;
-                 hoursItem.checked = hours >= 10 || projectData.hasBypassFlag;
+                 hoursItem.checked = hours >= projectData.effectiveHourGoal || projectData.hasBypassFlag;
                  
                  // Update text for hours item
                  if (projectData.hackatimeProjects && projectData.hackatimeProjects.length > 0) {
                    hoursItem.text = `At least ${projectData.effectiveHourGoal} hrs coded (${hours}h/${projectData.effectiveHourGoal}h)`;
                  } else {
-                 hoursItem.text = `At least ${projectData.effectiveHourGoal} hrs coded (Add Hackatime projects first)`;
+                   hoursItem.text = `At least ${projectData.effectiveHourGoal} hrs coded (Add Hackatime projects first)`;
                  }
                }
              }

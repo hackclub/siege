@@ -52,10 +52,15 @@ module ApplicationHelper
     week_start = Date.parse(week_range[0]).beginning_of_day
     week_end = Date.parse(week_range[1]).end_of_day
     
-    user.shop_purchases
+    count = user.shop_purchases
       .where(item_name: "Mercenary")
       .where(purchased_at: week_start..week_end)
       .count
+    
+    Rails.logger.info "[MercenaryCount] User #{user.id}, Week #{week_number}: Range #{week_start} to #{week_end}, Count: #{count}"
+    Rails.logger.info "[MercenaryCount] All mercenaries: #{user.shop_purchases.where(item_name: 'Mercenary').pluck(:id, :purchased_at).inspect}"
+    
+    count
   end
   
   # Fetch Hackatime projects list for a range; returns an array of hashes with name, total_seconds, percent, etc.
