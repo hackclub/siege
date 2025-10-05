@@ -235,7 +235,7 @@
             <% elsif siege_complete %>
               <span class="home-progress-top">you've been pillaging for <%= pillage_hours %>h <%= pillage_minutes %>m!</span>
             <% else %>
-              <span class="home-progress-top">you're <%= ((week_secs / 36000) * 100).round(1) %>% of the way there!</span>
+              <span class="home-progress-top">you're <%= ((week_secs.to_f / effective_goal_secs_top) * 100).round(1) %>% of the way there!</span>
             <% end %>
           </div>
         <% if Flipper.enabled?(:preparation_phase, current_user) %>
@@ -243,7 +243,7 @@
           <% pct = 100 %>
           <% marker_x = 100 %>
         <% else %>
-          <% percent = siege_complete ? 100 : [(week_secs / 36000 * 100), 100].min %>
+          <% percent = siege_complete ? 100 : [(week_secs.to_f / effective_goal_secs_top * 100), 100].min %>
           <% pct = percent.to_f.clamp(0,100) %>
           <% marker_x = pct %>
         <% end %>
@@ -497,9 +497,10 @@
                 <!-- DEBUG: week = <%= week %>, project_exists = <%= project_exists %> -->
                 <% week_secs = @current_user&.seconds_for_week(week).to_f || 0 %>
                 <% current_project = current_week_project %>
+                <% effective_goal_secs = current_week_effective_hour_goal * 3600 %>
                 <% unless Flipper.enabled?(:preparation_phase, current_user) %>
                   <label class="home-checkrow home-checkrow-help <%= 'home-muted' unless project_exists %>" title="These are the hours required to stay in Siege">
-                    <input type="checkbox" class="home-checkbox" <%= 'checked' if project_exists && week_secs >= 36000 %> disabled />
+                    <input type="checkbox" class="home-checkbox" <%= 'checked' if project_exists && week_secs >= effective_goal_secs %> disabled />
                     <span class="home-row-sm">
                       Siege! (
                       <% if project_exists %>

@@ -1512,7 +1512,9 @@ class AdminController < ApplicationController
           total_seconds += match&.dig("total_seconds") || 0
         end
 
-        if total_seconds >= 36000 # 10 hours
+        # Check if user met their effective hour goal for this week
+        effective_goal_seconds = view_context.effective_hour_goal_seconds(project.user, week_num)
+        if total_seconds >= effective_goal_seconds
           completed_users += 1
         end
       end
