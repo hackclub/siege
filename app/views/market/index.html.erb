@@ -296,6 +296,7 @@
     .then(data => {
       mercenaryPrice = data.price || 35;
       mercenaryCount = data.count || 0;
+      throttledRender(); // Redraw to update display
     })
     .catch(error => {
       console.warn('Failed to load mercenary price:', error);

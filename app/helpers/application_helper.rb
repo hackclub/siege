@@ -27,10 +27,16 @@ module ApplicationHelper
     [base_goal - mercenary_count, 0].max
   end
   
-  # Get effective hour goal for current week
+  # Get effective hour goal for current week (for display)
   def current_week_effective_hour_goal
     return 10 unless current_user
-    effective_hour_goal(current_user, current_week_number)
+    goal = effective_hour_goal(current_user, current_week_number)
+    # Apply display adjustment if nine_hour_display flag is enabled
+    if Flipper.enabled?(:nine_hour_display, current_user) && goal > 0
+      goal - 1
+    else
+      goal
+    end
   end
   
   # Get effective hour goal in seconds

@@ -800,8 +800,8 @@ class AdminController < ApplicationController
         average_score = project ? vote_averages[project.id] : nil
         
         # Get mercenary count and effective hour goal for this week
-        mercenary_count = view_context.mercenary_count_for_week(user, selected_week)
-        effective_goal = view_context.effective_hour_goal(user, selected_week)
+        mercenary_count = view_context.mercenary_count_for_week(user, @selected_week)
+        effective_goal = view_context.effective_hour_goal(user, @selected_week)
 
         @user_data[user.id] = {
           user: user,

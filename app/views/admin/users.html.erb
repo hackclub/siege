@@ -474,7 +474,9 @@
     <% if @users.any? %>
              <% @users.each do |user| %>
          <% current_week_seconds = @user_week_seconds[user.id] || 0 %>
-         <% progress_percent = [(current_week_seconds / 36000.0 * 100).round(1), 100].min %>
+         <% mercenary_count = mercenary_count_for_week(user, current_week_number) %>
+         <% effective_goal = effective_hour_goal(user, current_week_number) %>
+         <% progress_percent = [(current_week_seconds / (effective_goal * 3600.0) * 100).round(1), 100].min %>
          <% readable_time = format_time_from_seconds(current_week_seconds) %>
         
         <div class="user-card" onclick="window.location.href='<%= admin_user_details_path(user) %>'">
