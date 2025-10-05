@@ -347,99 +347,98 @@
     <% end %>
   </div>
   <nav class="navbar-nav">
-    <% if current_page?(keep_path) %>
-      <span class="navbar-link active">Keep</span>
-      <%= link_to "← Back", castle_path, class: "navbar-link" %>
-      <% if can_access_review? || can_access_fraud_dashboard? || can_access_admin? %>
-        <% if can_access_review? %>
-          <%= link_to "Review", review_path, class: "navbar-link navbar-link--admin #{'active' if current_page?(review_path)}" %>
-        <% end %>
-        <% if can_access_fraud_dashboard? %>
-          <%= link_to "Fraud", fraud_path, class: "navbar-link navbar-link--admin #{'active' if current_page?(fraud_path)}" %>
-        <% end %>
-        <% if can_access_admin? %>
-          <%= link_to "Admin", admin_path, class: "navbar-link navbar-link--admin #{'active' if current_page?(admin_path)}" %>
-        <% end %>
-      <% end %>
-    
-    <!-- Individual Project Pages -->
-    <% elsif controller_name == "projects" && action_name == "show" %>
-      <span class="navbar-link active">Project</span>
+    <!-- Context-aware back button -->
+    <% if controller_name == "projects" && action_name == "show" %>
       <%= link_to "← Back", projects_path, class: "navbar-link" %>
     <% elsif controller_name == "projects" && action_name == "new" %>
-      <span class="navbar-link active">New Project</span>
       <%= link_to "← Back", projects_path, class: "navbar-link" %>
     <% elsif controller_name == "projects" && action_name == "edit" %>
-      <span class="navbar-link active">Edit Project</span>
       <%= link_to "← Back", project_path(params[:id]), class: "navbar-link" %>
-    <% elsif current_page?(projects_path) %>
-      <span class="navbar-link active">Armory</span>
-      <%= link_to "← Back", castle_path, class: "navbar-link" %>
-      
-    <!-- Review Subpages -->
     <% elsif controller_name == "review" && action_name == "show" %>
-      <span class="navbar-link active">Review Project</span>
       <%= link_to "← Back", review_path, class: "navbar-link" %>
-    <% elsif current_page?(review_path) %>
-      <span class="navbar-link active navbar-link--admin">Review</span>
-      <%= link_to "← Back", castle_path, class: "navbar-link" %>
-      
-    <!-- Fraud/Greg Subpages -->
     <% elsif controller_name == "greg" && action_name == "show" %>
-      <span class="navbar-link active">Fraud Project</span>
       <%= link_to "← Back", fraud_path, class: "navbar-link" %>
-    <% elsif current_page?(fraud_path) %>
-      <span class="navbar-link active navbar-link--admin">Fraud</span>
-      <%= link_to "← Back", castle_path, class: "navbar-link" %>
-      
-    <!-- Admin Subpages -->
     <% elsif controller_name == "admin" && action_name == "users" %>
-      <span class="navbar-link active">Users</span>
       <%= link_to "← Back", admin_path, class: "navbar-link" %>
     <% elsif controller_name == "admin" && action_name == "user_details" %>
-      <span class="navbar-link active">User Details</span>
       <%= link_to "← Back", admin_users_path, class: "navbar-link" %>
     <% elsif controller_name == "admin" && action_name == "projects" %>
-      <span class="navbar-link active">Admin Projects</span>
       <%= link_to "← Back", admin_path, class: "navbar-link" %>
     <% elsif controller_name == "admin" && action_name == "ballots" %>
-      <span class="navbar-link active">Ballots</span>
       <%= link_to "← Back", admin_path, class: "navbar-link" %>
     <% elsif controller_name == "admin" && action_name == "ballot_details" %>
-      <span class="navbar-link active">Ballot Details</span>
       <%= link_to "← Back", admin_ballots_path, class: "navbar-link" %>
     <% elsif controller_name == "admin" && action_name == "edit_ballot" %>
-      <span class="navbar-link active">Edit Ballot</span>
       <%= link_to "← Back", admin_ballot_details_path(params[:id]), class: "navbar-link" %>
     <% elsif controller_name == "admin" && action_name == "weekly_overview" %>
-      <span class="navbar-link active">Weekly Overview</span>
       <%= link_to "← Back", admin_path, class: "navbar-link" %>
     <% elsif controller_name == "admin" && action_name == "weekly_overview_user" %>
-      <span class="navbar-link active">User Week Details</span>
       <%= link_to "← Back", admin_weekly_overview_path(week: params[:week]), class: "navbar-link" %>
     <% elsif controller_name == "admin" && action_name == "shop_purchases" %>
-      <span class="navbar-link active">Shop Purchases</span>
       <%= link_to "← Back", admin_path, class: "navbar-link" %>
     <% elsif controller_name == "admin" && action_name == "shop_purchase_details" %>
-      <span class="navbar-link active">Purchase Details</span>
       <%= link_to "← Back", admin_shop_purchases_path, class: "navbar-link" %>
-    <% elsif current_page?(admin_path) %>
-      <span class="navbar-link active navbar-link--admin">Admin</span>
-      <%= link_to "← Back", castle_path, class: "navbar-link" %>
-      
-    <!-- Main Section Pages -->
-    <% elsif current_page?(great_hall_path) %>
-      <span class="navbar-link active">Great Hall</span>
-      <%= link_to "← Back", castle_path, class: "navbar-link" %>
-    <% elsif current_page?(market_path) %>
-      <span class="navbar-link active">Market</span>
-      <%= link_to "← Back", castle_path, class: "navbar-link" %>
-    <% elsif current_page?(chambers_path) %>
-      <span class="navbar-link active">Chambers</span>
-      <%= link_to "← Back", castle_path, class: "navbar-link" %>
     <% else %>
       <%= link_to "← Back", castle_path, class: "navbar-link" %>
     <% end %>
+    
+    <!-- Main Navigation Links (hidden if on current page) -->
+    <% unless current_page?(keep_path) %>
+      <%= link_to "Keep", keep_path, class: "navbar-link" %>
+    <% else %>
+      <span class="navbar-link active">Keep</span>
+    <% end %>
+    
+    <% unless current_page?(projects_path) %>
+      <%= link_to "Armory", projects_path, class: "navbar-link" %>
+    <% else %>
+      <span class="navbar-link active">Armory</span>
+    <% end %>
+    
+    <% unless current_page?(great_hall_path) %>
+      <%= link_to "Great Hall", great_hall_path, class: "navbar-link" %>
+    <% else %>
+      <span class="navbar-link active">Great Hall</span>
+    <% end %>
+    
+    <% unless current_page?(market_path) %>
+      <%= link_to "Market", market_path, class: "navbar-link" %>
+    <% else %>
+      <span class="navbar-link active">Market</span>
+    <% end %>
+    
+    <% unless current_page?(chambers_path) %>
+      <%= link_to "Chambers", chambers_path, class: "navbar-link" %>
+    <% else %>
+      <span class="navbar-link active">Chambers</span>
+    <% end %>
+    
+    <!-- Admin Links (always shown if user has access) -->
+    <% if can_access_review? %>
+      <% unless current_page?(review_path) || (controller_name == "review") %>
+        <%= link_to "Review", review_path, class: "navbar-link navbar-link--admin" %>
+      <% else %>
+        <span class="navbar-link navbar-link--admin active">Review</span>
+      <% end %>
+    <% end %>
+    
+    <% if can_access_fraud_dashboard? %>
+      <% unless current_page?(fraud_path) || (controller_name == "greg") %>
+        <%= link_to "Fraud", fraud_path, class: "navbar-link navbar-link--admin" %>
+      <% else %>
+        <span class="navbar-link navbar-link--admin active">Fraud</span>
+      <% end %>
+    <% end %>
+    
+    <% if can_access_admin? %>
+      <% unless current_page?(admin_path) || (controller_name == "admin") %>
+        <%= link_to "Admin", admin_path, class: "navbar-link navbar-link--admin" %>
+      <% else %>
+        <span class="navbar-link navbar-link--admin active">Admin</span>
+      <% end %>
+    <% end %>
+    
+
   </nav>
   <div class="navbar-decoration bottom" id="admin-key-trigger" aria-hidden="true"></div>
 </aside>
