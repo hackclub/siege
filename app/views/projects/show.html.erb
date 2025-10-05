@@ -656,6 +656,12 @@
             // Project submission checklist function
            function showProjectSubmissionChecklist() {
              // Get project data
+             <% 
+               project_week = week_number_for_date(@project.created_at)
+               base_effective_goal = effective_hour_goal(@project.user, project_week)
+               # Apply nine_hour_display adjustment like current_week_effective_hour_goal does
+               display_effective_goal = (Flipper.enabled?(:nine_hour_display, current_user) && base_effective_goal > 0) ? base_effective_goal - 1 : base_effective_goal
+             %>
              const projectData = {
              repoUrl: '<%= @project.repo_url %>',
              demoUrl: '<%= @project.demo_url %>',
@@ -668,7 +674,7 @@
                 weekHours: <%= @project.week_hours_numeric %>,
                 hasBypassFlag: <%= Flipper.enabled?(:bypass_10_hour_requirement, current_user) %>,
       hourGoalDisplay: <%= hour_goal_display %>,
-                effectiveHourGoal: <%= effective_hour_goal(@project.user, week_number_for_date(@project.created_at)) %>,
+                effectiveHourGoal: <%= display_effective_goal %>,
                 isPreparationPhase: <%= Flipper.enabled?(:preparation_phase, current_user) %>
               };
              
