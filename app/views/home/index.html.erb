@@ -519,8 +519,8 @@
                     </span>
                   </label>
                 <% end %>
-                <label class="home-checkrow home-checkrow-help <%= 'home-muted' if Flipper.enabled?(:preparation_phase, current_user) ? false : (week_secs < 36000) %>" title="<%= Flipper.enabled?(:preparation_phase, current_user) ? 'All hours count towards coins in preparation phase' : 'These are bonus hours that go towards coins' %>">
-                  <% pillage_secs = Flipper.enabled?(:preparation_phase, current_user) ? week_secs : [week_secs - 36000, 0].max %>
+                <label class="home-checkrow home-checkrow-help <%= 'home-muted' if Flipper.enabled?(:preparation_phase, current_user) ? false : (week_secs < effective_goal_secs) %>" title="<%= Flipper.enabled?(:preparation_phase, current_user) ? 'All hours count towards coins in preparation phase' : 'These are bonus hours that go towards coins' %>">
+                  <% pillage_secs = Flipper.enabled?(:preparation_phase, current_user) ? week_secs : [week_secs - effective_goal_secs, 0].max %>
                   <input type="checkbox" class="home-checkbox" disabled />
                   <span class="home-row-sm">
                     Pillage (
