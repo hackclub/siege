@@ -65,7 +65,7 @@ class AdminController < ApplicationController
     @users = User.joins(:projects).select(:id, :name).distinct.order(:name)
 
     # Get all possible statuses for the status filter
-    @statuses = %w[building submitted pending_voting finished]
+    @statuses = %w[building submitted pending_voting waiting_for_review finished]
 
     # Get available weeks for the week filter dropdown
     @available_weeks = Project.distinct.pluck(:created_at).map do |created_at|

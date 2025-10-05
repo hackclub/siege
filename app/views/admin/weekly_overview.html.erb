@@ -447,7 +447,12 @@
           <div class="user-stats">
             <div class="stat-item">
               <div class="stat-label">Time Spent</div>
-              <div class="stat-value"><%= data[:time_readable] %></div>
+              <div class="stat-value">
+                <%= data[:time_readable] %>
+                <% if data[:mercenary_count] && data[:mercenary_count] > 0 %>
+                  <div style="font-size: 0.8rem; color: #8b4513; margin-top: 0.25rem;">🪖 <%= data[:mercenary_count] %> (Goal: <%= data[:effective_hour_goal] %>h)</div>
+                <% end %>
+              </div>
             </div>
             
             <% if data[:average_score] %>

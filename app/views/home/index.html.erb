@@ -224,8 +224,9 @@
       <section class="home-progress-standalone">
         <div class="home-full">
                           <% week_secs = @current_user&.week_seconds_time.to_f || 0 %>
-          <% siege_complete = week_secs >= 36000 %>
-          <% pillage_secs = Flipper.enabled?(:preparation_phase, current_user) ? week_secs : [week_secs - 36000, 0].max %>
+          <% effective_goal_secs_top = current_week_effective_hour_goal * 3600 %>
+          <% siege_complete = week_secs >= effective_goal_secs_top %>
+          <% pillage_secs = Flipper.enabled?(:preparation_phase, current_user) ? week_secs : [week_secs - effective_goal_secs_top, 0].max %>
           <% pillage_hours = (pillage_secs / 3600).floor %>
           <% pillage_minutes = ((pillage_secs % 3600) / 60).round %>
           
