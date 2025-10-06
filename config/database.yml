@@ -22,12 +22,37 @@ development:
 # re-generated from your development database when you run "rake".
 # Do not set this db to the same as development or production.
 test:
-  <<: *default
-  database: siege_test
-  username: <%= ENV.fetch("POSTGRES_USER") { "postgres" } %>
-  password: <%= ENV.fetch("POSTGRES_PASSWORD") { "password" } %>
-  host: <%= ENV.fetch("POSTGRES_HOST") { "localhost" } %>
-  port: <%= ENV.fetch("POSTGRES_PORT") { 5432 } %>
+  primary:
+    <<: *default
+    database: siege_test
+    username: <%= ENV.fetch("POSTGRES_USER") { "postgres" } %>
+    password: <%= ENV.fetch("POSTGRES_PASSWORD") { "password" } %>
+    host: <%= ENV.fetch("POSTGRES_HOST") { "localhost" } %>
+    port: <%= ENV.fetch("POSTGRES_PORT") { 5432 } %>
+  cache:
+    <<: *default
+    database: siege_test
+    username: <%= ENV.fetch("POSTGRES_USER") { "postgres" } %>
+    password: <%= ENV.fetch("POSTGRES_PASSWORD") { "password" } %>
+    host: <%= ENV.fetch("POSTGRES_HOST") { "localhost" } %>
+    port: <%= ENV.fetch("POSTGRES_PORT") { 5432 } %>
+    migrations_paths: db/cache_migrate
+  queue:
+    <<: *default
+    database: siege_test
+    username: <%= ENV.fetch("POSTGRES_USER") { "postgres" } %>
+    password: <%= ENV.fetch("POSTGRES_PASSWORD") { "password" } %>
+    host: <%= ENV.fetch("POSTGRES_HOST") { "localhost" } %>
+    port: <%= ENV.fetch("POSTGRES_PORT") { 5432 } %>
+    migrations_paths: db/queue_migrate
+  cable:
+    <<: *default
+    database: siege_test
+    username: <%= ENV.fetch("POSTGRES_USER") { "postgres" } %>
+    password: <%= ENV.fetch("POSTGRES_PASSWORD") { "password" } %>
+    host: <%= ENV.fetch("POSTGRES_HOST") { "localhost" } %>
+    port: <%= ENV.fetch("POSTGRES_PORT") { 5432 } %>
+    migrations_paths: db/cable_migrate
 
 production:
   primary:
