@@ -20,6 +20,10 @@ Rails.application.routes.draw do
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
   # Can be used by load balancers and uptime monitors to verify that the app is live.
   get "up" => "rails/health#show", as: :rails_health_check
+  
+  # Health check endpoints
+  get "health" => "health_check/health_check#index", as: :health_check
+  get "health/full" => "health_check/health_check#index", as: :health_check_full
 
   get "/auth/slack_openid/callback", to: "sessions#create"
   get "/auth/failure", to: "sessions#failure"
@@ -134,12 +138,9 @@ Rails.application.routes.draw do
   }
   
   # Mount monitoring dashboards (super admins only)
-  mount Flipper::UI.app(Flipper) => "/admin/flipper/ui", :constraints => super_admin_constraint
-  mount MissionControl::Jobs::Engine, at: "/admin/jobs", :constraints => super_admin_constraint
-  mount PgHero::Engine, at: "/admin/pghero", :constraints => super_admin_constraint
-  
-  # Mount health check endpoints (accessible to all - for uptime monitoring)
-  health_check_routes
+  mount Flipper::UI.app(Flipper) => "/admin/flipper/ui", constraints: super_admin_constraint
+  mount MissionControl::Jobs::Engine, at: "/admin/jobs", constraints: super_admin_constraint
+  mount PgHero::Engine, at: "/admin/pghero", constraints: super_admin_constraint
 
   resource :address, only: [ :show, :new, :create, :edit, :update ]
   resource :chambers, controller: "addresses", only: [ :show, :new, :create, :edit, :update ]

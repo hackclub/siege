@@ -4,11 +4,22 @@ class CheckDuplicatesJob < ApplicationJob
   def perform
     Rails.logger.info "[CheckDuplicatesJob] Starting job execution"
     
-    records_to_check = source_table.all(
-      max_records: 10,
-      filter: "BLANK() = {Duplicate?}",
-      sort: { "Created at": "asc" }
-    )
+    # Check if required environment variable is present
+    unless ENV["UNIFIED_DB_INTEGRATION_AIRTABLE_KEY"].present?
+      Rails.logger.error "[CheckDuplicatesJob] Missing UNIFIED_DB_INTEGRATION_AIRTABLE_KEY environment variable"
+      return
+    end
+    
+    begin
+      records_to_check = source_table.all(
+        max_records: 10,
+        filter: "BLANK() = {Duplicate?}",
+        sort: { "Created at": "asc" }
+      )
+    rescue => e
+      Rails.logger.error "[CheckDuplicatesJob] Failed to fetch records from Airtable: #{e.message}"
+      return
+    end
 
     if records_to_check.empty?
       Rails.logger.info "[CheckDuplicatesJob] No records to check"
@@ -41,11 +52,20 @@ class CheckDuplicatesJob < ApplicationJob
     end
 
     if records_to_update.any?
-      source_table.batch_update(records_to_update)
-      Rails.logger.info "[CheckDuplicatesJob] Successfully updated #{records_to_update.count} records with duplicate status"
+      begin
+        source_table.batch_update(records_to_update)
+        Rails.logger.info "[CheckDuplicatesJob] Successfully updated #{records_to_update.count} records with duplicate status"
+      rescue => e
+        Rails.logger.error "[CheckDuplicatesJob] Failed to update records: #{e.message}"
+        return
+      end
     end
     
     Rails.logger.info "[CheckDuplicatesJob] Job execution completed"
+  rescue => e
+    Rails.logger.error "[CheckDuplicatesJob] Job failed with error: #{e.message}"
+    Rails.logger.error "[CheckDuplicatesJob] Backtrace: #{e.backtrace.join("\n")}"
+    raise e
   end
 
   private

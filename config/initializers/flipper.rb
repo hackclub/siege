@@ -11,9 +11,9 @@ unless defined?(Flipper::Adapters::ActiveRecord::Feature)
     belongs_to :flipper_feature, foreign_key: :feature_key, primary_key: :key
   end
 
-  # Then assign them to the Flipper namespace
-  Flipper::Adapters::ActiveRecord::Feature = FlipperFeature
-  Flipper::Adapters::ActiveRecord::Gate = FlipperGate
+  # Then assign them to the Flipper namespace only if not already defined
+  Flipper::Adapters::ActiveRecord.const_set(:Feature, FlipperFeature) unless Flipper::Adapters::ActiveRecord.const_defined?(:Feature)
+  Flipper::Adapters::ActiveRecord.const_set(:Gate, FlipperGate) unless Flipper::Adapters::ActiveRecord.const_defined?(:Gate)
 end
 
 Flipper.configure do |config|

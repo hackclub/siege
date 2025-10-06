@@ -58,5 +58,5 @@ USER 1000:1000
 # Entrypoint prepares the database.
 ENTRYPOINT ["/rails/bin/docker-entrypoint"]
 
-# Start Solid Queue worker
-CMD ["bundle", "exec", "rake", "solid_queue:start"]
+# Start Solid Queue supervisor (runs in foreground)
+CMD ["bundle", "exec", "bin/jobs"]

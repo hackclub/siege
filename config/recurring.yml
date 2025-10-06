@@ -7,7 +7,7 @@
 #   periodic_cleanup_with_command:
 #     command: "SoftDeletedRecord.due.delete_all"
 #     priority: 2
-#     schedule: at 5am every day
+#     schedule: every day at 5am
 
 development:
   check_duplicates:
@@ -33,8 +33,8 @@ production:
 
   # storage_maintenance:
   #   command: "rake storage:maintenance"
-  #   schedule: daily at 3am
+  #   schedule: every day at 3am
 
   storage_backup:
     command: "rake storage:backup"
-    schedule: daily at 1am
+    schedule: every day at 1am
