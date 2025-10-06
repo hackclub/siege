@@ -11,7 +11,7 @@
 
 development:
   check_duplicates:
-    class: YswsReview::CheckDuplicatesJob
+    class: CheckDuplicatesJob
     schedule: every 5 minutes
 
 production:
@@ -20,7 +20,7 @@ production:
     schedule: every hour at minute 12
     
   check_duplicates:
-    class: YswsReview::CheckDuplicatesJob
+    class: CheckDuplicatesJob
     schedule: every 5 minutes
     
   transition_projects_to_waiting_on_review:
