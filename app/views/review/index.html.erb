@@ -405,15 +405,24 @@
     </div>
   </div>
 
-  <!-- Projects Count -->
-  <div class="projects-count">
-    Showing <%= @projects.count %> project<%= @projects.count == 1 ? '' : 's' %>
-    <% if params[:name].present? || params[:owner].present? || params[:status].present? || params[:week].present? %>
-      (filtered)
-    <% end %>
-    <% if params[:sort].present? %>
-      - sorted by <%= params[:sort].humanize.downcase %>
-    <% end %>
+  <!-- Projects Count and Controls -->
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+    <div class="projects-count" style="margin-bottom: 0;">
+      Showing <%= @projects.count %> project<%= @projects.count == 1 ? '' : 's' %>
+      <% if params[:name].present? || params[:owner].present? || params[:status].present? || params[:week].present? %>
+        (filtered)
+      <% end %>
+      <% if params[:sort].present? %>
+        - sorted by <%= params[:sort].humanize.downcase %>
+      <% end %>
+    </div>
+    
+    <div style="display: flex; align-items: center; gap: 0.5rem;">
+      <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 1rem; font-weight: 500; color: #402b20;">
+        <input type="checkbox" id="randomize-toggle" checked style="width: 18px; height: 18px; cursor: pointer;">
+        <span>Randomize Order</span>
+      </label>
+    </div>
   </div>
 
   <!-- Projects Grid -->
@@ -473,3 +482,54 @@
     <% end %>
   </div>
 </div>
+
+<script>
+(function() {
+  const projectsGrid = document.querySelector('.projects-grid');
+  const randomizeToggle = document.getElementById('randomize-toggle');
+  
+  if (!projectsGrid || !randomizeToggle) return;
+  
+  // Store original order
+  let originalCards = Array.from(projectsGrid.children);
+  let currentlyRandomized = false;
+  
+  // Fisher-Yates shuffle algorithm
+  function shuffleArray(array) {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  }
+  
+  function randomizeProjects() {
+    const cards = Array.from(projectsGrid.children);
+    const shuffled = shuffleArray(cards);
+    
+    // Clear and re-append in random order
+    projectsGrid.innerHTML = '';
+    shuffled.forEach(card => projectsGrid.appendChild(card));
+    currentlyRandomized = true;
+  }
+  
+  function restoreOriginalOrder() {
+    projectsGrid.innerHTML = '';
+    originalCards.forEach(card => projectsGrid.appendChild(card));
+    currentlyRandomized = false;
+  }
+  
+  // Randomize on page load (since toggle is checked by default)
+  randomizeProjects();
+  
+  // Toggle randomization when checkbox changes
+  randomizeToggle.addEventListener('change', function() {
+    if (this.checked) {
+      randomizeProjects();
+    } else {
+      restoreOriginalOrder();
+    }
+  });
+})();
+</script>
