@@ -2,15 +2,20 @@ class CheckDuplicatesJob < ApplicationJob
   queue_as :default
 
   def perform
+    Rails.logger.info "[CheckDuplicatesJob] Starting job execution"
+    
     records_to_check = source_table.all(
       max_records: 10,
       filter: "BLANK() = {Duplicate?}",
       sort: { "Created at": "asc" }
     )
 
-    return if records_to_check.empty?
+    if records_to_check.empty?
+      Rails.logger.info "[CheckDuplicatesJob] No records to check"
+      return
+    end
 
-    puts "Found #{records_to_check.count} records to check for duplicates"
+    Rails.logger.info "[CheckDuplicatesJob] Found #{records_to_check.count} records to check for duplicates"
 
     records_to_update = []
 
@@ -18,17 +23,17 @@ class CheckDuplicatesJob < ApplicationJob
       code_url = record.fields["Code URL"]
 
       unless code_url.present?
-        puts "Skipping record #{record.id} - no Code URL"
+        Rails.logger.info "[CheckDuplicatesJob] Skipping record #{record.id} - no Code URL"
         next
       end
 
       duplicate_record = find_duplicate_in_unified_db(code_url)
 
       if duplicate_record
-        puts "Found duplicate for #{code_url}: #{duplicate_record.id}"
+        Rails.logger.info "[CheckDuplicatesJob] Found duplicate for #{code_url}: #{duplicate_record.id}"
         record["Duplicate?"] = duplicate_record.id
       else
-        puts "No duplicate found for #{code_url}"
+        Rails.logger.info "[CheckDuplicatesJob] No duplicate found for #{code_url}"
         record["Duplicate?"] = "N/A"
       end
 
@@ -37,8 +42,10 @@ class CheckDuplicatesJob < ApplicationJob
 
     if records_to_update.any?
       source_table.batch_update(records_to_update)
-      puts "Successfully updated #{records_to_update.count} records with duplicate status"
+      Rails.logger.info "[CheckDuplicatesJob] Successfully updated #{records_to_update.count} records with duplicate status"
     end
+    
+    Rails.logger.info "[CheckDuplicatesJob] Job execution completed"
   end
 
   private
