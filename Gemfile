@@ -99,9 +99,28 @@ gem "memory_profiler"
 gem "stackprof"
 gem "skylight"
 
+# Database monitoring and optimization
+gem "pghero"
+
+# Exception tracking
+gem "sentry-ruby"
+gem "sentry-rails"
+
+# N+1 query detection
+gem "bullet", group: :development
+
+# Structured logging
+gem "lograge"
+
+# Health check endpoints
+gem "health_check"
+
 # Required for ActiveStorage R2
 gem "image_processing", "~> 1.2"
 gem "aws-sdk-s3", require: false
 
 # Airtable API client
 gem "norairrecord"
+
+# Job monitoring dashboard
+gem "mission_control-jobs"

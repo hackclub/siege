@@ -113,6 +113,9 @@ GEM
     brakeman (7.1.0)
       racc
     builder (3.3.0)
+    bullet (8.0.8)
+      activesupport (>= 3.0.0)
+      uniform_notifier (~> 1.11)
     capybara (3.40.0)
       addressable
       matrix
@@ -198,6 +201,8 @@ GEM
       bigdecimal
       rake (>= 13)
     hashie (5.0.0)
+    health_check (3.1.0)
+      railties (>= 5.0)
     hotwire-livereload (2.0.0)
       actioncable (>= 7.0.0)
       listen (>= 3.0.0)
@@ -251,6 +256,11 @@ GEM
       ffi-compiler (~> 1.0)
       rake (~> 13.0)
     logger (1.7.0)
+    lograge (0.14.0)
+      actionpack (>= 4)
+      activesupport (>= 4)
+      railties (>= 4)
+      request_store (~> 1.0)
     loofah (2.24.1)
       crass (~> 1.0.2)
       nokogiri (>= 1.12.0)
@@ -268,6 +278,16 @@ GEM
       logger
     mini_mime (1.1.5)
     minitest (5.25.5)
+    mission_control-jobs (1.1.0)
+      actioncable (>= 7.1)
+      actionpack (>= 7.1)
+      activejob (>= 7.1)
+      activerecord (>= 7.1)
+      importmap-rails (>= 1.2.1)
+      irb (~> 1.13)
+      railties (>= 7.1)
+      stimulus-rails
+      turbo-rails
     msgpack (1.8.0)
     multi_xml (0.7.2)
       bigdecimal (~> 3.1)
@@ -331,6 +351,8 @@ GEM
     pg (1.6.2-x86_64-linux)
     pg_query (6.1.0)
       google-protobuf (>= 3.25.3)
+    pghero (3.7.0)
+      activerecord (>= 7.1)
     pp (0.6.2)
       prettyprint
     prettyprint (0.2.0)
@@ -451,6 +473,12 @@ GEM
       rexml (~> 3.2, >= 3.2.5)
       rubyzip (>= 1.2.2, < 4.0)
       websocket (~> 1.0)
+    sentry-rails (5.28.0)
+      railties (>= 5.0)
+      sentry-ruby (~> 5.28.0)
+    sentry-ruby (5.28.0)
+      bigdecimal
+      concurrent-ruby (~> 1.0, >= 1.0.2)
     skylight (7.0.0)
       activesupport (>= 7.1.0)
     slack-ruby-client (3.0.0)
@@ -497,6 +525,9 @@ GEM
     thruster (0.1.15-x86_64-linux)
     timeout (0.4.3)
     tsort (0.2.0)
+    turbo-rails (2.0.17)
+      actionpack (>= 7.1.0)
+      railties (>= 7.1.0)
     tzinfo (2.0.6)
       concurrent-ruby (~> 1.0)
     tzinfo-data (1.2025.2)
@@ -505,6 +536,7 @@ GEM
     unicode-display_width (3.2.0)
       unicode-emoji (~> 4.1)
     unicode-emoji (4.1.0)
+    uniform_notifier (1.18.0)
     uri (1.0.3)
     useragent (0.16.11)
     validate_url (1.0.15)
@@ -530,6 +562,7 @@ DEPENDENCIES
   binding_of_caller
   bootsnap
   brakeman
+  bullet
   capybara
   country_select
   debug
@@ -538,14 +571,17 @@ DEPENDENCIES
   flipper-active_record
   flipper-ui
   geocoder
+  health_check
   hotwire-livereload
   http
   image_processing (~> 1.2)
   importmap-rails
   jbuilder
   kamal
+  lograge
   lucide-rails
   memory_profiler
+  mission_control-jobs
   norairrecord
   numbers_and_words
   omniauth
@@ -553,6 +589,7 @@ DEPENDENCIES
   omniauth-slack-openid
   pg (~> 1.1)
   pg_query
+  pghero
   propshaft
   prosopite
   puma (>= 5.0)
@@ -560,6 +597,8 @@ DEPENDENCIES
   rails (~> 8.0.2)
   rubocop-rails-omakase
   selenium-webdriver
+  sentry-rails
+  sentry-ruby
   skylight
   slack-ruby-client
   solid_cable

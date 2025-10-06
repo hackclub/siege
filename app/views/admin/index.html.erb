@@ -244,12 +244,45 @@
       <% end %>
       
       <% if current_user&.super_admin? %>
-        <%= link_to admin_flipper_path, class: "nav-button" do %>
-          <svg class="nav-button-icon" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M5 12a1 1 0 102 0V6.414l1.293 1.293a1 1 0 001.414-1.414l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L5 6.414V12zM15 8a1 1 0 10-2 0v5.586l-1.293-1.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L15 13.586V8z"></path>
-          </svg>
-          Feature Flags
-        <% end %>
+        <div style="margin-top: 1rem; padding-top: 1rem; border-top: 2px solid rgba(64, 43, 32, 0.15);">
+          <div style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #8b4513; margin-bottom: 0.75rem; text-align: center;">Monitoring Tools</div>
+          
+          <%= link_to "/admin/jobs", class: "nav-button" do %>
+            <%= lucide_icon("activity", class: "nav-button-icon") %>
+            Job Queue
+          <% end %>
+          
+          <%= link_to "/admin/pghero", class: "nav-button" do %>
+            <%= lucide_icon("database", class: "nav-button-icon") %>
+            Database Performance
+          <% end %>
+          
+          <%= link_to admin_flipper_path, class: "nav-button" do %>
+            <%= lucide_icon("toggle-left", class: "nav-button-icon") %>
+            Feature Flags
+          <% end %>
+          
+          <%= link_to "https://skylight.io", target: "_blank", class: "nav-button" do %>
+            <%= lucide_icon("zap", class: "nav-button-icon") %>
+            Skylight APM
+            <svg class="nav-button-icon" style="width: 14px; height: 14px; margin-left: auto; opacity: 0.5;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+            </svg>
+          <% end %>
+          
+          <%= link_to "https://sentry.io", target: "_blank", class: "nav-button" do %>
+            <%= lucide_icon("alert-circle", class: "nav-button-icon") %>
+            Sentry Errors
+            <svg class="nav-button-icon" style="width: 14px; height: 14px; margin-left: auto; opacity: 0.5;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+            </svg>
+          <% end %>
+          
+          <%= link_to "/health", class: "nav-button" do %>
+            <%= lucide_icon("heart-pulse", class: "nav-button-icon") %>
+            System Health
+          <% end %>
+        </div>
       <% end %>
     </div>
     

@@ -123,8 +123,8 @@ Rails.application.routes.draw do
     resources :physical_items, only: [:index, :show, :new, :create, :edit, :update, :destroy]
   end
 
-  # Mount Flipper UI for super admins only (constraint handled in controller)
-  constraint = lambda { |request|
+  # Super admin constraint for monitoring tools
+  super_admin_constraint = lambda { |request|
     if request.session[:user_id]
       user = User.find_by(id: request.session[:user_id])
       user&.super_admin?
@@ -132,7 +132,14 @@ Rails.application.routes.draw do
       false
     end
   }
-  mount Flipper::UI.app(Flipper) => "/admin/flipper/ui", :constraints => constraint
+  
+  # Mount monitoring dashboards (super admins only)
+  mount Flipper::UI.app(Flipper) => "/admin/flipper/ui", :constraints => super_admin_constraint
+  mount MissionControl::Jobs::Engine, at: "/admin/jobs", :constraints => super_admin_constraint
+  mount PgHero::Engine, at: "/admin/pghero", :constraints => super_admin_constraint
+  
+  # Mount health check endpoints (accessible to all - for uptime monitoring)
+  health_check_routes
 
   resource :address, only: [ :show, :new, :create, :edit, :update ]
   resource :chambers, controller: "addresses", only: [ :show, :new, :create, :edit, :update ]
