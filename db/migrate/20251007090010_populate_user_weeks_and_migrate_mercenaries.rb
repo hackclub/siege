@@ -1,4 +1,6 @@
 class PopulateUserWeeksAndMigrateMercenaries < ActiveRecord::Migration[8.0]
+  disable_ddl_transaction!
+
   def up
     # Create UserWeek records for all users for weeks 1-14
     User.find_each do |user|
@@ -38,7 +40,8 @@ class PopulateUserWeeksAndMigrateMercenaries < ActiveRecord::Migration[8.0]
     end
     
     # Add user_week_id to shop_purchases table
-    add_reference :shop_purchases, :user_week, null: true, foreign_key: true
+    add_reference :shop_purchases, :user_week, null: true, index: { algorithm: :concurrently }
+    add_foreign_key :shop_purchases, :user_weeks, validate: false
     
     # Associate existing mercenary purchases with UserWeeks
     ShopPurchase.where(item_name: "Mercenary").find_each do |purchase|
