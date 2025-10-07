@@ -102,6 +102,9 @@ gem "skylight"
 # Database monitoring and optimization
 gem "pghero"
 
+# SQL query tool
+gem "blazer"
+
 # Exception tracking
 gem "sentry-ruby"
 gem "sentry-rails"

@@ -138,7 +138,7 @@
     // Create funnel chart using Chart.js funnel plugin
     const funnelData = <%= @funnel_data.to_json.html_safe %>;
 
-    // Build labels and data arrays including individual weeks 4-13
+    // Build labels and data arrays including individual weeks 5-14
     const labels = [
       'Total Users',
       'Users with Address',
@@ -168,7 +168,7 @@
       '#DC2626'
     ];
 
-    // Add individual weeks 4-13 with different colors
+    // Add individual weeks 5-14 with different colors
     const weekColors = [
       '#8B5CF6', '#A855F7', '#C084FC', '#D8B4FE', // purples
       '#EC4899', '#F472B6', '#F9A8D4', '#FBCFE8', // pinks
@@ -180,12 +180,13 @@
       '#EA580C', '#F97316'
     ];
 
-    for (let week = 4; week <= 13; week++) {
+    for (let week = 5; week <= 14; week++) {
       if (funnelData.users_completed_by_week[week] !== undefined) {
-        labels.push(`Week ${week} Completed`);
+        const weekLabel = week === 5 ? `Week ${week} Completed (9h+ w/ mercenaries)` : `Week ${week} Completed (10h+ w/ mercenaries)`;
+        labels.push(weekLabel);
         data.push(funnelData.users_completed_by_week[week]);
-        colors.push(weekColors[week - 4] || '#8B5CF6');
-        borderColors.push(weekBorderColors[week - 4] || '#7C3AED');
+        colors.push(weekColors[week - 5] || '#8B5CF6');
+        borderColors.push(weekBorderColors[week - 5] || '#7C3AED');
       }
     }
 

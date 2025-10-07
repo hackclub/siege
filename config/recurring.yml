@@ -31,6 +31,10 @@ production:
     class: SyncHackatimeBanStatusJob
     schedule: every day at 2am
 
+  sync_users_to_airtable:
+    command: "rake sync:users_to_airtable"
+    schedule: every 3 hours
+
   # storage_maintenance:
   #   command: "rake storage:maintenance"
   #   schedule: every day at 3am

@@ -16,6 +16,7 @@ class User < ApplicationRecord
   # Automatically register user with Flipper after creation/update
   after_create :register_with_flipper
   after_create :create_default_meeple
+  after_create :create_user_weeks
   after_update :register_with_flipper, if: :saved_change_to_rank?
 
   # Associations
@@ -26,6 +27,7 @@ class User < ApplicationRecord
   belongs_to :referrer, class_name: "User", optional: true
   has_many :referrals, class_name: "User", foreign_key: "referrer_id", dependent: :nullify
   has_many :shop_purchases, class_name: "::ShopPurchase"
+  has_many :user_weeks, dependent: :destroy
 
   after_create :ensure_flipper_registration
   after_update :ensure_flipper_registration, if: :saved_change_to_rank?
@@ -410,6 +412,21 @@ class User < ApplicationRecord
 
   def create_default_meeple
     create_meeple(color: "blue", cosmetics: []) unless meeple.present?
+  end
+
+  def create_user_weeks
+    # Create UserWeek records for weeks 1-14 for this new user
+    (1..14).each do |week|
+      UserWeek.create!(
+        user: self,
+        week: week,
+        project: nil,
+        arbitrary_offset: 0,
+        mercenary_offset: 0
+      )
+    end
+  rescue => e
+    Rails.logger.error "Failed to create UserWeeks for user #{id}: #{e.message}"
   end
 
   def fetch_slack_user_data

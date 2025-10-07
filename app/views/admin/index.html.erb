@@ -257,6 +257,11 @@
             Database Performance
           <% end %>
           
+          <%= link_to "/admin/blazer", class: "nav-button" do %>
+            <%= lucide_icon("search", class: "nav-button-icon") %>
+            SQL Queries
+          <% end %>
+          
           <%= link_to admin_flipper_path, class: "nav-button" do %>
             <%= lucide_icon("toggle-left", class: "nav-button-icon") %>
             Feature Flags

@@ -799,9 +799,12 @@ class AdminController < ApplicationController
         # Get average score from pre-fetched data
         average_score = project ? vote_averages[project.id] : nil
         
-        # Get mercenary count and effective hour goal for this week
-        mercenary_count = view_context.mercenary_count_for_week(user, @selected_week)
-        effective_goal = view_context.effective_hour_goal(user, @selected_week)
+        # Get UserWeek data for this week
+        user_week = UserWeek.find_by(user: user, week: @selected_week)
+        mercenary_count = user_week&.mercenary_offset || 0
+        arbitrary_offset = user_week&.arbitrary_offset || 0
+        total_offset = user_week&.total_offset || 0
+        effective_goal = user_week&.effective_hour_goal || (week_num == 5 ? 9 : 10)
 
         @user_data[user.id] = {
           user: user,
@@ -812,7 +815,10 @@ class AdminController < ApplicationController
           fraud_status: project&.fraud_status,
           fraud_reasoning: project&.fraud_reasoning,
           mercenary_count: mercenary_count,
-          effective_hour_goal: effective_goal
+          arbitrary_offset: arbitrary_offset,
+          total_offset: total_offset,
+          effective_hour_goal: effective_goal,
+          user_week: user_week
         }
       end
 
@@ -950,7 +956,10 @@ class AdminController < ApplicationController
       return
     end
 
-    # Calculate coins using saved multiplier if requested, otherwise use manual amount
+    # Get the old project coin value to calculate the difference
+    old_coin_value = project.coin_value || 0
+    
+    # Calculate the new project coin value
     if use_calculated_amount
       # Calculate based on project's stored multiplier
       time_seconds = view_context.user_hackatime_time_for_projects(@user, [project], project.effective_time_range)
@@ -966,39 +975,47 @@ class AdminController < ApplicationController
       base_coins = (raw_hours * average_score).round
       calculated_coins = (base_coins * multiplier).round
       
-      coins_to_add = calculated_coins
+      new_coin_value = calculated_coins
     else
-      # Use manual amount from form
-      coins_to_add = params[:coins].to_i
+      # Use manual amount from form as the new project value
+      new_coin_value = params[:coins].to_i
     end
 
+    # Calculate the difference to determine how much to add/subtract from user balance
+    coin_difference = new_coin_value - old_coin_value
     current_coins = @user.coins || 0
-    new_coins = current_coins + coins_to_add
+    new_coins = current_coins + coin_difference
 
     ActiveRecord::Base.transaction do
-      # Update user's coin balance
+      # Update user's coin balance based on the difference
       if @user.update(coins: new_coins)
-        # Update project's coin value
+        # Set project's coin value to the new value
         project.skip_screenshot_validation!
-        current_coin_value = project.coin_value || 0
-        new_coin_value = current_coin_value + coins_to_add
         project.update!(coin_value: new_coin_value)
 
         # Send Slack notification if project has reviewer feedback and coins were added
-        if coins_to_add > 0 && project.reviewer_feedback.present?
+        if coin_difference > 0 && project.reviewer_feedback.present?
           SlackNotificationService.new.send_reviewer_feedback_notification(project)
         end
 
-        action_word = coins_to_add > 0 ? "Added" : "Removed"
+        action_word = coin_difference > 0 ? "Added" : (coin_difference < 0 ? "Removed" : "No change")
         calculation_note = use_calculated_amount ? 
           " (calculated: #{raw_hours}h × #{average_score} score × #{multiplier} multiplier)" : 
           " (manual entry)"
         
+        # Create appropriate message based on the change
+        if coin_difference == 0
+          message = "Project value set to #{new_coin_value} coins#{calculation_note}. No change to #{@user.name}'s balance (#{new_coins})."
+        else
+          message = "#{action_word} #{coin_difference.abs} coins #{coin_difference > 0 ? 'to' : 'from'} #{@user.name}#{calculation_note}. New balance: #{new_coins}, project value: #{new_coin_value}"
+        end
+        
         render json: {
           success: true,
-          message: "#{action_word} #{coins_to_add.abs} coins #{coins_to_add > 0 ? 'to' : 'from'} #{@user.name}#{calculation_note}. New balance: #{new_coins}, project value: #{new_coin_value}",
+          message: message,
           new_user_balance: new_coins,
-          new_project_coin_value: new_coin_value
+          new_project_coin_value: new_coin_value,
+          coin_difference: coin_difference
         }
       else
         render json: { success: false, error: "Failed to update coin balance" }
@@ -1006,6 +1023,40 @@ class AdminController < ApplicationController
     end
   rescue => e
     render json: { success: false, error: "Error updating coins: #{e.message}" }
+  end
+
+  def update_arbitrary_offset
+    @user = User.find(params[:user_id])
+    @selected_week = params[:week].to_i
+    new_offset = params[:arbitrary_offset].to_i
+    
+    # Ensure offset is non-negative
+    if new_offset < 0
+      render json: { success: false, error: "Arbitrary offset cannot be negative" }
+      return
+    end
+    
+    # Find or create UserWeek for this user and week
+    user_week = UserWeek.find_or_create_by(user: @user, week: @selected_week) do |uw|
+      uw.arbitrary_offset = 0
+      uw.mercenary_offset = 0
+    end
+    
+    old_offset = user_week.arbitrary_offset
+    user_week.update!(arbitrary_offset: new_offset)
+    
+    # Calculate new effective goal
+    new_effective_goal = user_week.effective_hour_goal
+    
+    render json: {
+      success: true,
+      message: "Updated arbitrary offset for #{@user.name} week #{@selected_week} from #{old_offset} to #{new_offset}. New effective goal: #{new_effective_goal} hours.",
+      new_arbitrary_offset: new_offset,
+      new_effective_goal: new_effective_goal,
+      total_offset: user_week.total_offset
+    }
+  rescue => e
+    render json: { success: false, error: "Error updating arbitrary offset: #{e.message}" }
   end
 
   def save_reviewer_multiplier
@@ -1481,22 +1532,25 @@ class AdminController < ApplicationController
     projects_by_week = {}
     all_projects_with_hackatime.each do |project|
       week_num = view_context.week_number_for_date(project.created_at.to_date)
-      next unless week_num && week_num >= 4 && week_num <= 13
+      next unless week_num && week_num >= 5 && week_num <= 14
 
       projects_by_week[week_num] ||= []
       projects_by_week[week_num] << project
     end
 
-    # Users who've completed each week 4-13 (project with 10+ hours)
+    # Users who've completed each week 5-14 (submitted projects meeting effective hour goal, accounting for mercenaries)
     users_completed_by_week = {}
-    weeks_4_to_13 = (4..13).to_a
+    weeks_5_to_14 = (5..14).to_a
 
-    weeks_4_to_13.each do |week_num|
+    weeks_5_to_14.each do |week_num|
       week_projects = projects_by_week[week_num] || []
 
       completed_users = 0
       week_projects.each do |project|
         next unless project.user
+        
+        # Only count submitted projects
+        next unless project.status.in?(["submitted", "pending_voting", "waiting_for_review", "finished"])
 
         # Use cached hackatime data instead of making individual API calls
         range = project.effective_time_range
@@ -1512,9 +1566,10 @@ class AdminController < ApplicationController
           total_seconds += match&.dig("total_seconds") || 0
         end
 
-        # Check if user met their effective hour goal for this week
-        effective_goal_seconds = view_context.effective_hour_goal_seconds(project.user, week_num)
-        if total_seconds >= effective_goal_seconds
+        # Use effective hour goal from UserWeek (accounts for both mercenaries and arbitrary offsets)
+        required_seconds = view_context.effective_hour_goal_seconds(project.user, week_num)
+        
+        if total_seconds >= required_seconds
           completed_users += 1
         end
       end

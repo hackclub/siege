@@ -663,6 +663,30 @@
           </button>
         </div>
 
+        <!-- Arbitrary Offset Controls -->
+        <div class="form-group">
+          <label class="form-label">Hour Offset:</label>
+          <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem;">
+            <select id="offset-week-select" class="form-input" style="flex: 1;" onchange="updateOffsetWeek()">
+              <% (1..14).each do |week| %>
+                <option value="<%= week %>" <%= 'selected' if week == @selected_week %>>
+                  Week <%= week %> (<%= week == 5 ? '9h' : '10h' %> base)
+                </option>
+              <% end %>
+            </select>
+          </div>
+          <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem;">
+            <input type="number" id="arbitrary-offset" value="0" min="0" class="form-input" style="flex: 1;" placeholder="Arbitrary offset">
+            <button type="button" onclick="updateArbitraryOffset()" class="submit-button" style="background: #7c3aed; font-size: 0.8rem; padding: 0.5rem;">Update Offset</button>
+          </div>
+          <div id="offset-info" style="font-size: 0.8rem; color: #6b7280; margin-top: 0.5rem;">
+            <div>Mercenary offset: <span id="mercenary-offset">0</span> hours</div>
+            <div>Arbitrary offset: <span id="current-arbitrary-offset">0</span> hours</div>
+            <div>Total offset: <span id="total-offset">0</span> hours</div>
+            <div>Effective goal: <span id="effective-goal">10</span> hours</div>
+          </div>
+        </div>
+
         <!-- Project Status -->
         <div class="form-group">
           <label class="form-label">Project Status:</label>
@@ -1191,6 +1215,75 @@
           alert('Error updating fraud status. Please try again.');
         });
       }
+
+      // Initialize offset controls with current week data
+      function initializeOffsetControls() {
+        updateOffsetWeek();
+      }
+
+      // Update offset controls when week selection changes
+      function updateOffsetWeek() {
+        const selectedWeek = document.getElementById('offset-week-select').value;
+        
+        // For now, we'll use the current week's data
+        // In a full implementation, you'd fetch data for the selected week
+        const mercenaryOffset = <%= @user.user_weeks.find_by(week: @selected_week)&.mercenary_offset || 0 %>;
+        const arbitraryOffset = <%= @user.user_weeks.find_by(week: @selected_week)&.arbitrary_offset || 0 %>;
+        const totalOffset = mercenaryOffset + arbitraryOffset;
+        const baseGoal = selectedWeek == 5 ? 9 : 10;
+        const effectiveGoal = Math.max(baseGoal - totalOffset, 0);
+        
+        document.getElementById('arbitrary-offset').value = arbitraryOffset;
+        document.getElementById('mercenary-offset').textContent = mercenaryOffset;
+        document.getElementById('current-arbitrary-offset').textContent = arbitraryOffset;
+        document.getElementById('total-offset').textContent = totalOffset;
+        document.getElementById('effective-goal').textContent = effectiveGoal;
+      }
+
+      // Update arbitrary offset
+      function updateArbitraryOffset() {
+        const selectedWeek = document.getElementById('offset-week-select').value;
+        const newOffset = parseInt(document.getElementById('arbitrary-offset').value);
+        
+        if (isNaN(newOffset) || newOffset < 0) {
+          alert('Please enter a valid non-negative offset value.');
+          return;
+        }
+
+        if (!confirm(`This will set the arbitrary offset for week ${selectedWeek} to ${newOffset} hours. Continue?`)) {
+          return;
+        }
+
+        fetch(`<%= admin_update_arbitrary_offset_path(@selected_week, @user.id) %>`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+          },
+          body: JSON.stringify({ 
+            week: selectedWeek,
+            arbitrary_offset: newOffset
+          })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            alert(data.message);
+            updateOffsetWeek(); // Refresh the display
+          } else {
+            alert('Error updating offset: ' + (data.error || 'Unknown error'));
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert('Error updating offset. Please try again.');
+        });
+      }
+
+      // Initialize controls when page loads
+      document.addEventListener('DOMContentLoaded', function() {
+        initializeOffsetControls();
+      });
     </script>
 
   <% else %>

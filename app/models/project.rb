@@ -3,9 +3,11 @@ class Project < ApplicationRecord
   has_many :votes, dependent: :destroy
   has_one_attached :screenshot
   has_one_attached :reviewer_video
+  has_many :user_weeks, dependent: :nullify
 
   before_create :set_time_override_from_flipper
   after_initialize :set_time_override_from_flipper, if: :new_record?
+  after_create :associate_with_user_week
 
   validates :name, presence: true
   validates :status, presence: true, inclusion: { in: %w[building submitted pending_voting waiting_for_review finished] }
@@ -431,6 +433,30 @@ class Project < ApplicationRecord
   def week_badge_text
     week_num = ApplicationController.helpers.week_number_for_date(created_at)
     "Week #{week_num}"
+  end
+
+  private
+
+  def associate_with_user_week
+    week_number = ApplicationController.helpers.week_number_for_date(created_at.to_date)
+    return unless week_number && week_number >= 1 && week_number <= 14
+    
+    # Find the UserWeek for this user and week
+    user_week = UserWeek.find_by(user: user, week: week_number)
+    if user_week
+      user_week.update!(project: self)
+    else
+      # Create UserWeek if it doesn't exist (shouldn't happen with new users, but safety net)
+      UserWeek.create!(
+        user: user,
+        week: week_number,
+        project: self,
+        arbitrary_offset: 0,
+        mercenary_offset: 0
+      )
+    end
+  rescue => e
+    Rails.logger.error "Failed to associate project #{id} with UserWeek: #{e.message}"
   end
 
 end
