@@ -71,7 +71,8 @@ class SyncUsersToAirtableJob < ApplicationJob
     # Batch operations to reduce API calls; process in small slices with rate-limit backoff
     to_create.each_slice(10) do |slice|
       with_rate_limit_retry(operation: "batch_create", count: slice.size) do
-        table.batch_create(slice)
+        records = slice.map { |fields| table.new(fields) }
+        table.batch_create(records)
       end
       # stay under 5 rps cap
       sleep 0.25
