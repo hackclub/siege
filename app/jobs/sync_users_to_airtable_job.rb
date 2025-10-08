@@ -39,6 +39,23 @@ class SyncUsersToAirtableJob < ApplicationJob
     14 => "fldOO166yZz48yH8j"
   }
 
+  WEEK_SHIPPED_FIELD_IDS = {
+    1 => "fldOYsDK3UVCyl8JI",
+    2 => "fldDBpyaMJjByzWzk",
+    3 => "fldrQkxMY5vc1CbIJ",
+    4 => "fldw0kYQgVu3sXDIY",
+    5 => "fldns1UNvMDZDWgmk",
+    6 => "fldvcfXPTfJcXkQD5",
+    7 => "fldtm8XSvMTCc1NHQ",
+    8 => "fldUIqL1UrUBVj3Gj",
+    9 => "fldoajbjHuVqJH9QR",
+    10 => "fldZI5SoZ7ThxQe49",
+    11 => "fldNLOPE6oJPjsMAk",
+    12 => "fldE0dTtfE4ebdfpx",
+    13 => "fldynEHm1XyWMgjUZ",
+    14 => "fldgtuWuO2JipVVbD"
+  }
+
   def perform
     Rails.logger.info "[SyncUsersToAirtableJob] Starting"
 
@@ -160,6 +177,22 @@ class SyncUsersToAirtableJob < ApplicationJob
         hours = 0.0 if hours.negative?
       end
       fields[WEEK_FIELD_IDS[week_num]] = hours
+    end
+
+    # Weekly shipped status (boolean)
+    (1..14).each do |week_num|
+      range = helpers.week_date_range(week_num)
+      shipped = false
+      if range
+        week_start_date = Date.parse(range[0])
+        week_end_date = Date.parse(range[1])
+        # Check if user has any projects past building phase in this week
+        shipped = user.projects
+          .where(created_at: week_start_date.beginning_of_day..week_end_date.end_of_day)
+          .where(status: ['submitted', 'pending_voting', 'waiting_on_review', 'finished'])
+          .exists?
+      end
+      fields[WEEK_SHIPPED_FIELD_IDS[week_num]] = shipped
     end
 
     fields
