@@ -292,6 +292,20 @@ class Project < ApplicationRecord
     }
   end
 
+  # Get the timestamp of the last status change
+  def status_updated_at
+    return created_at if logs.empty?
+
+    status_logs = logs.select { |log| log["old_status"].present? && log["new_status"].present? }
+    return created_at if status_logs.empty?
+
+    most_recent_log = status_logs.max_by { |log| Time.parse(log["timestamp"]) }
+    Time.parse(most_recent_log["timestamp"])
+  rescue => e
+    Rails.logger.error "Error parsing status_updated_at for project #{id}: #{e.message}"
+    created_at
+  end
+
   private
 
   def repo_url_must_be_github
@@ -300,13 +314,13 @@ class Project < ApplicationRecord
     begin
       uri = URI.parse(repo_url)
       allowed_hosts = [
-        'github.com', 'www.github.com',
-        'gitlab.com', 'www.gitlab.com',
-        'bitbucket.org', 'www.bitbucket.org',
-        'codeberg.org', 'www.codeberg.org',
-        'sourceforge.net', 'www.sourceforge.net',
-        'dev.azure.com',
-        'git.hackclub.app'
+        "github.com", "www.github.com",
+        "gitlab.com", "www.gitlab.com",
+        "bitbucket.org", "www.bitbucket.org",
+        "codeberg.org", "www.codeberg.org",
+        "sourceforge.net", "www.sourceforge.net",
+        "dev.azure.com",
+        "git.hackclub.app"
       ]
 
       unless allowed_hosts.include?(uri.host)
@@ -440,7 +454,7 @@ class Project < ApplicationRecord
   def associate_with_user_week
     week_number = ApplicationController.helpers.week_number_for_date(created_at.to_date)
     return unless week_number && week_number >= 1 && week_number <= 14
-    
+
     # Find the UserWeek for this user and week
     user_week = UserWeek.find_by(user: user, week: week_number)
     if user_week
@@ -458,5 +472,4 @@ class Project < ApplicationRecord
   rescue => e
     Rails.logger.error "Failed to associate project #{id} with UserWeek: #{e.message}"
   end
-
 end
