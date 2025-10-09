@@ -118,7 +118,7 @@
 
   <!-- Daily Hours Chart -->
   <div class="chart-section">
-    <h2 class="chart-title">Daily Hours Coded (Last 30 Days)</h2>
+    <h2 class="chart-title">Daily Coding Activity (Last 3 Weeks)</h2>
     <div class="chart-container">
       <canvas id="dailyHoursChart"></canvas>
     </div>
@@ -491,45 +491,93 @@
       }
     });
 
-    // Daily Hours Chart
+    // Daily Hours Chart with 3 metrics
     const dailyHoursData = <%= @daily_hours_data.to_json.html_safe %>;
 
     new Chart(document.getElementById('dailyHoursChart'), {
       type: 'line',
       data: {
         labels: dailyHoursData.map(d => d.display_date),
-        datasets: [{
-          label: 'Hours Coded',
-          data: dailyHoursData.map(d => d.hours),
-          backgroundColor: 'rgba(16, 185, 129, 0.1)',
-          borderColor: '#10B981',
-          borderWidth: 2,
-          fill: true,
-          tension: 0.4,
-          pointBackgroundColor: '#10B981',
-          pointBorderColor: '#059669',
-          pointBorderWidth: 2,
-          pointRadius: 4,
-          pointHoverRadius: 6
-        }]
+        datasets: [
+          {
+            label: 'Total Hours Logged',
+            data: dailyHoursData.map(d => d.hours),
+            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+            borderColor: '#10B981',
+            borderWidth: 2,
+            fill: true,
+            tension: 0.4,
+            pointBackgroundColor: '#10B981',
+            pointBorderColor: '#059669',
+            pointBorderWidth: 2,
+            pointRadius: 3,
+            pointHoverRadius: 5,
+            yAxisID: 'y'
+          },
+          {
+            label: 'Total Users Coding',
+            data: dailyHoursData.map(d => d.user_count),
+            backgroundColor: 'rgba(99, 102, 241, 0.1)',
+            borderColor: '#6366F1',
+            borderWidth: 2,
+            fill: true,
+            tension: 0.4,
+            pointBackgroundColor: '#6366F1',
+            pointBorderColor: '#4F46E5',
+            pointBorderWidth: 2,
+            pointRadius: 3,
+            pointHoverRadius: 5,
+            yAxisID: 'y1'
+          },
+          {
+            label: 'Average Hours per User',
+            data: dailyHoursData.map(d => d.average_hours),
+            backgroundColor: 'rgba(245, 158, 11, 0.1)',
+            borderColor: '#F59E0B',
+            borderWidth: 2,
+            fill: true,
+            tension: 0.4,
+            pointBackgroundColor: '#F59E0B',
+            pointBorderColor: '#D97706',
+            pointBorderWidth: 2,
+            pointRadius: 3,
+            pointHoverRadius: 5,
+            yAxisID: 'y'
+          }
+        ]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
           legend: {
-            display: false
+            display: true,
+            position: 'top',
+            labels: {
+              color: '#402b20',
+              font: { size: 12, weight: '600' },
+              usePointStyle: true,
+              padding: 15
+            }
           },
           tooltip: {
             callbacks: {
               label: function(context) {
-                return `${context.parsed.y} hours`;
+                const label = context.dataset.label || '';
+                const value = context.parsed.y;
+                if (label.includes('Users')) {
+                  return `${label}: ${value} users`;
+                } else {
+                  return `${label}: ${value.toFixed(1)}h`;
+                }
               }
             }
           }
         },
         scales: {
           y: {
+            type: 'linear',
+            position: 'left',
             beginAtZero: true,
             grid: {
               color: 'rgba(64, 43, 32, 0.1)'
@@ -550,13 +598,34 @@
               }
             }
           },
+          y1: {
+            type: 'linear',
+            position: 'right',
+            beginAtZero: true,
+            grid: {
+              display: false
+            },
+            ticks: {
+              color: '#402b20',
+              stepSize: 1
+            },
+            title: {
+              display: true,
+              text: 'Users',
+              color: '#402b20',
+              font: {
+                size: 14,
+                weight: '600'
+              }
+            }
+          },
           x: {
             grid: {
               color: 'rgba(64, 43, 32, 0.1)'
             },
             ticks: {
               color: '#402b20',
-              maxTicksLimit: 15
+              maxTicksLimit: 21
             },
             title: {
               display: true,

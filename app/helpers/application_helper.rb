@@ -193,7 +193,7 @@ module ApplicationHelper
     return true if current_user && Flipper.enabled?(:voting_any_day, current_user)
 
     today = Date.current
-    allowed_days = [ 1, 2, 3 ] # Monday = 1, Tuesday = 2, Wednesday = 3
+    allowed_days = [ 1, 2, 3, 4, 5 ] # Monday = 1, Tuesday = 2, Wednesday = 3, Thursday = 4, Friday = 5
     allowed_days.include?(today.wday)
   end
 

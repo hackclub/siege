@@ -251,6 +251,22 @@ class AdminController < ApplicationController
     end
   end
 
+  def clear_github_cache
+    begin
+      # Clear all GitHub commit caches
+      cleared_count = 0
+      
+      # Since SolidCache doesn't support delete_matched, we'll need to clear manually
+      # This is a simplified approach - in production you might want to track cache keys
+      Rails.cache.clear
+      cleared_count = "all"
+      
+      redirect_to admin_path, notice: "GitHub commit cache cleared (#{cleared_count} entries). Fresh data will be loaded on next page load."
+    rescue => e
+      redirect_to admin_path, alert: "Failed to clear GitHub cache: #{e.message}"
+    end
+  end
+
   def ballots
     @ballots = Ballot.all.includes(:user, votes: [ project: :user ])
 
@@ -860,6 +876,23 @@ class AdminController < ApplicationController
         end
       end
 
+      # Apply airtable status filter - default to "not_submitted"
+      @airtable_status_filter = params[:airtable_status].present? ? params[:airtable_status] : "not_submitted"
+      airtable_status_filter = @airtable_status_filter
+
+      @user_data = @user_data.select do |user_id, data|
+        case airtable_status_filter
+        when "not_submitted"
+          data[:project].nil? || !data[:project].in_airtable
+        when "submitted"
+          data[:project]&.in_airtable == true
+        when "all"
+          true
+        else
+          data[:project].nil? || !data[:project].in_airtable # default to not submitted
+        end
+      end
+
       # Pagination for weekly overview
       @total_users = @user_data.count
       @per_page = 25
@@ -933,6 +966,165 @@ class AdminController < ApplicationController
       @submitted_to_airtable = @project&.in_airtable? || false
     else
       redirect_to admin_weekly_overview_path, alert: "Invalid week selected."
+    end
+  end
+
+  def github_commits
+    Rails.logger.info "[GitHubCommits] Starting github_commits for project #{params[:project_id]}, week #{params[:week]}"
+    
+    project = Project.find(params[:project_id])
+    repo_url = project.repo_url
+    week = params[:week].to_i
+    
+    # Extract owner/repo from GitHub URL
+    match = repo_url&.match(%r{github\.com[/:]([\w-]+)/([\w.-]+?)(?:\.git)?(?:/|$)})
+    unless match
+      render json: { error: 'Invalid GitHub URL' }, status: :bad_request
+      return
+    end
+    
+    owner = match[1]
+    repo = match[2].gsub(/\.git$/, '')
+    
+    # Get week date range
+    week_range = view_context.week_date_range(week)
+    week_start = Date.parse(week_range[0])
+    week_end = Date.parse(week_range[1])
+    
+    # Create cache key with version to handle date parsing changes
+    cache_key = "github_commits_v2:#{owner}:#{repo}:#{week_start}:#{week_end}"
+    
+    # Try to get from cache first
+    cached_data = Rails.cache.read(cache_key)
+    if cached_data
+      Rails.logger.info "[GitHubCommits] Cache hit for key: #{cache_key}"
+      render json: cached_data
+      return
+    end
+    
+    Rails.logger.info "[GitHubCommits] Cache miss for key: #{cache_key}, fetching fresh data"
+    
+    # Use gh-proxy if available, otherwise GitHub API
+    base_url = ENV['GH_PROXY_API_KEY'].present? ? 'https://gh-proxy.hackclub.com/gh' : 'https://api.github.com'
+    headers = ENV['GH_PROXY_API_KEY'].present? ? { 'X-API-Key' => ENV['GH_PROXY_API_KEY'] } : {}
+    
+    begin
+      # Set up HTTP client with timeout
+      http = Net::HTTP.new(URI(base_url).host, URI(base_url).port)
+      http.use_ssl = true
+      http.read_timeout = 10
+      http.open_timeout = 5
+      
+      # Fetch commits (get more to ensure we capture the week)
+      uri = URI("#{base_url}/repos/#{owner}/#{repo}/commits?per_page=100")
+      request = Net::HTTP::Get.new(uri)
+      headers.each { |k, v| request[k] = v }
+      request['Accept'] = 'application/vnd.github+json'
+      
+      response = http.request(request)
+      unless response.is_a?(Net::HTTPSuccess)
+        render json: { error: "GitHub API error: #{response.code}" }, status: :service_unavailable
+        return
+      end
+      
+      commits = JSON.parse(response.body)
+      
+      # Categorize commits
+      before_week_commits = 0
+      week_commit_urls = []
+      
+      Rails.logger.info "[GitHubCommits] Processing #{commits.length} total commits for week #{week_start} to #{week_end}"
+      
+      commits.each do |commit|
+        commit_date = DateTime.parse(commit.dig('commit', 'author', 'date'))
+        
+        if commit_date < week_start.beginning_of_day
+          before_week_commits += 1
+        elsif commit_date >= week_start.beginning_of_day && commit_date <= week_end.end_of_day
+          week_commit_urls << {
+            sha: commit['sha'],
+            date: commit.dig('commit', 'author', 'date'),
+            message: commit.dig('commit', 'message')&.split("\n")&.first,
+            author: commit.dig('commit', 'author', 'name')
+          }
+          Rails.logger.info "[GitHubCommits] Found week commit: #{commit['sha'][0..7]} - #{commit.dig('commit', 'message')&.split("\n")&.first}"
+        end
+      end
+      
+      Rails.logger.info "[GitHubCommits] Categorized: #{before_week_commits} before week, #{week_commit_urls.length} in week"
+      
+      # Fetch details for week commits in parallel using threads with connection pooling
+      week_commits = []
+      if week_commit_urls.any?
+        Rails.logger.info "[GitHubCommits] Found #{week_commit_urls.length} commits in week, fetching details in parallel..."
+        
+        threads = []
+        mutex = Mutex.new
+        completed_count = 0
+        
+        week_commit_urls.each_with_index do |commit_info, index|
+          threads << Thread.new do
+            begin
+              # Create a new HTTP client for each thread to avoid connection conflicts
+              detail_http = Net::HTTP.new(URI(base_url).host, URI(base_url).port)
+              detail_http.use_ssl = true
+              detail_http.read_timeout = 15
+              detail_http.open_timeout = 10
+              
+              detail_uri = URI("#{base_url}/repos/#{owner}/#{repo}/commits/#{commit_info[:sha]}")
+              detail_request = Net::HTTP::Get.new(detail_uri)
+              headers.each { |k, v| detail_request[k] = v }
+              detail_request['Accept'] = 'application/vnd.github+json'
+              
+              detail_response = detail_http.request(detail_request)
+              if detail_response.is_a?(Net::HTTPSuccess)
+                detail = JSON.parse(detail_response.body)
+                commit_data = commit_info.merge(
+                  additions: detail.dig('stats', 'additions') || 0,
+                  deletions: detail.dig('stats', 'deletions') || 0
+                )
+                
+                mutex.synchronize do
+                  week_commits << commit_data
+                  completed_count += 1
+                  Rails.logger.info "[GitHubCommits] Successfully fetched commit #{completed_count}/#{week_commit_urls.length}: #{commit_info[:sha][0..7]}"
+                end
+              else
+                mutex.synchronize do
+                  completed_count += 1
+                  Rails.logger.warn "[GitHubCommits] Failed to fetch commit #{commit_info[:sha][0..7]}: HTTP #{detail_response.code}"
+                end
+              end
+            rescue => e
+              mutex.synchronize do
+                completed_count += 1
+                Rails.logger.warn "[GitHubCommits] Failed to fetch commit #{commit_info[:sha][0..7]}: #{e.message}"
+              end
+            end
+          end
+        end
+        
+        # Wait for all threads to complete with timeout
+        threads.each { |t| t.join(30) } # 30 second timeout per thread
+        
+        Rails.logger.info "[GitHubCommits] Successfully processed #{week_commits.length} commits in parallel"
+      end
+      
+      result = {
+        before_week_commits: before_week_commits,
+        before_week_lines: before_week_commits * 50,
+        week_commits: week_commits,
+        week_start: week_start.to_s,
+        week_end: week_end.to_s
+      }
+      
+      # Cache the result for 1 hour
+      Rails.cache.write(cache_key, result, expires_in: 1.hour)
+      
+      render json: result
+    rescue => e
+      Rails.logger.error "[GitHubCommits] Error: #{e.message}"
+      render json: { error: e.message }, status: :internal_server_error
     end
   end
 
@@ -1674,54 +1866,24 @@ class AdminController < ApplicationController
       }
     end
 
-    # Daily hours spent on Siege projects
+    # Daily hours spent on Siege projects - using HackatimeDay model
     @daily_hours_data = []
 
-    # Get the date range for the last 30 days
+    # Get the date range for the last 3 weeks (21 days)
     end_date = Date.current
-    start_date = end_date - 29.days
+    start_date = end_date - 20.days
+
+    hackatime_days = HackatimeDay.where(date: start_date..end_date).index_by(&:date)
 
     (start_date..end_date).each do |date|
-      daily_seconds = 0
-
-      # Find all projects that were active on this date
-      all_projects_with_hackatime.each do |project|
-        next unless project.user
-
-        # Check if project was active on this date
-        project_start = project.created_at.to_date
-        project_end = project.updated_at.to_date
-
-        next unless date >= project_start && date <= project_end
-
-        # Use cached hackatime data
-        range = project.effective_time_range
-        next unless range
-
-        cache_key = [ range[0], range[1] ]
-        cached_data = user_hackatime_cache.dig(project.user.id, cache_key) || []
-
-        # Calculate time for this project on this specific date
-        project.hackatime_projects.each do |project_name|
-          match = cached_data.find { |p| p["name"].to_s == project_name.to_s }
-          next unless match
-
-          # Get daily breakdown from hackatime data
-          daily_data = match["daily_data"] || []
-          day_entry = daily_data.find { |d| Date.parse(d["date"]) == date }
-
-          if day_entry
-            daily_seconds += day_entry["total_seconds"] || 0
-          end
-        end
-      end
-
-      daily_hours = (daily_seconds / 3600.0).round(1)
-
+      day_record = hackatime_days[date]
+      
       @daily_hours_data << {
         date: date.strftime("%Y-%m-%d"),
         display_date: date.strftime("%m/%d"),
-        hours: daily_hours
+        hours: day_record&.total_hours&.round(1) || 0.0,
+        user_count: day_record&.user_count || 0,
+        average_hours: day_record&.average_hours&.round(2) || 0.0
       }
     end
   end

@@ -206,10 +206,10 @@ class GreatHallController < ApplicationController
       return
     end
 
-    # Check if it's Monday, Tuesday, or Wednesday (unless voting_any_day flag is enabled)
+    # Check if it's Monday through Friday (unless voting_any_day flag is enabled)
     unless Flipper.enabled?(:voting_any_day, current_user) || helpers.voting_day?
       @voting_state = :closed
-      @meeple_message = "The castle is only open for visitors between Monday and Wednesday..."
+      @meeple_message = "The castle is only open for visitors between Monday and Friday..."
       @votes_json = "[]"
       @ballot = OpenStruct.new(id: 0)
       render :voting_summary

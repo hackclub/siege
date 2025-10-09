@@ -73,6 +73,7 @@ Rails.application.routes.draw do
   get "/admin/shop-purchases", to: "admin#shop_purchases", as: :admin_shop_purchases
   get "/admin/shop-purchases/:id", to: "admin#shop_purchase_details", as: :admin_shop_purchase_details
   get "/admin/weekly-overview/:week/:user_id", to: "admin#weekly_overview_user", as: :admin_weekly_overview_user
+  get "/admin/projects/:project_id/github-commits", to: "admin#github_commits", as: :admin_github_commits
   patch "/admin/shop-purchases/:id/fulfillment", to: "admin#update_purchase_fulfillment", as: :admin_update_purchase_fulfillment
   delete "/admin/shop-purchases/:id", to: "admin#delete_shop_purchase", as: :admin_delete_shop_purchase
   post "/admin/shop-purchases/:id/refund", to: "admin#refund_shop_purchase", as: :admin_refund_shop_purchase
@@ -121,6 +122,7 @@ Rails.application.routes.draw do
   post "/fraud/projects/:id/fraud_status", to: "greg#update_fraud_status", as: :fraud_update_fraud_status
   get "/admin/flipper", to: "admin/flipper#index", as: :admin_flipper
   post "/admin/refresh-hackatime-cache", to: "admin#refresh_hackatime_cache", as: :admin_refresh_hackatime_cache
+  post "/admin/clear-github-cache", to: "admin#clear_github_cache", as: :admin_clear_github_cache
 
   # Admin cosmetics management
   namespace :admin do

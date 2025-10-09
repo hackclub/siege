@@ -3,15 +3,13 @@
 <% content_for :head do %>
   <style>
     .admin-container {
-      max-width: 1200px;
-      margin: 0 auto;
-      margin-left: 20rem; /* Account for navbar */
+      max-width: 100%;
+      margin: 0;
       padding: 2rem;
     }
 
 @media (max-width: 768px) {
   .admin-container {
-    margin-left: auto; /* Reset to auto on mobile */
     margin-top: 12rem; /* Position content below navbar */
   }
 }
@@ -54,6 +52,8 @@
       display: grid;
       gap: 1.5rem;
       grid-template-columns: 1fr;
+      max-width: 100%;
+      overflow-x: hidden;
     }
     
     /* Responsive grid - 2 columns max on medium+ screens */
@@ -290,6 +290,23 @@
       color: #6b5b4a;
       font-weight: 500;
     }
+    
+    .refresh-cache-btn {
+      padding: 0.75rem 1.5rem;
+      background: #059669;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 0.9rem;
+    }
+    
+    .refresh-cache-btn:hover {
+      background: #047857;
+      transform: translateY(-1px);
+    }
   </style>
 <% end %>
 
@@ -359,6 +376,18 @@
       <% end %>
       
       <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-top: 1rem;">
+        <%= form.label :airtable_status, "Filter by Airtable Status:" %>
+        <%= form.select :airtable_status,
+            options_for_select([
+              ['All', 'all'],
+              ['Not Submitted (Default)', 'not_submitted'],
+              ['Submitted', 'submitted']
+            ], @airtable_status_filter),
+            {},
+            { onchange: "this.form.submit();" } %>
+      </div>
+      
+      <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-top: 1rem;">
         <%= form.check_box :show_hidden, { checked: @show_hidden, onchange: "this.form.submit();" }, "1", "0" %>
         <%= form.label :show_hidden, "Show hidden projects", style: "margin-left: 0.5rem;" %>
       </div>
@@ -371,9 +400,10 @@
           is_non_default_user_status = params[:user_status].present? && params[:user_status] != 'all'
           is_non_default_status = params[:status].present? && params[:status] != 'pending_voting_and_waiting'
           is_non_default_fraud = current_user&.can_access_fraud_dashboard? && params[:fraud_status].present? && params[:fraud_status] != 'good_and_unchecked'
+          is_non_default_airtable = params[:airtable_status].present? && params[:airtable_status] != 'not_submitted'
           is_non_default_hidden = params[:show_hidden] == "1"
         %>
-        <% if is_non_default_week || is_non_default_user_status || is_non_default_status || is_non_default_fraud || is_non_default_hidden %>
+        <% if is_non_default_week || is_non_default_user_status || is_non_default_status || is_non_default_fraud || is_non_default_airtable || is_non_default_hidden %>
           <%= link_to "Reset to Defaults", admin_weekly_overview_path, class: "clear-filters" %>
         <% end %>
       </div>
@@ -515,7 +545,7 @@
         </div>
         <div class="pagination-controls">
           <% if @current_page > 1 %>
-            <%= link_to "← Previous", admin_weekly_overview_path(page: @current_page - 1, week: @selected_week, user_status: params[:user_status], status: params[:status], fraud_status: params[:fraud_status]), class: "pagination-link" %>
+            <%= link_to "← Previous", admin_weekly_overview_path(page: @current_page - 1, week: @selected_week, user_status: params[:user_status], status: params[:status], fraud_status: params[:fraud_status], airtable_status: params[:airtable_status]), class: "pagination-link" %>
           <% end %>
           
           <% @total_pages.times do |page_num| %>
@@ -523,14 +553,14 @@
             <% if page_num == @current_page %>
               <span class="pagination-current"><%= page_num %></span>
             <% elsif page_num == 1 || page_num == @total_pages || (page_num >= @current_page - 2 && page_num <= @current_page + 2) %>
-              <%= link_to page_num, admin_weekly_overview_path(page: page_num, week: @selected_week, user_status: params[:user_status], status: params[:status], fraud_status: params[:fraud_status]), class: "pagination-link" %>
+              <%= link_to page_num, admin_weekly_overview_path(page: page_num, week: @selected_week, user_status: params[:user_status], status: params[:status], fraud_status: params[:fraud_status], airtable_status: params[:airtable_status]), class: "pagination-link" %>
             <% elsif page_num == @current_page - 3 || page_num == @current_page + 3 %>
               <span class="pagination-ellipsis">...</span>
             <% end %>
           <% end %>
           
           <% if @current_page < @total_pages %>
-            <%= link_to "Next →", admin_weekly_overview_path(page: @current_page + 1, week: @selected_week, user_status: params[:user_status], status: params[:status], fraud_status: params[:fraud_status]), class: "pagination-link" %>
+            <%= link_to "Next →", admin_weekly_overview_path(page: @current_page + 1, week: @selected_week, user_status: params[:user_status], status: params[:status], fraud_status: params[:fraud_status], airtable_status: params[:airtable_status]), class: "pagination-link" %>
           <% end %>
         </div>
       </div>

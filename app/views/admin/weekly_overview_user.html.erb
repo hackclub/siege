@@ -3,9 +3,8 @@
 <% content_for :head do %>
   <style>
     .admin-container {
-      max-width: 1200px;
-      margin: 0 auto;
-      margin-left: 20rem; /* Account for navbar */
+      max-width: 100%;
+      margin: 0;
       padding: 2rem;
     }
 
@@ -124,41 +123,6 @@
     .fraud-status.sus { background-color: #f59e0b; color: white; }
     .fraud-status.fraud { background-color: #dc2626; color: white; }
     .fraud-status.good { background-color: #059669; color: white; }
-    
-    .votes-list {
-      margin-top: 1rem;
-    }
-    
-    .vote-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 0.75rem;
-      background: rgba(255, 255, 255, 0.5);
-      border: 1px solid rgba(64, 43, 32, 0.1);
-      border-radius: 8px;
-      margin-bottom: 0.5rem;
-    }
-    
-    .vote-user {
-      font-weight: 600;
-      color: #402b20;
-    }
-    
-    .vote-score {
-      font-weight: 700;
-      color: #d97706;
-    }
-    
-    .ballot-link {
-      color: #6366f1;
-      text-decoration: none;
-      font-size: 0.9rem;
-    }
-    
-    .ballot-link:hover {
-      text-decoration: underline;
-    }
     
          .review-panel, .user-management-panel {
        background: rgba(255, 248, 220, 0.8);
@@ -300,6 +264,103 @@
     text-decoration: none;
     transform: translateY(-1px);
     }
+     
+     .unified-info-card {
+       background: rgba(255, 255, 255, 0.95);
+       border: 2px solid rgba(64, 43, 32, 0.15);
+       border-radius: 16px;
+       padding: 2rem;
+       margin-bottom: 2rem;
+     }
+     
+     .project-name-header {
+       font-size: 2rem;
+       font-weight: 700;
+       color: #402b20;
+       margin-bottom: 1rem;
+     }
+     
+     .badge-row {
+       display: flex;
+       gap: 0.75rem;
+       margin-bottom: 1.5rem;
+       flex-wrap: wrap;
+     }
+     
+     .info-grid {
+       display: grid;
+       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+       gap: 1.5rem;
+       margin-bottom: 1.5rem;
+     }
+     
+     .button-row {
+       display: flex;
+       gap: 1rem;
+       flex-wrap: wrap;
+       margin-top: 1.5rem;
+     }
+     
+     .action-button {
+       padding: 0.5rem 1rem;
+       border-radius: 6px;
+       text-decoration: none;
+       font-size: 0.9rem;
+       font-weight: 500;
+       transition: all 0.2s ease;
+       display: inline-block;
+     }
+     
+     .btn-primary {
+       background: #6366f1;
+       color: white;
+     }
+     
+     .btn-primary:hover {
+       background: #4f46e5;
+       color: white;
+       text-decoration: none;
+     }
+     
+     .demo-analysis-grid {
+       display: grid;
+       grid-template-columns: 1fr 1fr;
+       gap: 2rem;
+       margin-bottom: 2rem;
+     }
+     
+     @media (max-width: 768px) {
+       .demo-analysis-grid {
+         grid-template-columns: 1fr;
+       }
+     }
+     
+     .demo-container, .analysis-container {
+       background: rgba(255, 255, 255, 0.95);
+       border: 2px solid rgba(64, 43, 32, 0.15);
+       border-radius: 16px;
+       padding: 1.5rem;
+     }
+     
+     .demo-iframe {
+       width: 100%;
+       height: 500px;
+       border: 2px solid rgba(64, 43, 32, 0.1);
+       border-radius: 8px;
+       margin-top: 1rem;
+     }
+     
+     #commit-graph {
+       min-height: 400px;
+       display: flex;
+       align-items: center;
+       justify-content: center;
+       color: #6b5b4a;
+       font-style: italic;
+       border: 2px dashed rgba(64, 43, 32, 0.2);
+       border-radius: 8px;
+       margin-top: 1rem;
+     }
 
      .slack-dm-button {
        background: #4A154B;
@@ -342,6 +403,23 @@
        margin-top: 0.5rem;
        display: block;
      }
+     
+     .refresh-cache-btn {
+       padding: 0.75rem 1.5rem;
+       background: #059669;
+       color: white;
+       border: none;
+       border-radius: 8px;
+       font-weight: 600;
+       cursor: pointer;
+       transition: all 0.2s;
+       font-size: 0.9rem;
+     }
+     
+     .refresh-cache-btn:hover {
+       background: #047857;
+       transform: translateY(-1px);
+     }
   </style>
 <% end %>
 
@@ -354,194 +432,138 @@
         <h1 class="page-title"><%= @user.name %></h1>
         <p class="page-subtitle">Week <%= @selected_week %> Details</p>
       </div>
-      <% if @user.slack_id.present? %>
-        <a href="https://app.slack.com/client/T0266FRGM/D0266FRGM/user_profile/<%= @user.slack_id %>" 
-           target="_blank" 
-           class="slack-dm-button"
-           title="Open Slack DM with <%= @user.name %>">
-          💬 DM in Slack
-        </a>
-      <% end %>
+      <div style="display: flex; gap: 1rem; align-items: center;">
+        <% if @user.slack_id.present? %>
+          <a href="https://app.slack.com/client/T0266FRGM/D0266FRGM/user_profile/<%= @user.slack_id %>" 
+             target="_blank" 
+             class="slack-dm-button"
+             title="Open Slack DM with <%= @user.name %>">
+            💬 DM in Slack
+          </a>
+        <% end %>
+        <%= button_to "📊 Clear GitHub Cache", admin_clear_github_cache_path, 
+            method: :post, 
+            class: "refresh-cache-btn",
+            data: { confirm: "This will clear the GitHub commit cache. Fresh data will be loaded on next page load. Continue?" } %>
+      </div>
     </div>
   </div>
 
   <% if @project %>
-    <div class="content-grid">
-      <!-- Project & Voting Information -->
-      <div class="card">
-        <h2 class="card-title">Project Information</h2>
-        
-        <div class="user-info">
-          <div class="info-item">
-            <span class="info-label">Project Name</span>
-            <span class="info-value"><%= @project.name %></span>
-          </div>
-          
-          <div class="info-item">
-            <span class="info-label">Status</span>
-            <span class="project-status <%= @project.status %>">
-              <%= @project.status.humanize %>
-            </span>
-          </div>
-          
-					<div class="info-item">
-						<span class="info-label">Fraud Status</span>
-						<span class="fraud-status <%= @project.fraud_status %>">
-							<%= @project.fraud_status.humanize %>
-						</span>
-					</div>
-          
-          <div class="info-item">
-            <span class="info-label">Time Spent</span>
-            <span class="info-value">
-                <%= @time_readable %>
-          <% mercenary_count = mercenary_count_for_week(@user, @week) %>
-          <% if mercenary_count > 0 %>
-            <span style="font-size: 0.85rem; color: #8b4513; margin-left: 0.5rem;">(🪖 <%= mercenary_count %> - Goal: <%= effective_hour_goal(@user, @week) %>h)</span>
-          <% end %>
+    <!-- Unified Project & User Information Card -->
+    <div class="unified-info-card">
+      <h1 class="project-name-header"><%= @project.name %></h1>
+      
+      <div class="badge-row">
+        <span class="project-status <%= @project.status %>">
+          <%= @project.status.humanize %>
+        </span>
+        <span class="fraud-status <%= @project.fraud_status %>">
+          <%= @project.fraud_status.humanize %>
         </span>
       </div>
-          
-          <% if @average_score %>
-            <div class="info-item">
-              <span class="info-label">Average Score</span>
-              <span class="info-value"><%= @average_score %> / 5</span>
-            </div>
-          <% end %>
-          
-          <div class="info-item">
-            <span class="info-label">Repository</span>
-            <span class="info-value">
-              <% if @project.repo_url.present? %>
-                <a href="<%= @project.repo_url %>" target="_blank" style="color: #6366f1;">
-                  <%= @project.repo_url.split('/').last %>
-                </a>
-              <% else %>
-                Not provided
-              <% end %>
-            </span>
-          </div>
-          
-          <div class="info-item">
-            <span class="info-label">Demo URL</span>
-            <span class="info-value">
-              <% if @project.demo_url.present? %>
-                <a href="<%= @project.demo_url %>" target="_blank" style="color: #6366f1;">
-                  View Demo
-                </a>
-              <% else %>
-                Not provided
-              <% end %>
-            </span>
-          </div>
+      
+      <div class="info-grid">
+        <div class="info-item">
+          <span class="info-label">User Status</span>
+          <span class="info-value"><%= @user.status.humanize %></span>
         </div>
-
-        <% if @project.description.present? %>
-          <div style="margin-top: 1rem;">
-            <span class="info-label">Description</span>
-            <p style="margin-top: 0.5rem; color: #402b20;"><%= @project.description %></p>
-          </div>
-        <% end %>
-
-        <% if @votes.any? %>
-          <h3 style="margin-top: 2rem; margin-bottom: 1rem; color: #402b20;">Votes Received</h3>
-          <div class="votes-list">
-            <% @votes.each do |vote| %>
-              <div class="vote-item" style="<%= vote.voted? ? '' : 'opacity: 0.6;' %>">
-                <div>
-                  <span class="vote-user"><%= vote.ballot.user.name %></span>
-                  <br>
-                  <span class="ballot-link">
-                    <%= link_to "View Ballot", admin_ballot_details_path(vote.ballot), target: "_blank" %>
-                  </span>
-                  <% unless vote.voted? %>
-                    <br>
-                    <span style="color: #dc2626; font-size: 0.8rem; font-style: italic;">(Not cast)</span>
-                  <% end %>
-                </div>
-                <span class="vote-score">
-                  <% if vote.voted? %>
-                    <%= vote.star_count %> / 5
-                  <% else %>
-                    <span style="color: #6b7280; font-style: italic;">Not voted</span>
-                  <% end %>
-                </span>
-              </div>
-            <% end %>
-          </div>
-        <% end %>
-      </div>
-
-      <!-- User Information -->
-      <div class="card">
-        <h2 class="card-title">User Information</h2>
         
-        <div class="user-info">
-          <div class="info-item">
-            <span class="info-label">Email</span>
-            <span class="info-value"><%= @user.email || "Not provided" %></span>
-          </div>
-          
-          <div class="info-item">
-            <span class="info-label">Slack ID</span>
-            <span class="info-value"><%= @user.slack_id %></span>
-          </div>
-          
-          <div class="info-item">
-            <span class="info-label">Balance</span>
-            <span class="info-value"><%= @user.coins || 0 %> coins</span>
-          </div>
-          
-          <div class="info-item">
-            <span class="info-label">Rank</span>
-            <span class="info-value"><%= @user.rank.humanize %></span>
-          </div>
-          
-          <div class="info-item">
-            <span class="info-label">Status</span>
-            <span class="info-value"><%= @user.status.humanize %></span>
-          </div>
+        <div class="info-item">
+          <span class="info-label">Time Spent</span>
+          <span class="info-value">
+            <%= @time_readable %>
+            <% mercenary_count = mercenary_count_for_week(@user, @week) %>
+            <% if mercenary_count > 0 %>
+              <span style="font-size: 0.85rem; color: #8b4513; margin-left: 0.5rem;">(🪖 <%= mercenary_count %> - Goal: <%= effective_hour_goal(@user, @week) %>h)</span>
+            <% end %>
+          </span>
         </div>
+        
+        <% if @average_score %>
+          <div class="info-item">
+            <span class="info-label">Average Score</span>
+            <span class="info-value"><%= @average_score %> / 5</span>
+          </div>
+        <% end %>
+        
+        <div class="info-item">
+          <span class="info-label">Slack ID</span>
+          <span class="info-value"><%= @user.slack_id %></span>
+        </div>
+        
+        <div class="info-item">
+          <span class="info-label">Hackatime Projects</span>
+          <span class="info-value">
+            <% if @project.hackatime_projects.present? && @project.hackatime_projects.any? %>
+              <%= @project.hackatime_projects.join(', ') %>
+            <% else %>
+              None
+            <% end %>
+          </span>
+        </div>
+      </div>
+      
+      <% if @project.description.present? %>
+        <div style="margin-bottom: 1.5rem;">
+          <span class="info-label">Description</span>
+          <p style="margin-top: 0.5rem; color: #402b20;"><%= @project.description %></p>
+        </div>
+      <% end %>
+      
+      <div class="button-row">
+        <% if @project.repo_url.present? %>
+          <a href="<%= @project.repo_url %>" target="_blank" class="action-button btn-primary">
+            View Repository
+          </a>
+        <% end %>
+        
+        <% if @project.demo_url.present? %>
+          <a href="<%= @project.demo_url %>" target="_blank" class="action-button btn-primary">
+            View Demo
+          </a>
+        <% end %>
         
         <% if @user.slack_id.present? %>
-          <div style="margin-top: 1rem; text-align: center;">
-            <a href="https://dash.fraud.land/profile/<%= @user.slack_id %>" target="_blank" class="fraud-link">
-              View Fraud.land Profile
-            </a>
-          </div>
+          <a href="https://fraud.land/<%= @user.slack_id %>" target="_blank" class="action-button fraud-link">
+            View Fraud Profile
+          </a>
         <% end %>
+      </div>
+    </div>
 
-        <% if @address %>
-          <h3 style="margin-top: 1.5rem; margin-bottom: 1rem; color: #402b20;">Address Information</h3>
-          <div class="user-info">
-            <div class="info-item">
-              <span class="info-label">Name</span>
-              <span class="info-value"><%= @address.first_name %> <%= @address.last_name %></span>
-            </div>
-            
-            <div class="info-item">
-              <span class="info-label">Shipping Name</span>
-              <span class="info-value"><%= @address.shipping_name || "Not provided" %></span>
-            </div>
-            
-            <div class="info-item">
-              <span class="info-label">Address</span>
-              <span class="info-value">
-                <%= @address.line_one %><br>
-                <% if @address.line_two.present? %>
-                  <%= @address.line_two %><br>
-                <% end %>
-                <%= @address.city %>, <%= @address.state %> <%= @address.postcode %><br>
-                <%= @address.country %>
-              </span>
-            </div>
-            
-            <div class="info-item">
-              <span class="info-label">Birthday</span>
-              <span class="info-value"><%= @address.birthday || "Not provided" %></span>
-            </div>
+
+
+    <!-- Demo & GitHub Analysis Section -->
+    <div class="demo-analysis-grid">
+      <% if @project.demo_url.present? %>
+        <div class="demo-container">
+          <h2 class="card-title">Live Demo</h2>
+          <iframe src="<%= @project.demo_url %>" class="demo-iframe" title="Project Demo" sandbox="allow-same-origin allow-scripts allow-forms" referrerpolicy="no-referrer"></iframe>
+          <div style="margin-top: 1rem; text-align: center;">
+            <a href="<%= @project.demo_url %>" target="_blank" style="color: #6366f1; text-decoration: none; font-weight: 500;">
+              Open in New Tab ↗
+            </a>
+            <p style="font-size: 0.85rem; color: #6b5b4a; margin-top: 0.5rem;">
+              If demo doesn't load above, it may block embedding. Use the link to open in a new tab.
+            </p>
           </div>
-        <% end %>
+        </div>
+      <% else %>
+        <div class="demo-container">
+          <h2 class="card-title">Live Demo</h2>
+          <div style="color: #6b5b4a; font-style: italic; padding: 2rem; text-align: center;">
+            No demo URL provided
+          </div>
+        </div>
+      <% end %>
+      
+      <div class="analysis-container">
+        <h2 class="card-title">GitHub Commit Analysis</h2>
+        <!-- GitHub commit graph will be implemented with JavaScript in future -->
+        <div id="commit-graph">
+          GitHub commit analysis will be added here
+        </div>
       </div>
     </div>
 
@@ -1283,8 +1305,207 @@
       // Initialize controls when page loads
       document.addEventListener('DOMContentLoaded', function() {
         initializeOffsetControls();
+        <% if @project && @project.repo_url.present? %>
+        loadGitHubCommits();
+        <% end %>
       });
+
+      // GitHub Commit Graph
+      async function loadGitHubCommits() {
+        const projectId = <%= @project.id %>;
+        const weekNumber = <%= @selected_week %>;
+        
+        try {
+          // Call server-side endpoint to fetch commit data
+          const response = await fetch(`/admin/projects/${projectId}/github-commits?week=${weekNumber}`);
+          
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to fetch commit data');
+          }
+          
+          const data = await response.json();
+          
+          // Parse dates
+          const weekStart = new Date(data.week_start);
+          const weekEnd = new Date(data.week_end);
+          
+          // Convert commit data to expected format
+          const weekCommits = data.week_commits.map(c => ({
+            date: new Date(c.date),
+            message: c.message,
+            additions: c.additions,
+            deletions: c.deletions,
+            author: c.author
+          }));
+          
+          renderCommitGraph(weekCommits, weekStart, weekEnd, data.before_week_commits, data.before_week_lines);
+        } catch (error) {
+          console.error('Error fetching commits:', error);
+          document.getElementById('commit-graph').innerHTML = 
+            '<p style="color: #dc2626;">Error loading commit data. Check console for details.</p>';
+        }
+      }
+      
+      function renderCommitGraph(commits, weekStart, weekEnd, beforeCount, beforeLines) {
+        const container = document.getElementById('commit-graph');
+        
+        // Summary section
+        let html = `
+          <div style="margin-bottom: 1.5rem; padding: 1rem; background: rgba(255, 248, 220, 0.5); border-radius: 8px;">
+            <h4 style="margin: 0 0 0.5rem 0; color: #402b20;">Repository History</h4>
+            <p style="margin: 0; color: #6b5b4a;">
+              <strong>${beforeCount}</strong> commits (≈${beforeLines.toLocaleString()} lines) before this week
+            </p>
+          </div>
+        `;
+        
+        if (commits.length === 0) {
+          html += '<p style="color: #6b5b4a; text-align: center;">No commits during this week</p>';
+          container.innerHTML = html;
+          return;
+        }
+        
+        // Find max values for scaling
+        const maxAdditions = Math.max(...commits.map(c => c.additions), 1);
+        const maxDeletions = Math.max(...commits.map(c => c.deletions), 1);
+        const maxChanges = Math.max(maxAdditions, maxDeletions, 1);
+        
+        // Create a unified grid container for both day labels and graph
+        html += '<div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 0; margin-bottom: 1rem;">';
+        
+        // Day labels row
+        const daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+        const weekStartDay = weekStart.getDay();
+        const startIndex = weekStartDay === 0 ? 6 : weekStartDay - 1;
+        for (let i = 0; i < 7; i++) {
+          const dayIndex = (startIndex + i) % 7;
+          const date = new Date(weekStart);
+          date.setDate(date.getDate() + i);
+          html += `<div style="padding: 0.5rem; border-right: 1px solid rgba(64, 43, 32, 0.1); font-size: 0.8rem; color: #6b5b4a; text-align: center;"><strong>${daysOfWeek[dayIndex]}</strong><br>${date.getMonth() + 1}/${date.getDate()}</div>`;
+        }
+        
+        // Graph area row - spans all 7 columns
+        html += `<div style="grid-column: 1 / -1; position: relative; height: 300px; border: 1px solid rgba(64, 43, 32, 0.1); border-radius: 8px; padding: 1rem;">`;
+        
+        // Center line
+        html += '<div style="position: absolute; left: 1rem; right: 1rem; top: 50%; height: 2px; background: rgba(64, 43, 32, 0.3); z-index: 1;"></div>';
+        
+        // Calculate total milliseconds in the week
+        const weekDuration = weekEnd - weekStart;
+        
+        // Plot commits - position based on exact timestamp within the week
+        commits.forEach((commit, i) => {
+          // Calculate exact position within the week (0 to 1)
+          const timeIntoWeek = commit.date - weekStart;
+          const positionRatio = Math.max(0, Math.min(1, timeIntoWeek / weekDuration));
+          
+          // Calculate pixel position within the graph container (accounting for 1rem padding)
+          const pixelOffset = `calc(1rem + (100% - 2rem) * ${positionRatio} - 6px)`;
+          
+          const addHeight = Math.max((commit.additions / maxChanges) * 130, 3);
+          const delHeight = Math.max((commit.deletions / maxChanges) * 130, 3);
+          
+          const commitTitle = `${commit.message}\\nAdditions: +${commit.additions}\\nDeletions: -${commit.deletions}\\nAuthor: ${commit.author}`;
+          
+          // Addition bar (extends upward)
+          html += `<div style="position: absolute; left: ${pixelOffset}; bottom: calc(50% + 1px); width: 12px; background: #059669; height: ${addHeight}px; border-radius: 2px 2px 0 0; z-index: 2; cursor: pointer;" title="${commitTitle}"></div>`;
+          
+          // Deletion bar (extends downward)
+          html += `<div style="position: absolute; left: ${pixelOffset}; top: calc(50% + 1px); width: 12px; background: #dc2626; height: ${delHeight}px; border-radius: 0 0 2px 2px; z-index: 2; cursor: pointer;" title="${commitTitle}"></div>`;
+        });
+        
+        html += '</div>'; // Close graph area
+        html += '</div>'; // Close grid container
+        
+        // Legend
+        html += `
+          <div style="padding: 1rem; background: rgba(255, 255, 255, 0.5); border-radius: 8px;">
+            <div style="display: flex; flex-direction: column; gap: 0.75rem; font-size: 0.9rem;">
+              <div><span style="display: inline-block; width: 12px; height: 12px; background: #059669; margin-right: 0.5rem; border-radius: 2px;"></span>Lines Added</div>
+              <div><span style="display: inline-block; width: 12px; height: 12px; background: #dc2626; margin-right: 0.5rem; border-radius: 2px;"></span>Lines Deleted</div>
+              <div style="margin-top: 0.5rem; padding-top: 0.75rem; border-top: 1px solid rgba(64, 43, 32, 0.1);"><strong>${commits.length}</strong> commit${commits.length !== 1 ? 's' : ''} this week</div>
+            </div>
+          </div>
+        `;
+        
+        container.innerHTML = html;
+      }
     </script>
+
+    <!-- Review Status History -->
+    <% if @project.logs.any? %>
+      <div class="card" style="margin-top: 2rem;">
+        <h2 class="card-title">Review Status History</h2>
+        <div style="max-height: 400px; overflow-y: auto;">
+          <% @project.logs.reverse.each do |log| %>
+            <div style="padding: 1rem; border-bottom: 1px solid rgba(64, 43, 32, 0.1); margin-bottom: 0.5rem;">
+              <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.5rem;">
+                <div>
+                  <span style="font-weight: 600; color: #dc2626;"><%= log['old_status']&.humanize || 'N/A' %></span>
+                  <span style="color: #6b5b4a; margin: 0 0.5rem;">→</span>
+                  <span style="font-weight: 600; color: #059669;"><%= log['new_status']&.humanize || 'N/A' %></span>
+                </div>
+                <div style="font-size: 0.85rem; color: #6b5b4a;">
+                  <%= Time.parse(log['timestamp']).strftime("%m/%d/%Y %I:%M %p") rescue log['timestamp'] %>
+                </div>
+              </div>
+              <div style="font-size: 0.9rem; color: #402b20;">
+                <strong>Reviewer:</strong> <%= log['reviewer_name'] %> (ID: <%= log['reviewer_id'] %>)
+              </div>
+              <% if log['message'].present? %>
+                <div style="margin-top: 0.5rem; padding: 0.5rem; background: rgba(255, 248, 220, 0.3); border-radius: 4px; font-size: 0.9rem; color: #6b5b4a;">
+                  <%= log['message'] %>
+                </div>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+
+    <!-- Fraud Audit History -->
+    <% fraud_logs = @user.audit_logs.select { |log| log['action']&.include?('fraud') && log['details']&.dig('project_id') == @project.id } %>
+    <% if fraud_logs.any? %>
+      <div class="card" style="margin-top: 2rem;">
+        <h2 class="card-title">Fraud Status History</h2>
+        <div style="max-height: 400px; overflow-y: auto;">
+          <% fraud_logs.reverse.each do |log| %>
+            <div style="padding: 1rem; border-bottom: 1px solid rgba(64, 43, 32, 0.1); margin-bottom: 0.5rem;">
+              <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.5rem;">
+                <div>
+                  <span style="font-weight: 600; color: #dc2626;"><%= log['details']['old_fraud_status']&.humanize || 'N/A' %></span>
+                  <span style="color: #6b5b4a; margin: 0 0.5rem;">→</span>
+                  <span style="font-weight: 600; color: #059669;"><%= log['details']['new_fraud_status']&.humanize || 'N/A' %></span>
+                </div>
+                <div style="font-size: 0.85rem; color: #6b5b4a;">
+                  <%= Time.parse(log['timestamp']).strftime("%m/%d/%Y %I:%M %p") rescue log['timestamp'] %>
+                </div>
+              </div>
+              <div style="font-size: 0.9rem; color: #402b20;">
+                <strong>Reviewer:</strong> <%= log['actor_name'] %> (ID: <%= log['actor_id'] %>)
+              </div>
+              <% if log['details']['old_reasoning'].present? %>
+                <div style="margin-top: 0.5rem;">
+                  <div style="font-size: 0.85rem; color: #6b5b4a; font-weight: 600;">Old Reasoning:</div>
+                  <div style="padding: 0.5rem; background: rgba(255, 240, 240, 0.3); border-radius: 4px; font-size: 0.9rem; color: #6b5b4a;">
+                    <%= log['details']['old_reasoning'] %>
+                  </div>
+                </div>
+              <% end %>
+              <% if log['details']['new_reasoning'].present? %>
+                <div style="margin-top: 0.5rem;">
+                  <div style="font-size: 0.85rem; color: #6b5b4a; font-weight: 600;">New Reasoning:</div>
+                  <div style="padding: 0.5rem; background: rgba(240, 255, 240, 0.3); border-radius: 4px; font-size: 0.9rem; color: #6b5b4a;">
+                    <%= log['details']['new_reasoning'] %>
+                  </div>
+                </div>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
 
   <% else %>
     <div class="no-project-notice">

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_10_01_204944) do
+ActiveRecord::Schema[8.0].define(version: 2025_10_09_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -70,6 +70,66 @@ ActiveRecord::Schema[8.0].define(version: 2025_10_01_204944) do
     t.index ["user_id"], name: "index_ballots_on_user_id"
   end
 
+  create_table "blazer_audits", force: :cascade do |t|
+    t.string "user_type"
+    t.bigint "user_id"
+    t.bigint "query_id"
+    t.text "statement"
+    t.string "data_source"
+    t.datetime "created_at"
+    t.index ["query_id"], name: "index_blazer_audits_on_query_id"
+    t.index ["user_type", "user_id"], name: "index_blazer_audits_on_user"
+  end
+
+  create_table "blazer_checks", force: :cascade do |t|
+    t.string "creator_type"
+    t.bigint "creator_id"
+    t.bigint "query_id"
+    t.string "state"
+    t.string "schedule"
+    t.text "emails"
+    t.text "slack_channels"
+    t.string "check_type"
+    t.text "message"
+    t.datetime "last_run_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["creator_type", "creator_id"], name: "index_blazer_checks_on_creator"
+    t.index ["query_id"], name: "index_blazer_checks_on_query_id"
+  end
+
+  create_table "blazer_dashboard_queries", force: :cascade do |t|
+    t.bigint "dashboard_id"
+    t.bigint "query_id"
+    t.integer "position"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["dashboard_id"], name: "index_blazer_dashboard_queries_on_dashboard_id"
+    t.index ["query_id"], name: "index_blazer_dashboard_queries_on_query_id"
+  end
+
+  create_table "blazer_dashboards", force: :cascade do |t|
+    t.string "creator_type"
+    t.bigint "creator_id"
+    t.string "name"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["creator_type", "creator_id"], name: "index_blazer_dashboards_on_creator"
+  end
+
+  create_table "blazer_queries", force: :cascade do |t|
+    t.string "creator_type"
+    t.bigint "creator_id"
+    t.string "name"
+    t.text "description"
+    t.text "statement"
+    t.string "data_source"
+    t.string "status"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["creator_type", "creator_id"], name: "index_blazer_queries_on_creator"
+  end
+
   create_table "cosmetics", force: :cascade do |t|
     t.string "name", null: false
     t.text "description"
@@ -95,6 +155,15 @@ ActiveRecord::Schema[8.0].define(version: 2025_10_01_204944) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["feature_key", "key", "value"], name: "index_flipper_gates_on_feature_key_and_key_and_value", unique: true
+  end
+
+  create_table "hackatime_days", force: :cascade do |t|
+    t.date "date", null: false
+    t.float "total_hours", default: 0.0, null: false
+    t.json "user_ids", default: []
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["date"], name: "index_hackatime_days_on_date", unique: true
   end
 
   create_table "meeple_cosmetics", force: :cascade do |t|
@@ -155,7 +224,6 @@ ActiveRecord::Schema[8.0].define(version: 2025_10_01_204944) do
     t.boolean "hidden", default: false, null: false
     t.text "stonemason_feedback"
     t.decimal "reviewer_multiplier", precision: 3, scale: 1, default: "2.0"
-    t.text "reviewer_video_url"
     t.index ["fraud_status"], name: "index_projects_on_fraud_status"
     t.index ["hidden"], name: "index_projects_on_hidden"
     t.index ["status"], name: "index_projects_on_status"
@@ -170,12 +238,28 @@ ActiveRecord::Schema[8.0].define(version: 2025_10_01_204944) do
     t.boolean "fulfilled", default: false, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "user_week_id"
     t.index ["fulfilled"], name: "index_shop_purchases_on_fulfilled"
     t.index ["item_name"], name: "index_shop_purchases_on_item_name"
     t.index ["user_id", "item_name"], name: "index_shop_purchases_unique_one_time", unique: true, where: "((item_name)::text = ANY ((ARRAY['Unlock Orange Meeple'::character varying, 'Random Sticker'::character varying])::text[]))"
     t.index ["user_id", "purchased_at"], name: "index_shop_purchases_on_user_id_and_purchased_at"
     t.index ["user_id"], name: "index_shop_purchases_on_user_id"
+    t.index ["user_week_id"], name: "index_shop_purchases_on_user_week_id"
     t.check_constraint "coins_spent >= 0", name: "check_non_negative_purchase_amount"
+  end
+
+  create_table "user_weeks", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "project_id"
+    t.integer "week", null: false
+    t.integer "arbitrary_offset", default: 0, null: false
+    t.integer "mercenary_offset", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["project_id"], name: "index_user_weeks_on_project_id"
+    t.index ["user_id", "week"], name: "index_user_weeks_on_user_id_and_week", unique: true
+    t.index ["user_id"], name: "index_user_weeks_on_user_id"
+    t.index ["week"], name: "index_user_weeks_on_week"
   end
 
   create_table "users", force: :cascade do |t|
@@ -222,7 +306,10 @@ ActiveRecord::Schema[8.0].define(version: 2025_10_01_204944) do
   add_foreign_key "meeple_cosmetics", "meeples"
   add_foreign_key "meeples", "users"
   add_foreign_key "projects", "users"
+  add_foreign_key "shop_purchases", "user_weeks", validate: false
   add_foreign_key "shop_purchases", "users"
+  add_foreign_key "user_weeks", "projects"
+  add_foreign_key "user_weeks", "users"
   add_foreign_key "users", "users", column: "referrer_id"
   add_foreign_key "votes", "ballots"
   add_foreign_key "votes", "projects"

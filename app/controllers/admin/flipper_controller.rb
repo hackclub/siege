@@ -48,7 +48,7 @@ class Admin::FlipperController < ApplicationController
     descriptions = {
       "extra_week" => "Allow users to submit hours from the previous week along with the current week for a project",
       "ballot_verification_required" => "Require users to be identity verified before they can create a ballot for voting",
-      "voting_any_day" => "Allow voting to happen on any day of the week, not just Monday-Wednesday",
+      "voting_any_day" => "Allow voting to happen on any day of the week, not just Monday-Friday",
       "bypass_10_hour_requirement" => "Allow users to submit projects without reaching 10 hours of coding time",
       "nine_hour_display" => "Display 9 hours as the goal instead of 10 (visual only, actual requirement unchanged)",
       "preparation_phase" => "Enable preparation phase mode - removes siege requirements and shows coins around castle instead of meeple track",
