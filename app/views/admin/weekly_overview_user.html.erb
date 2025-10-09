@@ -525,7 +525,7 @@
         <% end %>
         
         <% if @user.slack_id.present? %>
-          <a href="https://fraud.land/<%= @user.slack_id %>" target="_blank" class="action-button fraud-link">
+          <a href="https://dash.fraud.land/profile/<%= @user.slack_id %>" target="_blank" class="action-button fraud-link">
             View Fraud Profile
           </a>
         <% end %>
@@ -1374,15 +1374,12 @@
         // Create a unified grid container for both day labels and graph
         html += '<div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 0; margin-bottom: 1rem;">';
         
-        // Day labels row
+        // Day labels row - Monday through Sunday
         const daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-        const weekStartDay = weekStart.getDay();
-        const startIndex = weekStartDay === 0 ? 6 : weekStartDay - 1;
         for (let i = 0; i < 7; i++) {
-          const dayIndex = (startIndex + i) % 7;
           const date = new Date(weekStart);
           date.setDate(date.getDate() + i);
-          html += `<div style="padding: 0.5rem; border-right: 1px solid rgba(64, 43, 32, 0.1); font-size: 0.8rem; color: #6b5b4a; text-align: center;"><strong>${daysOfWeek[dayIndex]}</strong><br>${date.getMonth() + 1}/${date.getDate()}</div>`;
+          html += `<div style="padding: 0.5rem; border-right: 1px solid rgba(64, 43, 32, 0.1); font-size: 0.8rem; color: #6b5b4a; text-align: center;"><strong>${daysOfWeek[i]}</strong><br>${date.getMonth() + 1}/${date.getDate()}</div>`;
         }
         
         // Graph area row - spans all 7 columns
