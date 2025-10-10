@@ -323,7 +323,7 @@
     <div class="detail-field">
       <span class="detail-label">Current Status</span>
       <span class="status-badge status-<%= @project.status %>">
-        <%= @project.status.capitalize %>
+        <%= @project.status.capitalize %> (on <%= @project.status_updated_at.strftime("%b %d, %Y at %l:%M %p") %>)
       </span>
     </div>
     
