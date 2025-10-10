@@ -411,9 +411,9 @@
         <% 
           # Determine available ranks based on current user's permissions
           available_ranks = if current_user.super_admin?
-            [['User', 'user'], ['Viewer', 'viewer'], ['Admin', 'admin'], ['Super Admin', 'super_admin']]
+            [['User', 'user'], ['Viewer', 'viewer'], ['Reviewer', 'reviewer'], ['Admin', 'admin'], ['Super Admin', 'super_admin']]
           elsif current_user.admin?
-            [['User', 'user'], ['Viewer', 'viewer']]
+            [['User', 'user'], ['Viewer', 'viewer'], ['Reviewer', 'reviewer']]
           else
             []
           end
@@ -432,7 +432,7 @@
             <% if current_user.super_admin? %>
               <strong>Super Admin:</strong> Can set any rank including other admins
             <% elsif current_user.admin? %>
-              <strong>Admin:</strong> Can only promote users to Viewer level
+              <strong>Admin:</strong> Can promote users to Viewer or Reviewer level
             <% end %>
           </div>
         <% else %>

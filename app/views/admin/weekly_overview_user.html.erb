@@ -5,6 +5,9 @@
     .admin-container {
       max-width: 100%;
       margin: 0;
+      <% if @is_ysws_review %>
+      margin-left: 20rem; /* Account for navbar on YSWS review */
+      <% end %>
       padding: 2rem;
     }
 
