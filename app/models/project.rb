@@ -74,7 +74,7 @@ class Project < ApplicationRecord
 
   # Check if project is eligible for fraud review (submitted or above)
   def fraud_reviewable?
-    status.in?([ "submitted", "pending_voting", "finished" ])
+    status.in?([ "submitted", "pending_voting", "waiting_for_review", "finished" ])
   end
 
   # Check if project can be edited by regular users
