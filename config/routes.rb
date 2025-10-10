@@ -70,6 +70,10 @@ Rails.application.routes.draw do
   get "/admin/referrals", to: "admin#referrals", as: :admin_referrals
   get "/admin/weekly-overview", to: "admin#weekly_overview", as: :admin_weekly_overview
   get "/admin/analytics", to: "admin#analytics", as: :admin_analytics
+  
+  # YSWS Review routes (for reviewers)
+  get "/ysws-review", to: "ysws_review#index", as: :ysws_review
+  get "/ysws-review/:week/:user_id", to: "ysws_review#show", as: :ysws_review_user
   get "/admin/shop-purchases", to: "admin#shop_purchases", as: :admin_shop_purchases
   get "/admin/shop-purchases/:id", to: "admin#shop_purchase_details", as: :admin_shop_purchase_details
   get "/admin/weekly-overview/:week/:user_id", to: "admin#weekly_overview_user", as: :admin_weekly_overview_user

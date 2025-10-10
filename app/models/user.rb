@@ -1,7 +1,7 @@
 class User < ApplicationRecord
   # Validations
   validates :slack_id, presence: true, uniqueness: true
-  validates :rank, presence: true, inclusion: { in: %w[user viewer admin super_admin] }
+  validates :rank, presence: true, inclusion: { in: %w[user viewer reviewer admin super_admin] }
   validates :status, presence: true, inclusion: { in: %w[new working out banned] }
   validates :referrer_id, presence: false, allow_nil: true
   validates :main_device, inclusion: { in: %w[framework_12 framework_13 ipad_mini oneplus_pad_2 galaxy_tab_s10_fe laptop_grant_base], allow_nil: true }
@@ -205,6 +205,10 @@ class User < ApplicationRecord
     rank == "viewer"
   end
 
+  def reviewer?
+    rank == "reviewer"
+  end
+
   def admin?
     rank == "admin"
   end
@@ -215,6 +219,10 @@ class User < ApplicationRecord
 
   def can_manage_users?
     admin? || super_admin?
+  end
+  
+  def can_review?
+    reviewer? || admin? || super_admin?
   end
 
   # Get the current Slack display name, updating it if needed

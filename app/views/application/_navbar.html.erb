@@ -416,7 +416,15 @@
     <!-- Admin Links (always shown if user has access) -->
     <% if can_access_review? %>
       <% unless current_page?(review_path) || (controller_name == "review") %>
-        <%= link_to "Review", review_path, class: "navbar-link navbar-link--admin" %>
+        <%= link_to "Stonemason", review_path, class: "navbar-link navbar-link--admin" %>
+      <% else %>
+        <span class="navbar-link navbar-link--admin active">Stonemason</span>
+      <% end %>
+    <% end %>
+    
+    <% if current_user&.can_review? %>
+      <% unless current_page?(ysws_review_path) || (controller_name == "ysws_review") %>
+        <%= link_to "Review", ysws_review_path, class: "navbar-link navbar-link--admin" %>
       <% else %>
         <span class="navbar-link navbar-link--admin active">Review</span>
       <% end %>

@@ -5,11 +5,15 @@
     .admin-container {
       max-width: 100%;
       margin: 0;
+      <% if @is_ysws_review %>
+      margin-left: 20rem; /* Account for navbar on YSWS review */
+      <% end %>
       padding: 2rem;
     }
 
 @media (max-width: 768px) {
   .admin-container {
+    margin-left: auto;
     margin-top: 12rem; /* Position content below navbar */
   }
 }
@@ -318,7 +322,7 @@
   </div>
 
   <div class="week-selector">
-    <%= form_with url: admin_weekly_overview_path, method: :get, local: true do |form| %>
+    <%= form_with url: (@is_ysws_review ? ysws_review_path : admin_weekly_overview_path), method: :get, local: true do |form| %>
       <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
         <%= form.label :week, "Select Week:" %>
         <%= form.select :week, 
@@ -404,7 +408,7 @@
           is_non_default_hidden = params[:show_hidden] == "1"
         %>
         <% if is_non_default_week || is_non_default_user_status || is_non_default_status || is_non_default_fraud || is_non_default_airtable || is_non_default_hidden %>
-          <%= link_to "Reset to Defaults", admin_weekly_overview_path, class: "clear-filters" %>
+          <%= link_to "Reset to Defaults", (@is_ysws_review ? ysws_review_path : admin_weekly_overview_path), class: "clear-filters" %>
         <% end %>
       </div>
     <% end %>
@@ -434,7 +438,7 @@
   <div class="users-grid">
     <% if @user_data.any? %>
       <% @user_data.each do |user_id, data| %>
-        <div class="user-card" onclick="window.location.href='<%= admin_weekly_overview_user_path(@selected_week, user_id) %>'">
+        <div class="user-card" onclick="window.location.href='<%= @is_ysws_review ? ysws_review_user_path(@selected_week, user_id) : admin_weekly_overview_user_path(@selected_week, user_id) %>'">
           <div class="user-header">
             <h3 class="user-name">
               <%= data[:user].name %>
@@ -544,8 +548,12 @@
           Showing <%= (@current_page - 1) * @per_page + 1 %> to <%= [@current_page * @per_page, @total_users].min %> of <%= @total_users %> users
         </div>
         <div class="pagination-controls">
+          <% 
+            base_path = @is_ysws_review ? :ysws_review_path : :admin_weekly_overview_path
+            pagination_params = { week: @selected_week, user_status: params[:user_status], status: params[:status], fraud_status: params[:fraud_status], airtable_status: params[:airtable_status] }
+          %>
           <% if @current_page > 1 %>
-            <%= link_to "← Previous", admin_weekly_overview_path(page: @current_page - 1, week: @selected_week, user_status: params[:user_status], status: params[:status], fraud_status: params[:fraud_status], airtable_status: params[:airtable_status]), class: "pagination-link" %>
+            <%= link_to "← Previous", send(base_path, pagination_params.merge(page: @current_page - 1)), class: "pagination-link" %>
           <% end %>
           
           <% @total_pages.times do |page_num| %>
@@ -553,14 +561,14 @@
             <% if page_num == @current_page %>
               <span class="pagination-current"><%= page_num %></span>
             <% elsif page_num == 1 || page_num == @total_pages || (page_num >= @current_page - 2 && page_num <= @current_page + 2) %>
-              <%= link_to page_num, admin_weekly_overview_path(page: page_num, week: @selected_week, user_status: params[:user_status], status: params[:status], fraud_status: params[:fraud_status], airtable_status: params[:airtable_status]), class: "pagination-link" %>
+              <%= link_to page_num, send(base_path, pagination_params.merge(page: page_num)), class: "pagination-link" %>
             <% elsif page_num == @current_page - 3 || page_num == @current_page + 3 %>
               <span class="pagination-ellipsis">...</span>
             <% end %>
           <% end %>
           
           <% if @current_page < @total_pages %>
-            <%= link_to "Next →", admin_weekly_overview_path(page: @current_page + 1, week: @selected_week, user_status: params[:user_status], status: params[:status], fraud_status: params[:fraud_status], airtable_status: params[:airtable_status]), class: "pagination-link" %>
+            <%= link_to "Next →", send(base_path, pagination_params.merge(page: @current_page + 1)), class: "pagination-link" %>
           <% end %>
         </div>
       </div>

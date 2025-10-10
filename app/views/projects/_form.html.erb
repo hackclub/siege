@@ -177,6 +177,7 @@
         <% selected = Array(project.hackatime_projects).map(&:to_s) %>
         <% projects_list.each do |hp| %>
           <% name = hp['name'].to_s %>
+          <% next if name == "<<LAST_PROJECT>>" %>
           <% duration = hp['text'] || hp['digital'] || '' %>
           <label class="project-hackatime-item">
             <%= check_box_tag 'project[hackatime_projects][]', name, selected.include?(name), class: 'project-hackatime-checkbox' %>
