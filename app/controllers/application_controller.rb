@@ -86,7 +86,7 @@ class ApplicationController < ActionController::Base
   end
 
   def can_access_review?
-    current_user&.viewer? || current_user&.admin? || current_user&.super_admin?
+    current_user&.viewer? || current_user&.reviewer? || current_user&.admin? || current_user&.super_admin?
   end
 
   def can_access_fraud_dashboard?
