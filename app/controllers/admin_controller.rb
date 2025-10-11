@@ -750,6 +750,12 @@ class AdminController < ApplicationController
       # Get all users, optionally filtered by status
       @users = User.all.includes(:meeple, :address)
 
+      # Apply user search filter if provided (search name, display_name, and slack_id)
+      if params[:user_search].present?
+        escaped_search = ActiveRecord::Base.connection.quote_string(params[:user_search])
+        @users = @users.where("users.name ILIKE ? OR users.display_name ILIKE ? OR users.slack_id ILIKE ?", "%#{escaped_search}%", "%#{escaped_search}%", "%#{escaped_search}%")
+      end
+
       # Apply user status filter if provided
       if params[:user_status].present? && %w[new working out banned all].include?(params[:user_status])
         @user_status_filter = params[:user_status]
@@ -776,6 +782,12 @@ class AdminController < ApplicationController
           user_id: @users.pluck(:id),
           created_at: week_start_date.beginning_of_day..week_end_date.end_of_day
         ).includes(:user)
+      end
+
+      # Apply project search filter if provided
+      if params[:project_search].present?
+        escaped_search = ActiveRecord::Base.connection.quote_string(params[:project_search])
+        week_projects = week_projects.where("projects.name ILIKE ?", "%#{escaped_search}%")
       end
 
       # Group projects by user_id for efficient lookup

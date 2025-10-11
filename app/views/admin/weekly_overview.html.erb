@@ -396,6 +396,14 @@
         <%= form.label :show_hidden, "Show hidden projects", style: "margin-left: 0.5rem;" %>
       </div>
       
+      <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-top: 1rem;">
+        <%= form.label :user_search, "Search User:" %>
+        <%= form.text_field :user_search, value: params[:user_search], placeholder: "Name, display name, or Slack ID", style: "padding: 0.5rem; border: 2px solid rgba(64, 43, 32, 0.3); border-radius: 6px; font-size: 0.9rem;" %>
+        <%= form.label :project_search, "Search Project:", style: "margin-left: 1rem;" %>
+        <%= form.text_field :project_search, value: params[:project_search], placeholder: "Project name", style: "padding: 0.5rem; border: 2px solid rgba(64, 43, 32, 0.3); border-radius: 6px; font-size: 0.9rem;" %>
+        <%= form.submit "Search", style: "padding: 0.5rem 1rem; background: #059669; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;" %>
+      </div>
+      
       <div style="margin-top: 1rem;">
         <% 
           current_week = current_week_number
@@ -515,7 +523,7 @@
             </div>
           <% end %>
           
-          <% if current_user&.super_admin? && data[:project] %>
+          <% if current_user&.super_admin? && data[:project] && !@is_ysws_review %>
             <div style="margin-top: 1rem; text-align: center;">
               <% if data[:project].hidden? %>
                 <%= button_to "Unhide Project", admin_unhide_project_path(data[:project]),
@@ -550,7 +558,7 @@
         <div class="pagination-controls">
           <% 
             base_path = @is_ysws_review ? :ysws_review_path : :admin_weekly_overview_path
-            pagination_params = { week: @selected_week, user_status: params[:user_status], status: params[:status], fraud_status: params[:fraud_status], airtable_status: params[:airtable_status] }
+            pagination_params = { week: @selected_week, user_status: params[:user_status], status: params[:status], fraud_status: params[:fraud_status], airtable_status: params[:airtable_status], user_search: params[:user_search], project_search: params[:project_search] }
           %>
           <% if @current_page > 1 %>
             <%= link_to "← Previous", send(base_path, pagination_params.merge(page: @current_page - 1)), class: "pagination-link" %>

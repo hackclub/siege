@@ -18,10 +18,10 @@ class ReviewController < ApplicationController
       @projects = @projects.where("name ILIKE ?", "%#{escaped_name}%")
     end
 
-    # Filter by owner if provided
-    if params[:owner].present?
-      escaped_owner = ActiveRecord::Base.connection.quote_string(params[:owner])
-      @projects = @projects.joins(:user).where("users.name ILIKE ?", "%#{escaped_owner}%")
+    # Filter by author name if provided (search name, display_name, and slack_id)
+    if params[:author_name].present?
+      escaped_name = ActiveRecord::Base.connection.quote_string(params[:author_name])
+      @projects = @projects.joins(:user).where("users.name ILIKE ? OR users.display_name ILIKE ? OR users.slack_id ILIKE ?", "%#{escaped_name}%", "%#{escaped_name}%", "%#{escaped_name}%")
     end
 
     # Filter by week if provided

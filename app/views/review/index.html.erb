@@ -318,11 +318,8 @@
         </div>
 
         <div class="filter-group">
-          <%= form.label :owner, "Owner", class: "filter-label" %>
-          <%= form.select :owner,
-              options_from_collection_for_select(@users, :name, :name, params[:owner]),
-              { prompt: "All owners" },
-              { class: "filter-select" } %>
+          <%= form.label :author_name, "Author", class: "filter-label" %>
+          <%= form.text_field :author_name, value: params[:author_name], placeholder: "Search by name...", class: "filter-input" %>
         </div>
 
         <div class="filter-group">
@@ -359,7 +356,7 @@
         </div>
       <% end %>
 
-      <% if params[:name].present? || params[:owner].present? || params[:status].present? || params[:week].present? || params[:sort].present? %>
+      <% if params[:name].present? || params[:author_name].present? || params[:status].present? || params[:week].present? || params[:sort].present? %>
         <div style="margin-top: 1rem;">
           <%= link_to "Clear All Filters", review_path, class: "clear-filters" %>
         </div>
@@ -374,7 +371,7 @@
           <label for="leaderboard_week">Week:</label>
           <%= form_with url: review_path, method: :get, local: true, id: "leaderboard-form" do |form| %>
             <%= form.hidden_field :name, value: params[:name] %>
-            <%= form.hidden_field :owner, value: params[:owner] %>
+            <%= form.hidden_field :author_name, value: params[:author_name] %>
             <%= form.hidden_field :status, value: params[:status] %>
             <%= form.hidden_field :week, value: params[:week] %>
             <%= form.hidden_field :sort, value: params[:sort] %>
@@ -409,7 +406,7 @@
   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
     <div class="projects-count" style="margin-bottom: 0;">
       Showing <%= @projects.count %> project<%= @projects.count == 1 ? '' : 's' %>
-      <% if params[:name].present? || params[:owner].present? || params[:status].present? || params[:week].present? %>
+      <% if params[:name].present? || params[:author_name].present? || params[:status].present? || params[:week].present? %>
         (filtered)
       <% end %>
       <% if params[:sort].present? %>
@@ -475,7 +472,7 @@
       <div class="empty-state">
         <h3>No Projects Found</h3>
         <p>There are no projects matching your current filters.</p>
-        <% if params[:name].present? || params[:owner].present? || params[:status].present? %>
+        <% if params[:name].present? || params[:author_name].present? || params[:status].present? %>
           <%= link_to "Clear filters", review_path, class: "clear-filters" %>
         <% end %>
       </div>
