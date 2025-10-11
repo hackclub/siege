@@ -1518,13 +1518,22 @@ class AdminController < ApplicationController
         new_logs = @project.logs + [ log_entry ]
         @project.update!(logs: new_logs)
 
-        redirect_to admin_weekly_overview_user_path(@selected_week, @user.id), notice: "Successfully submitted project to Airtable!"
+        render json: {
+          success: true,
+          message: "Successfully submitted project to Airtable!"
+        }
       else
-        redirect_to admin_weekly_overview_user_path(@selected_week, @user.id), alert: "Failed to submit to Airtable: #{airtable_response[:error]}"
+        render json: {
+          success: false,
+          error: "Failed to submit to Airtable: #{airtable_response[:error]}"
+        }
       end
     rescue => e
       Rails.logger.error "Error submitting to Airtable: #{e.message}"
-      redirect_to admin_weekly_overview_user_path(@selected_week, @user.id), alert: "Error submitting to Airtable: #{e.message}"
+      render json: {
+        success: false,
+        error: "Error submitting to Airtable: #{e.message}"
+      }
     end
   end
 
@@ -1999,7 +2008,15 @@ class AdminController < ApplicationController
 
   def require_admin_access
     # Allow reviewers to access certain actions
-    reviewer_allowed_actions = %w[update_reviewer_feedback save_reviewer_multiplier update_project_status_admin]
+    reviewer_allowed_actions = %w[
+      update_reviewer_feedback 
+      save_reviewer_multiplier 
+      update_project_status_admin
+      update_fraud_status
+      submit_to_airtable
+      update_arbitrary_offset
+      github_commits
+    ]
     
     if reviewer_allowed_actions.include?(action_name) && current_user&.can_review?
       # Reviewers can access these specific actions
