@@ -37,6 +37,7 @@ Rails.application.routes.draw do
   get "/great-hall", to: "great_hall#index", as: :great_hall
   get "/map", to: "map#index", as: :map
   get "/great-hall/thanks", to: "great_hall#thanks", as: :great_hall_thanks
+  get "/great-hall/reset-ballot", to: "great_hall#reset_ballot", as: :great_hall_reset_ballot
   get "/market", to: "market#index", as: :market
   post "/market/purchase", to: "market#purchase", as: :market_purchase
   get "/market/mercenary_price", to: "market#mercenary_price", as: :market_mercenary_price

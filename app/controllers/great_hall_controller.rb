@@ -19,14 +19,21 @@ class GreatHallController < ApplicationController
     previous_week = helpers.current_week_number - 1
 
     # Allow voting with any week number (including 0 or negative for testing)
-
-    @ballot = current_user.ballots.find_by(week: previous_week)
+    
+    # If multiple ballots allowed, only find most recent ballot
+    # Otherwise, find the only ballot (enforced by uniqueness constraint)
+    if Flipper.enabled?(:allow_multiple_ballots, current_user)
+      @ballot = current_user.ballots.where(week: previous_week).order(created_at: :desc).first
+    else
+      @ballot = current_user.ballots.find_by(week: previous_week)
+    end
 
     if @ballot
       if @ballot.voted?
         @voting_state = :already_voted
         @meeple_message = "What wise logic you have! Your declaration has been submitted. Here are three 🪙 for your trouble!"
         @votes_json = "[]"
+        @allow_revote = Flipper.enabled?(:allow_multiple_ballots, current_user)
         render :voting_summary
       else
         # Check if this is a dummy ballot (no votes) and re-evaluate
@@ -101,6 +108,22 @@ class GreatHallController < ApplicationController
     @ballot = OpenStruct.new(id: 0)
 
     render :voting_summary
+  end
+  
+  def reset_ballot
+    # Only allow if multiple ballots feature is enabled
+    unless Flipper.enabled?(:allow_multiple_ballots, current_user)
+      redirect_to great_hall_path, alert: "Multiple ballots are not currently allowed."
+      return
+    end
+    
+    previous_week = helpers.current_week_number - 1
+    
+    # Mark the current ballot as archived/old (optional - just for record keeping)
+    # The uniqueness constraint will need to be relaxed if we want multiple ballots
+    
+    # Redirect back to great hall to create a new ballot
+    redirect_to great_hall_path, notice: "You can now create a new ballot."
   end
 
   private

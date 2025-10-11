@@ -5,7 +5,6 @@
     .review-detail-container {
       max-width: 1000px;
       margin: 0 auto;
-      margin-left: 20rem; /* Account for navbar */
       padding: 2rem;
     }
     
@@ -299,7 +298,7 @@
 
     <h1 class="review-detail-title"><%= @project.name %></h1>
     <div class="review-detail-subtitle">
-      <span>by <%= @project.user.name %> • Created <%= @project.created_at.strftime("%B %d, %Y") %></span>
+      <span>by <%= @project.user.name %> • Week <%= @week %> • Created <%= @project.created_at.strftime("%B %d, %Y") %></span>
       <% if @project.user.slack_id.present? %>
         <a href="https://app.slack.com/client/T0266FRGM/D0266FRGM/user_profile/<%= @project.user.slack_id %>" 
            target="_blank" 

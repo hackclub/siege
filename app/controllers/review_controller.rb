@@ -74,6 +74,7 @@ class ReviewController < ApplicationController
   def show
     # Detailed view of a single project for review
     @project = @project.decorate
+    @week = view_context.week_number_for_date(@project.created_at)
   end
 
   def update_status

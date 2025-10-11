@@ -1201,14 +1201,23 @@ const votingManager = new VotingManager();
 // Get voting state from server
 const serverVotingState = '<%= voting_state %>';
 const meepleMessage = "<%= j(meeple_message) %>";
+const allowRevote = <%= @allow_revote ? 'true' : 'false' %>;
 
 // Function to show meeple message for different voting states
-function showMeepleMessage(message) {
+function showMeepleMessage(message, showRevoteButton = false) {
   // Set up animation state for meeple message
   votingState.set('phase', 'speaking');
   votingState.set('dialogueVisible', true);
   votingState.set('dialogueText', message);
-  votingState.set('dialogueButtons', []);
+  
+  // Add revote button if allowed
+  const buttons = showRevoteButton && allowRevote ? [{
+    text: 'Vote Again',
+    action: () => {
+      window.location.href = '/great-hall/reset-ballot';
+    }
+  }] : [];
+  votingState.set('dialogueButtons', buttons);
   
   // Start animation loop to show meeple and message
   function animateMeepleMessage() {
@@ -3270,7 +3279,7 @@ document.addEventListener('DOMContentLoaded', function() {
     localStorage.removeItem(VOTING_CONFIG.LOCAL_STORAGE_KEYS.VOTING_PROGRESS);
     localStorage.removeItem(VOTING_CONFIG.LOCAL_STORAGE_KEYS.CURRENT_WEEK);
     localStorage.removeItem(VOTING_CONFIG.LOCAL_STORAGE_KEYS.BALLOT_ID);
-    showMeepleMessage(meepleMessage);
+    showMeepleMessage(meepleMessage, serverVotingState === 'already_voted');
   } else {
     // Initialize voting manager for active voting
     votingManager.initializeStarAllocations();

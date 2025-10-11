@@ -453,9 +453,9 @@ class AdminController < ApplicationController
 
     # Check permissions based on current user's rank
     allowed_ranks = if current_user.super_admin?
-      %w[user viewer admin super_admin]
+      %w[user viewer reviewer admin super_admin]
     elsif current_user.admin?
-      %w[user viewer]
+      %w[user viewer reviewer]
     else
       []
     end
