@@ -281,7 +281,7 @@ class ReviewController < ApplicationController
   end
 
   def require_review_access
-    unless current_user&.viewer? || current_user&.admin? || current_user&.super_admin?
+    unless current_user&.viewer? || current_user&.reviewer? || current_user&.admin? || current_user&.super_admin?
       redirect_to keep_path, alert: "Access denied. Viewer privileges required."
     end
   end
