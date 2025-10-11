@@ -181,7 +181,10 @@ class YswsReviewController < ApplicationController
       cast_votes = @votes.where(voted: true)
       @average_score = cast_votes.any? ? cast_votes.average(:star_count).to_f.round(2) : nil
       @raw_hours = (@time_seconds / 3600.0).round(2)
-      @suggested_coins = @average_score && @raw_hours > 0 ? (@raw_hours * @average_score).round : 0
+      
+      # Use the same coin calculation as admin
+      @suggested_coins = calculate_project_coins(@user, @project, @raw_hours, @average_score, @selected_week)
+      
       @address = @user.address
       @submitted_to_airtable = @project&.in_airtable? || false
       @week = @selected_week
@@ -198,6 +201,40 @@ class YswsReviewController < ApplicationController
   def require_reviewer
     unless current_user&.can_review?
       redirect_to root_path, alert: "You don't have permission to access this page."
+    end
+  end
+  
+  def calculate_project_coins(user, project, hours, voting_bonus, week)
+    return 0 unless hours && hours > 0
+    
+    # Get reviewer multiplier (defaults to 2.0)
+    reviewer_bonus = project&.reviewer_multiplier || 2.0
+    
+    # Ensure voting bonus is at least 1
+    voting_bonus = [voting_bonus || 1, 1].max
+    
+    # Weeks 1-4 use simple formula
+    if week <= 4
+      return (hours * 2 * reviewer_bonus * voting_bonus).round
+    end
+    
+    # Weeks 5+ depend on user status
+    if user.status == "out"
+      # Out users use simple formula
+      return (hours * 2 * reviewer_bonus * voting_bonus).round
+    else
+      # Working users use complex formula
+      # Get the week's hour goal
+      hour_goal = ApplicationController.helpers.effective_hour_goal(user, week)
+      
+      # Calculate base: 5 * reviewer_bonus * voting_bonus
+      base = 5 * reviewer_bonus * voting_bonus
+      
+      # Calculate bonus for hours past goal
+      hours_past_goal = [hours - hour_goal, 0].max
+      bonus = hours_past_goal * reviewer_bonus * voting_bonus
+      
+      return (base + bonus).round
     end
   end
 end

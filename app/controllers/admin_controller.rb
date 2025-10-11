@@ -964,12 +964,8 @@ class AdminController < ApplicationController
       # Calculate raw hours for the hour override default
       @raw_hours = (@time_seconds / 3600.0).round(2)
 
-      # Calculate suggested coin amount (hours * average score)
-      @suggested_coins = if @average_score && @raw_hours > 0
-        (@raw_hours * @average_score).round
-      else
-        0
-      end
+      # Calculate suggested coin amount using new formula
+      @suggested_coins = calculate_project_coins(@user, @project, @raw_hours, @average_score, @selected_week)
 
       # Get user's address for airtable submission
       @address = @user.address
@@ -1312,7 +1308,7 @@ class AdminController < ApplicationController
       created_at: week_start_date.beginning_of_day..week_end_date.end_of_day
     ).first
 
-    unless %w[building submitted pending_voting finished].include?(new_status)
+    unless %w[building submitted pending_voting waiting_for_review finished].include?(new_status)
       render json: { success: false, error: "Invalid status" }
       return
     end
@@ -2329,6 +2325,40 @@ class AdminController < ApplicationController
   rescue => e
     Rails.logger.error "Error removing cosmetic: #{e.message}"
     render json: { success: false, error: "Failed to remove cosmetic" }
+  end
+  
+  def calculate_project_coins(user, project, hours, voting_bonus, week)
+    return 0 unless hours && hours > 0
+    
+    # Get reviewer multiplier (defaults to 2.0)
+    reviewer_bonus = project&.reviewer_multiplier || 2.0
+    
+    # Ensure voting bonus is at least 1
+    voting_bonus = [voting_bonus || 1, 1].max
+    
+    # Weeks 1-4 use simple formula
+    if week <= 4
+      return (hours * 2 * reviewer_bonus * voting_bonus).round
+    end
+    
+    # Weeks 5+ depend on user status
+    if user.status == "out"
+      # Out users use simple formula
+      return (hours * 2 * reviewer_bonus * voting_bonus).round
+    else
+      # Working users use complex formula
+      # Get the week's hour goal
+      hour_goal = view_context.effective_hour_goal(user, week)
+      
+      # Calculate base: 5 * reviewer_bonus * voting_bonus
+      base = 5 * reviewer_bonus * voting_bonus
+      
+      # Calculate bonus for hours past goal
+      hours_past_goal = [hours - hour_goal, 0].max
+      bonus = hours_past_goal * reviewer_bonus * voting_bonus
+      
+      return (base + bonus).round
+    end
   end
 
 end
