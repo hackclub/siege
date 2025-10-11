@@ -1998,6 +1998,14 @@ class AdminController < ApplicationController
   private
 
   def require_admin_access
+    # Allow reviewers to access certain actions
+    reviewer_allowed_actions = %w[update_reviewer_feedback save_reviewer_multiplier update_project_status_admin]
+    
+    if reviewer_allowed_actions.include?(action_name) && current_user&.can_review?
+      # Reviewers can access these specific actions
+      return
+    end
+    
     unless can_access_admin?
       redirect_to keep_path, alert: "Access denied. Admin privileges required."
     end
