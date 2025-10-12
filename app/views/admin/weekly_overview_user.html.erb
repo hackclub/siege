@@ -1272,8 +1272,8 @@
         const selectedWeek = document.getElementById('offset-week-select').value;
         const newOffset = parseInt(document.getElementById('arbitrary-offset').value);
         
-        if (isNaN(newOffset) || newOffset < 0) {
-          alert('Please enter a valid non-negative offset value.');
+        if (isNaN(newOffset)) {
+          alert('Please enter a valid offset value.');
           return;
         }
 
@@ -1281,7 +1281,9 @@
           return;
         }
 
-        fetch(`<%= admin_update_arbitrary_offset_path(@selected_week, @user.id) %>`, {
+        const updatePath = `/admin/weekly-overview/${selectedWeek}/<%= @user.id %>/update_arbitrary_offset`;
+        
+        fetch(updatePath, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

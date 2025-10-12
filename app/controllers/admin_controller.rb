@@ -1229,13 +1229,6 @@ class AdminController < ApplicationController
     @user = User.find(params[:user_id])
     @selected_week = params[:week].to_i
     new_offset = params[:arbitrary_offset].to_i
-    
-    # Ensure offset is non-negative
-    if new_offset < 0
-      render json: { success: false, error: "Arbitrary offset cannot be negative" }
-      return
-    end
-    
     # Find or create UserWeek for this user and week
     user_week = UserWeek.find_or_create_by(user: @user, week: @selected_week) do |uw|
       uw.arbitrary_offset = 0
