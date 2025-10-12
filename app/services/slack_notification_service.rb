@@ -63,7 +63,7 @@ class SlackNotificationService
       end
       send_direct_message(project.user.slack_id, message)
       
-      # Send waiting for review notification
+      # Send waiting for finalization notification
       message = "Because your project didn't follow the theme, it'll skip voting and go directly to review."
       send_direct_message(project.user.slack_id, message)
     end

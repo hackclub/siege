@@ -721,7 +721,7 @@
             <option value="building" <%= 'selected' if @project&.status == 'building' %>>Building</option>
             <option value="submitted" <%= 'selected' if @project&.status == 'submitted' %>>Submitted</option>
             <option value="pending_voting" <%= 'selected' if @project&.status == 'pending_voting' %>>Pending Voting</option>
-            <option value="waiting_for_review" <%= 'selected' if @project&.status == 'waiting_for_review' %>>Waiting for Review</option>
+            <option value="waiting_for_review" <%= 'selected' if @project&.status == 'waiting_for_review' %>>Waiting for Finalization</option>
               <option value="finished" <%= 'selected' if @project&.status == 'finished' %>>Finished</option>
           </select>
           <small class="reviewer-feedback-help">

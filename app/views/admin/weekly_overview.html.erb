@@ -350,11 +350,11 @@
         <%= form.select :status,
             options_for_select([
               ['All Statuses', 'all'],
-              ['Pending Voting & Waiting for Review', 'pending_voting_and_waiting'],
+              ['Pending Voting & Waiting for Finalization', 'pending_voting_and_waiting'],
               ['Building', 'building'],
               ['Submitted', 'submitted'],
               ['Pending Voting', 'pending_voting'],
-              ['Waiting for Review', 'waiting_for_review'],
+              ['Waiting for Finalization', 'waiting_for_review'],
               ['Finished', 'finished'],
               ['No Project', 'no_project']
             ], @status_filter),
