@@ -300,7 +300,7 @@
     <div class="review-detail-subtitle">
       <span>by <%= @project.user.name %> • Week <%= @week %> • Created <%= @project.created_at.strftime("%B %d, %Y") %></span>
       <% if @project.user.slack_id.present? %>
-        <a href="https://app.slack.com/client/T0266FRGM/D0266FRGM/user_profile/<%= @project.user.slack_id %>" 
+        <a href="https://hackclub.slack.com/team/<%= @project.user.slack_id %>" 
            target="_blank" 
            class="slack-dm-button"
            title="Open Slack DM with <%= @project.user.name %>">

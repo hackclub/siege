@@ -437,7 +437,7 @@
       </div>
       <div style="display: flex; gap: 1rem; align-items: center;">
         <% if @user.slack_id.present? %>
-          <a href="https://app.slack.com/client/T0266FRGM/D0266FRGM/user_profile/<%= @user.slack_id %>" 
+          <a href="https://hackclub.slack.com/team/<%= @user.slack_id %>" 
              target="_blank" 
              class="slack-dm-button"
              title="Open Slack DM with <%= @user.name %>">
