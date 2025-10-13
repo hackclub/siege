@@ -127,7 +127,8 @@ class MarketController < ApplicationController
     end
 
     # Use transaction with locking to prevent race conditions
-    current_user.with_lock do
+    ActiveRecord::Base.transaction do
+      current_user.lock!
       # Reload user to get latest coin balance
       current_user.reload
 
@@ -148,21 +149,21 @@ class MarketController < ApplicationController
 
       # Deduct coins from user
       current_user.update!(coins: current_user.coins - coins_spent)
-    end
 
-    # Handle special item effects
-    case item_name
-    when "Unlock Orange Meeple"
-      current_user.meeple ||= current_user.build_meeple
-      unlocked_colors = current_user.meeple.unlocked_colors || []
-      unlocked_colors << "orange" unless unlocked_colors.include?("orange")
-      current_user.meeple.update!(unlocked_colors: unlocked_colors)
-    else
-      # Check if it's a cosmetic and unlock it for the user's meeple
-      cosmetic = Cosmetic.purchasable.find_by(name: item_name)
-      if cosmetic
-        current_user.meeple ||= current_user.create_meeple(color: "blue", cosmetics: [])
-        current_user.meeple.unlock_cosmetic(cosmetic)
+      # Handle special item effects inside the same transaction
+      case item_name
+      when "Unlock Orange Meeple"
+        current_user.meeple ||= current_user.build_meeple
+        unlocked_colors = current_user.meeple.unlocked_colors || []
+        unlocked_colors << "orange" unless unlocked_colors.include?("orange")
+        current_user.meeple.update!(unlocked_colors: unlocked_colors)
+      else
+        # Check if it's a cosmetic and unlock it for the user's meeple
+        cosmetic = Cosmetic.purchasable.find_by(name: item_name)
+        if cosmetic
+          current_user.meeple ||= current_user.create_meeple(color: "blue", cosmetics: [])
+          current_user.meeple.unlock_cosmetic(cosmetic)
+        end
       end
     end
 
@@ -203,22 +204,44 @@ class MarketController < ApplicationController
 
   def refund_item
     item_name = params[:item_name]
-    refund_amount = params[:refund_amount].to_i
 
-    # Find all purchases of this item
+    # Find all purchases of this item for the current user
     purchases = current_user.shop_purchases.where(item_name: item_name)
 
-    if purchases.any?
+    if purchases.empty?
+      render json: { success: false, error: "No purchases found for this item" }
+      return
+    end
+
+    # Calculate refund amount server-side (don't trust client)
+    total_refund = purchases.sum(:coins_spent)
+
+    # Use transaction with locking to prevent race conditions
+    ActiveRecord::Base.transaction do
+      current_user.lock!
+      current_user.reload
+      
       # Add coins back to user
-      current_user.increment!(:coins, refund_amount)
+      current_user.increment!(:coins, total_refund)
 
       # Delete all purchases of this item
       purchases.destroy_all
 
-      render json: { success: true, message: "Item refunded successfully", refund_amount: refund_amount }
-    else
-      render json: { success: false, error: "No purchases found for this item" }
+      # Log refund action (differentiate between user and admin)
+      action_text = can_access_admin? ? "Item refunded by admin" : "Item refunded (tech tree switch)"
+      current_user.add_audit_log(
+        action: action_text,
+        actor: current_user,
+        details: {
+          "item_name" => item_name,
+          "refund_amount" => total_refund,
+          "previous_balance" => current_user.coins - total_refund,
+          "new_balance" => current_user.coins
+        }
+      )
     end
+
+    render json: { success: true, message: "Item refunded successfully", refund_amount: total_refund }
   end
 
   def user_purchases
@@ -251,6 +274,12 @@ class MarketController < ApplicationController
   end
 
   private
+
+  def require_admin_access
+    unless can_access_admin?
+      render json: { success: false, error: "Admin privileges required" }, status: :forbidden
+    end
+  end
 
   def check_market_enabled
     unless Flipper.enabled?(:market_enabled, current_user)

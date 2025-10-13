@@ -130,6 +130,68 @@ class ProjectsController < ApplicationController
 
   # POST /projects/1/submit
   def submit
+    # Validate project is in building status
+    unless @project.building?
+      respond_to do |format|
+        format.html { redirect_to @project, alert: "Project cannot be submitted in its current state." }
+        format.json { render json: { error: "Project cannot be submitted in its current state." }, status: :unprocessable_entity }
+      end
+      return
+    end
+
+    # Validate user is not banned
+    if current_user.banned?
+      respond_to do |format|
+        format.html { redirect_to @project, alert: "You are banned and cannot submit projects." }
+        format.json { render json: { error: "You are banned and cannot submit projects." }, status: :forbidden }
+      end
+      return
+    end
+
+    # Validate project is not locked
+    if @project.locked?
+      respond_to do |format|
+        format.html { redirect_to @project, alert: "This project is locked and cannot be submitted." }
+        format.json { render json: { error: "This project is locked and cannot be submitted." }, status: :unprocessable_entity }
+      end
+      return
+    end
+
+    # Validate required fields
+    if @project.repo_url.blank?
+      respond_to do |format|
+        format.html { redirect_to @project, alert: "Repository URL is required." }
+        format.json { render json: { error: "Repository URL is required." }, status: :unprocessable_entity }
+      end
+      return
+    end
+
+    if @project.demo_url.blank?
+      respond_to do |format|
+        format.html { redirect_to @project, alert: "Demo URL is required." }
+        format.json { render json: { error: "Demo URL is required." }, status: :unprocessable_entity }
+      end
+      return
+    end
+
+    # Validate screenshot
+    unless @project.screenshot.attached? && @project.screenshot_valid?
+      respond_to do |format|
+        format.html { redirect_to @project, alert: "A valid screenshot is required." }
+        format.json { render json: { error: "A valid screenshot is required." }, status: :unprocessable_entity }
+      end
+      return
+    end
+
+    # Validate hackatime projects (must have at least one)
+    if @project.hackatime_projects.blank? || @project.hackatime_projects.empty?
+      respond_to do |format|
+        format.html { redirect_to @project, alert: "At least one Hackatime project is required." }
+        format.json { render json: { error: "At least one Hackatime project is required." }, status: :unprocessable_entity }
+      end
+      return
+    end
+
     # Update the is_update flag if provided
     if params[:is_update].present?
       @project.skip_screenshot_validation!
@@ -426,7 +488,11 @@ class ProjectsController < ApplicationController
 
     # Only allow a list of trusted parameters through.
     def project_params
-      permitted_params = params.expect(project: [ :name, :repo_url, :demo_url, :description, :time_override_days, :screenshot, { hackatime_projects: [] } ])
+      # Build list of allowed parameters - time_override_days only for admins
+      allowed_params = [ :name, :repo_url, :demo_url, :description, :screenshot, { hackatime_projects: [] } ]
+      allowed_params << :time_override_days if can_access_admin?
+      
+      permitted_params = params.expect(project: allowed_params)
 
       # Clean up hackatime_projects array - remove empty strings and nil values
       if permitted_params[:hackatime_projects].present?

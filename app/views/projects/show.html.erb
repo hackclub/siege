@@ -242,11 +242,7 @@
       <% end %>
       
       <% if @project.building? %>
-        <% if current_user&.out? %>
-          <span class="submit-button submit-button--disabled" title="Your siege has failed :( Better luck next time!">Submit Project</span>
-        <% else %>
-          <button type="button" class="submit-button" id="submit-project-btn">Submit Project</button>
-        <% end %>
+        <button type="button" class="submit-button" id="submit-project-btn">Submit Project</button>
       <% elsif @project.submitted? %>
         <span class="submit-button submit-button--disabled">Submitted</span>
       <% elsif @project.pending_voting? %>

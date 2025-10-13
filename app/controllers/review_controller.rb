@@ -104,6 +104,22 @@ class ReviewController < ApplicationController
       render json: { success: false, error: "Invalid review status" }
       return
     end
+
+    # Validate reviewer video if provided
+    if reviewer_video.present?
+      # Check file size (max 100MB)
+      if reviewer_video.size > 100.megabytes
+        render json: { success: false, error: "Video file is too large (max 100MB)" }
+        return
+      end
+
+      # Check content type (allow common video formats)
+      allowed_types = %w[video/mp4 video/quicktime video/x-msvideo video/x-matroska video/webm]
+      unless allowed_types.include?(reviewer_video.content_type)
+        render json: { success: false, error: "Invalid video format. Please upload MP4, MOV, AVI, MKV, or WebM" }
+        return
+      end
+    end
     
     # Store old feedback and video to check for changes
     old_feedback = @project.stonemason_feedback

@@ -4,6 +4,12 @@ class VotesController < ApplicationController
   before_action :set_vote, only: [ :update_stars, :toggle_vote ]
 
   def update_stars
+    # Prevent editing votes after ballot is submitted
+    if @vote.ballot.voted?
+      render json: { success: false, errors: [ "Cannot edit votes after ballot is submitted" ] }
+      return
+    end
+
     star_count = params[:star_count].to_i
     if star_count < 1 || star_count > 5
       render json: { success: false, errors: [ "Star count must be between 1 and 5" ] }
@@ -18,6 +24,12 @@ class VotesController < ApplicationController
   end
 
   def toggle_vote
+    # Prevent editing votes after ballot is submitted
+    if @vote.ballot.voted?
+      render json: { success: false, errors: [ "Cannot edit votes after ballot is submitted" ] }
+      return
+    end
+
     new_voted_state = !@vote.voted
     if @vote.update(voted: new_voted_state)
       render json: { success: true, voted: @vote.voted }

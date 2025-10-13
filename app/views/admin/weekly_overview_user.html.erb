@@ -1115,35 +1115,27 @@
         .then(responses => Promise.all(responses.map(r => r.json())))
         .then(results => {
           if (results.every(r => r.success)) {
-            // Then submit to Airtable
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = '<%= admin_submit_to_airtable_path(@selected_week, @user.id) %>';
-            
-            const csrfInput = document.createElement('input');
-            csrfInput.type = 'hidden';
-            csrfInput.name = 'authenticity_token';
-            csrfInput.value = document.querySelector('meta[name="csrf-token"]').content;
-            form.appendChild(csrfInput);
-            
-            if (hourOverride) {
-              const hourInput = document.createElement('input');
-              hourInput.type = 'hidden';
-              hourInput.name = 'hour_override';
-              hourInput.value = hourOverride;
-              form.appendChild(hourInput);
-            }
-            
-            if (airtableComments) {
-              const commentsInput = document.createElement('input');
-              commentsInput.type = 'hidden';
-              commentsInput.name = 'justification';
-              commentsInput.value = airtableComments;
-              form.appendChild(commentsInput);
-            }
-            
-            document.body.appendChild(form);
-            form.submit();
+            // Then submit to Airtable using fetch
+            return fetch('<%= admin_submit_to_airtable_path(@selected_week, @user.id) %>', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+              },
+              body: JSON.stringify({
+                hour_override: hourOverride,
+                justification: airtableComments
+              })
+            })
+            .then(response => response.json())
+            .then(data => {
+              if (data.success) {
+                alert(data.message);
+                location.reload(); // Reload to show updated status
+              } else {
+                alert('Error submitting to Airtable: ' + (data.error || 'Unknown error'));
+              }
+            });
           } else {
             alert('Error saving review data. Please try again.');
           }

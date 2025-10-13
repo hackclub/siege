@@ -42,7 +42,7 @@ class AdminController < ApplicationController
     end
 
     # Filter by status if provided
-    if params[:status].present? && %w[building submitted pending_voting finished].include?(params[:status])
+    if params[:status].present? && %w[building submitted pending_voting waiting_for_review finished].include?(params[:status])
       @projects = @projects.where(status: params[:status])
     end
 
