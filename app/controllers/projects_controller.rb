@@ -148,15 +148,6 @@ class ProjectsController < ApplicationController
       return
     end
 
-    # Validate project is not locked
-    if @project.locked?
-      respond_to do |format|
-        format.html { redirect_to @project, alert: "This project is locked and cannot be submitted." }
-        format.json { render json: { error: "This project is locked and cannot be submitted." }, status: :unprocessable_entity }
-      end
-      return
-    end
-
     # Validate required fields
     if @project.repo_url.blank?
       respond_to do |format|
