@@ -443,7 +443,7 @@ class ProjectsController < ApplicationController
   def update_status
     new_status = params[:status]
 
-    if %w[building pending_voting finished submitted].include?(new_status)
+    if %w[building submitted pending_voting waiting_for_review finished].include?(new_status)
       # Skip screenshot validation when updating status to handle corrupted/missing screenshots
       @project.skip_screenshot_validation!
 

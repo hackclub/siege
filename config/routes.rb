@@ -86,6 +86,7 @@ Rails.application.routes.draw do
   post "/admin/weekly-overview/:week/:user_id/update_coins", to: "admin#update_user_coins", as: :admin_update_user_coins
   post "/admin/weekly-overview/:week/:user_id/save_multiplier", to: "admin#save_reviewer_multiplier", as: :admin_save_reviewer_multiplier
   post "/admin/weekly-overview/:week/:user_id/update_arbitrary_offset", to: "admin#update_arbitrary_offset", as: :admin_update_arbitrary_offset
+  get "/admin/weekly-overview/:week/:user_id/user_week_data", to: "admin#get_user_week_data", as: :admin_get_user_week_data
   post "/admin/weekly-overview/:week/:user_id/update_project_status", to: "admin#update_project_status_admin", as: :admin_update_project_status
   post "/admin/weekly-overview/:week/:user_id/update_reviewer_feedback", to: "admin#update_reviewer_feedback", as: :admin_update_reviewer_feedback
   post "/admin/projects/:project_id/update_coin_value", to: "admin#update_project_coin_value", as: :admin_update_project_coin_value

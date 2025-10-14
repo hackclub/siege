@@ -703,7 +703,7 @@
             </select>
           </div>
           <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem;">
-            <input type="number" id="arbitrary-offset" value="0" min="0" class="form-input" style="flex: 1;" placeholder="Arbitrary offset">
+            <input type="number" id="arbitrary-offset" value="0" class="form-input" style="flex: 1;" placeholder="Arbitrary offset (can be negative)">
             <button type="button" onclick="updateArbitraryOffset()" class="submit-button" style="background: #7c3aed; font-size: 0.8rem; padding: 0.5rem;">Update Offset</button>
           </div>
           <div id="offset-info" style="font-size: 0.8rem; color: #6b7280; margin-top: 0.5rem;">
@@ -1244,19 +1244,24 @@
       function updateOffsetWeek() {
         const selectedWeek = document.getElementById('offset-week-select').value;
         
-        // For now, we'll use the current week's data
-        // In a full implementation, you'd fetch data for the selected week
-        const mercenaryOffset = <%= @user.user_weeks.find_by(week: @selected_week)&.mercenary_offset || 0 %>;
-        const arbitraryOffset = <%= @user.user_weeks.find_by(week: @selected_week)&.arbitrary_offset || 0 %>;
-        const totalOffset = mercenaryOffset + arbitraryOffset;
-        const baseGoal = selectedWeek == 5 ? 9 : 10;
-        const effectiveGoal = Math.max(baseGoal - totalOffset, 0);
-        
-        document.getElementById('arbitrary-offset').value = arbitraryOffset;
-        document.getElementById('mercenary-offset').textContent = mercenaryOffset;
-        document.getElementById('current-arbitrary-offset').textContent = arbitraryOffset;
-        document.getElementById('total-offset').textContent = totalOffset;
-        document.getElementById('effective-goal').textContent = effectiveGoal;
+        // Fetch data for the selected week from the server
+        fetch(`/admin/weekly-overview/${selectedWeek}/<%= @user.id %>/user_week_data`)
+          .then(response => response.json())
+          .then(data => {
+            if (data.error) {
+              console.error('Error fetching user week data:', data.error);
+              return;
+            }
+            
+            document.getElementById('arbitrary-offset').value = data.arbitrary_offset;
+            document.getElementById('mercenary-offset').textContent = data.mercenary_offset;
+            document.getElementById('current-arbitrary-offset').textContent = data.arbitrary_offset;
+            document.getElementById('total-offset').textContent = data.total_offset;
+            document.getElementById('effective-goal').textContent = data.effective_goal;
+          })
+          .catch(error => {
+            console.error('Error:', error);
+          });
       }
 
       // Update arbitrary offset
@@ -1290,7 +1295,11 @@
         .then(data => {
           if (data.success) {
             alert(data.message);
-            updateOffsetWeek(); // Refresh the display
+            // Update the display with returned data
+            document.getElementById('arbitrary-offset').value = data.new_arbitrary_offset;
+            document.getElementById('current-arbitrary-offset').textContent = data.new_arbitrary_offset;
+            document.getElementById('total-offset').textContent = data.total_offset;
+            document.getElementById('effective-goal').textContent = data.new_effective_goal;
           } else {
             alert('Error updating offset: ' + (data.error || 'Unknown error'));
           }

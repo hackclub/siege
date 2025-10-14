@@ -3,7 +3,7 @@ class UserWeek < ApplicationRecord
   belongs_to :project, optional: true
   
   validates :week, presence: true, inclusion: { in: 1..14 }
-  validates :arbitrary_offset, presence: true, numericality: { greater_than_or_equal_to: 0 }
+  validates :arbitrary_offset, presence: true, numericality: true
   validates :mercenary_offset, presence: true, numericality: { greater_than_or_equal_to: 0 }
   validates :user_id, uniqueness: { scope: :week }
   

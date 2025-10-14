@@ -273,13 +273,15 @@
           <span>Inspect User</span>
         <% end %>
       </div>
-      <form action="<%= update_status_project_path(@project) %>" method="patch" style="display: inline-flex; align-items: center; gap: 0.5rem;">
+      <form action="<%= update_status_project_path(@project) %>" method="post" style="display: inline-flex; align-items: center; gap: 0.5rem;">
         <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+        <%= hidden_field_tag :_method, 'patch' %>
         <label for="status" style="font-weight: 600;">Status:</label>
         <select name="status" id="status" style="padding: 0.25rem 0.5rem; border: 2px solid rgba(64,43,32,0.75); border-radius: 4px;">
           <option value="building" <%= 'selected' if @project.building? %>>Building</option>
           <option value="submitted" <%= 'selected' if @project.submitted? %>>Submitted</option>
           <option value="pending_voting" <%= 'selected' if @project.pending_voting? %>>Pending Voting</option>
+          <option value="waiting_for_review" <%= 'selected' if @project.waiting_for_review? %>>Waiting for Finalization</option>
           <option value="finished" <%= 'selected' if @project.finished? %>>Finished</option>
         </select>
         <button type="submit" class="submit-button" style="background-color: #6366f1; padding: 0.25rem 0.75rem; font-size: 0.875rem;">Update Status</button>

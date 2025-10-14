@@ -1252,6 +1252,25 @@ class AdminController < ApplicationController
     render json: { success: false, error: "Error updating arbitrary offset: #{e.message}" }
   end
 
+  def get_user_week_data
+    @user = User.find(params[:user_id])
+    week = params[:week].to_i
+    
+    user_week = UserWeek.find_or_create_by(user: @user, week: week) do |uw|
+      uw.arbitrary_offset = 0
+      uw.mercenary_offset = 0
+    end
+    
+    render json: {
+      mercenary_offset: user_week.mercenary_offset,
+      arbitrary_offset: user_week.arbitrary_offset,
+      total_offset: user_week.total_offset,
+      effective_goal: user_week.effective_hour_goal
+    }
+  rescue => e
+    render json: { error: "Error fetching user week data: #{e.message}" }, status: :internal_server_error
+  end
+
   def save_reviewer_multiplier
     @user = User.find(params[:user_id])
     @selected_week = params[:week].to_i
@@ -1726,8 +1745,8 @@ class AdminController < ApplicationController
                          .where(projects: { status: [ "submitted", "pending_voting", "waiting_for_review", "finished" ] })
                          .distinct.count
 
-    # Pre-fetch all projects with hackatime data to avoid N+1 queries
-    all_projects_with_hackatime = Project.includes(:user)
+    # Pre-fetch all projects with hackatime data to avoid N+1 queries (only visible projects)
+    all_projects_with_hackatime = Project.visible.includes(:user)
                                         .where("json_array_length(hackatime_projects) > 0")
 
     # Group projects by week for efficient processing
@@ -1849,8 +1868,8 @@ class AdminController < ApplicationController
 
         total_seconds += project_seconds
 
-        # Add to submitted hours if project is submitted, pending_voting, or finished
-        if project.status.in?([ "submitted", "pending_voting", "finished" ])
+        # Add to submitted hours if project is submitted, pending_voting, waiting_for_review, or finished
+        if project.status.in?([ "submitted", "pending_voting", "waiting_for_review", "finished" ])
           submitted_seconds += project_seconds
           
           # Only add coin value for submitted projects (divided by 10 to keep bars reasonable)
