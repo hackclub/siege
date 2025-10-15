@@ -324,11 +324,8 @@
   <% if @is_ysws_review && @airtable_leaderboard&.any? %>
     <div style="background: rgba(255, 255, 255, 0.95); border: 2px solid rgba(64, 43, 32, 0.15); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
       <h2 style="font-size: 1.5rem; font-weight: 700; color: #402b20; margin-bottom: 1rem;">
-        Airtable Submissions - Week <%= @selected_week %>
+        Review leaderboard
       </h2>
-      <p style="color: #6b5b4a; margin-bottom: 1rem; font-size: 0.9rem;">
-        Reviewers ranked by number of projects submitted to Airtable this week
-      </p>
       <table style="width: 100%; border-collapse: collapse;">
         <thead>
           <tr style="background: rgba(64, 43, 32, 0.05); border-bottom: 2px solid rgba(64, 43, 32, 0.2);">
