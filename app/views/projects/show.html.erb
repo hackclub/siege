@@ -143,7 +143,7 @@
           <% when 'finished' %>
             <% if can_access_admin? && (@average_score || @project.coin_value&.positive?) %>
               Avg. Score: <%= @average_score || 'N/A' %>, Value: <%= @project.coin_value || 0 %><%= image_tag 'coin.png', style: 'width: 16px; height: 16px; vertical-align: middle; margin-left: 4px;' %>
-            <% elsif (@project.user == current_user || can_access_admin?) && @project.coin_value&.positive? %>
+            <% elsif @project.coin_value&.positive? %>
               Value: <%= @project.coin_value %><%= image_tag 'coin.png', style: 'width: 16px; height: 16px; vertical-align: middle; margin-left: 4px;' %>
             <% else %>
               Finished
@@ -248,9 +248,13 @@
       <% elsif @project.pending_voting? %>
         <span class="submit-button submit-button--disabled">Pending Voting</span>
       <% elsif @project.finished? %>
-        <% if @average_score || @project.coin_value&.positive? %>
+        <% if can_access_admin? && (@average_score || @project.coin_value&.positive?) %>
           <span class="submit-button submit-button--disabled">
             Avg. Score: <%= @average_score || 'N/A' %>, Value: <%= @project.coin_value || 0 %><%= image_tag 'coin.png', style: 'width: 16px; height: 16px; vertical-align: middle; margin-left: 4px;' %>
+          </span>
+        <% elsif @project.coin_value&.positive? %>
+          <span class="submit-button submit-button--disabled">
+            Value: <%= @project.coin_value %><%= image_tag 'coin.png', style: 'width: 16px; height: 16px; vertical-align: middle; margin-left: 4px;' %>
           </span>
         <% else %>
           <span class="submit-button submit-button--disabled">Finished</span>

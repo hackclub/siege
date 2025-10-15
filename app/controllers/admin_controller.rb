@@ -1513,7 +1513,7 @@ class AdminController < ApplicationController
         # Mark project as submitted to airtable (but don't automatically set to finished)
         @project.update!(in_airtable: true)
 
-        # Add log entry
+        # Add log entry to project
         log_entry = {
           timestamp: Time.current.iso8601,
           old_status: @project.status,
@@ -1525,6 +1525,19 @@ class AdminController < ApplicationController
 
         new_logs = @project.logs + [ log_entry ]
         @project.update!(logs: new_logs)
+
+        # Add audit log entry to user
+        @user.add_audit_log(
+          action: "Project submitted to Airtable",
+          actor: current_user,
+          details: {
+            "project_name" => @project.name,
+            "project_id" => @project.id,
+            "week" => @selected_week,
+            "hour_override" => hour_override > 0 ? hour_override : nil,
+            "justification" => justification
+          }
+        )
 
         render json: {
           success: true,

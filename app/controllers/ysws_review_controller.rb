@@ -159,6 +159,46 @@ class YswsReviewController < ApplicationController
       @total_pages = 0
     end
     
+    # Calculate Airtable submission leaderboard for the selected week
+    if week_range
+      week_start_date = Date.parse(week_range[0])
+      week_end_date = Date.parse(week_range[1])
+      
+      # Get all projects submitted to Airtable this week by checking logs
+      week_projects_with_logs = Project.where(
+        created_at: week_start_date.beginning_of_day..week_end_date.end_of_day,
+        in_airtable: true
+      ).where("json_array_length(logs) > 0")
+      
+      # Count Airtable submissions by reviewer
+      airtable_submissions = Hash.new(0)
+      reviewer_names = {}
+      
+      week_projects_with_logs.each do |project|
+        project.logs.each do |log|
+          if log["message"]&.include?("Submitted to Airtable")
+            reviewer_id = log["reviewer_id"]
+            reviewer_name = log["reviewer_name"]
+            if reviewer_id && reviewer_name
+              airtable_submissions[reviewer_id] += 1
+              reviewer_names[reviewer_id] = reviewer_name
+            end
+          end
+        end
+      end
+      
+      # Sort by submission count (descending) and prepare leaderboard data
+      @airtable_leaderboard = airtable_submissions.sort_by { |_, count| -count }.map do |reviewer_id, count|
+        {
+          reviewer_id: reviewer_id,
+          reviewer_name: reviewer_names[reviewer_id],
+          submission_count: count
+        }
+      end
+    else
+      @airtable_leaderboard = []
+    end
+    
     @is_ysws_review = true
     render 'admin/weekly_overview'
   end

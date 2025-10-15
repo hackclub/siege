@@ -321,6 +321,48 @@
     <h1 class="admin-title">Weekly Overview</h1>
   </div>
 
+  <% if @is_ysws_review && @airtable_leaderboard&.any? %>
+    <div style="background: rgba(255, 255, 255, 0.95); border: 2px solid rgba(64, 43, 32, 0.15); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
+      <h2 style="font-size: 1.5rem; font-weight: 700; color: #402b20; margin-bottom: 1rem;">
+        Airtable Submissions - Week <%= @selected_week %>
+      </h2>
+      <p style="color: #6b5b4a; margin-bottom: 1rem; font-size: 0.9rem;">
+        Reviewers ranked by number of projects submitted to Airtable this week
+      </p>
+      <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+          <tr style="background: rgba(64, 43, 32, 0.05); border-bottom: 2px solid rgba(64, 43, 32, 0.2);">
+            <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #402b20;">Rank</th>
+            <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #402b20;">Reviewer</th>
+            <th style="padding: 0.75rem; text-align: center; font-weight: 600; color: #402b20;">Submissions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @airtable_leaderboard.each_with_index do |entry, index| %>
+            <tr style="border-bottom: 1px solid rgba(64, 43, 32, 0.1); <%= 'background: rgba(255, 215, 0, 0.1);' if index == 0 %>">
+              <td style="padding: 0.75rem; font-weight: <%= index < 3 ? '700' : '500' %>; color: <%= index == 0 ? '#d97706' : (index == 1 ? '#6b7280' : (index == 2 ? '#92400e' : '#402b20')) %>;">
+                <%= index + 1 %>
+              </td>
+              <td style="padding: 0.75rem;">
+                <% user = User.find_by(id: entry[:reviewer_id]) %>
+                <% if user %>
+                  <%= link_to entry[:reviewer_name], admin_user_details_path(user), style: "color: #2563eb; text-decoration: none; font-weight: 600;" %>
+                <% else %>
+                  <span style="font-weight: 600; color: #402b20;"><%= entry[:reviewer_name] %></span>
+                <% end %>
+              </td>
+              <td style="padding: 0.75rem; text-align: center;">
+                <span style="display: inline-block; background: <%= index == 0 ? '#059669' : '#6366f1' %>; color: white; padding: 0.25rem 0.75rem; border-radius: 12px; font-weight: 600; font-size: 0.9rem;">
+                  <%= entry[:submission_count] %>
+                </span>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% end %>
+
   <div class="week-selector">
     <%= form_with url: (@is_ysws_review ? ysws_review_path : admin_weekly_overview_path), method: :get, local: true do |form| %>
       <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
