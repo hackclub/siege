@@ -27,7 +27,7 @@ class SlackNotificationService
       reviewer_mention = "<@#{reviewer.slack_id}>"
     end
     
-    # Check if there's video content
+    # Check if there's video content (only for rejections and comments, not approvals)
     video_text = video_changed && project.reviewer_video.attached? ? " 📹 They also left you a video review!" : ""
     
     case review_status
@@ -43,11 +43,11 @@ class SlackNotificationService
         send_direct_message(project.user.slack_id, message)
       end
     when "accept"
-      # Send approval message - with feedback if updated, generic if not
+      # Send approval message - with feedback if updated, generic if not (no video notification)
       if feedback_changed && project.stonemason_feedback.present?
-        message = "Great news! #{reviewer_mention} approved your #{project.name} project! Here's what they said: #{project.stonemason_feedback}#{video_text}"
+        message = "Great news! #{reviewer_mention} approved your #{project.name} project! Here's what they said: #{project.stonemason_feedback}"
       else
-        message = "Great news! #{reviewer_mention} approved your #{project.name} project!#{video_text}"
+        message = "Great news! #{reviewer_mention} approved your #{project.name} project!"
       end
       send_direct_message(project.user.slack_id, message)
       
@@ -55,11 +55,11 @@ class SlackNotificationService
       message = "The diplomats have been sent out to preach about #{project.name}! They should be back in a few days to report how it went..."
       send_direct_message(project.user.slack_id, message)
     when "accept_not_following_theme"
-      # Send approval message for non-themed projects
+      # Send approval message for non-themed projects (no video notification)
       if feedback_changed && project.stonemason_feedback.present?
-        message = "Good news! #{reviewer_mention} approved your #{project.name} project! Here's what they said: #{project.stonemason_feedback}#{video_text}"
+        message = "Good news! #{reviewer_mention} approved your #{project.name} project! Here's what they said: #{project.stonemason_feedback}"
       else
-        message = "Good news! #{reviewer_mention} approved your #{project.name} project!#{video_text}"
+        message = "Good news! #{reviewer_mention} approved your #{project.name} project!"
       end
       send_direct_message(project.user.slack_id, message)
       
