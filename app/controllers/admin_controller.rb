@@ -2489,9 +2489,9 @@ class AdminController < ApplicationController
       # Calculate base: 5 * reviewer_bonus * voting_bonus
       base = 5 * reviewer_bonus * voting_bonus
       
-      # Calculate bonus for hours past goal
+      # Calculate bonus for hours past goal (2x multiplier on bonus hours)
       hours_past_goal = [hours - hour_goal, 0].max
-      bonus = hours_past_goal * reviewer_bonus * voting_bonus
+      bonus = hours_past_goal * 2 * reviewer_bonus * voting_bonus
       
       return (base + bonus).round
     end
