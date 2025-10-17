@@ -341,24 +341,24 @@
         <div class="filter-group">
           <label class="filter-label">User</label>
           <%= form.select :user, 
-              options_from_collection_for_select(@users, :name, :name, params[:user]), 
-              { prompt: "All users" }, 
+              options_from_collection_for_select(@users, :name, :name, @user_filter), 
+              { include_blank: "All users" }, 
               { class: "filter-select" } %>
         </div>
         
         <div class="filter-group">
           <label class="filter-label">Week</label>
           <%= form.select :week, 
-              options_from_collection_for_select(@weeks, :to_s, :to_s, params[:week]), 
-              { prompt: "All weeks" }, 
+              options_from_collection_for_select(@weeks, :to_s, :to_s, @week_filter), 
+              { include_blank: "All weeks" }, 
               { class: "filter-select" } %>
         </div>
         
         <div class="filter-group">
           <label class="filter-label">Voted Status</label>
           <%= form.select :voted, 
-              options_for_select([["All", ""], ["Voted", "true"], ["Not Voted", "false"]], params[:voted]), 
-              {}, 
+              options_for_select([["Voted", "true"], ["Not Voted", "false"]], @voted_filter), 
+              { include_blank: "All" }, 
               { class: "filter-select" } %>
         </div>
         

@@ -33,20 +33,24 @@ class YswsReviewController < ApplicationController
 
       @users = User.all.includes(:meeple, :address)
 
+      # Store filter values (clean empty strings)
+      @user_search_filter = params[:user_search].presence
+      @user_status_filter = params[:user_status].presence
+      @project_search_filter = params[:project_search].presence
+      @show_hidden = params[:show_hidden] == "1"
+
       # Apply user search filter if provided (search name, display_name, and slack_id)
-      if params[:user_search].present?
-        escaped_search = ActiveRecord::Base.connection.quote_string(params[:user_search])
+      if @user_search_filter
+        escaped_search = ActiveRecord::Base.connection.quote_string(@user_search_filter)
         @users = @users.where("users.name ILIKE ? OR users.display_name ILIKE ? OR users.slack_id ILIKE ?", "%#{escaped_search}%", "%#{escaped_search}%", "%#{escaped_search}%")
       end
 
-      if params[:user_status].present? && %w[new working out banned all].include?(params[:user_status])
-        @user_status_filter = params[:user_status]
-        @users = @users.where(status: @user_status_filter) if @user_status_filter != "all"
-      else
+      # Default user_status_filter when not explicitly set or when set to invalid value
+      if @user_status_filter.nil? || !%w[new working out banned all].include?(@user_status_filter)
         @user_status_filter = "all"
       end
-
-      @show_hidden = params[:show_hidden] == "1"
+      
+      @users = @users.where(status: @user_status_filter) if @user_status_filter != "all"
       
       week_projects = if @show_hidden
         Project.where(user_id: @users.pluck(:id), created_at: week_start_date.beginning_of_day..week_end_date.end_of_day).includes(:user)
@@ -55,8 +59,8 @@ class YswsReviewController < ApplicationController
       end
 
       # Apply project search filter if provided
-      if params[:project_search].present?
-        escaped_search = ActiveRecord::Base.connection.quote_string(params[:project_search])
+      if @project_search_filter
+        escaped_search = ActiveRecord::Base.connection.quote_string(@project_search_filter)
         week_projects = week_projects.where("projects.name ILIKE ?", "%#{escaped_search}%")
       end
 
@@ -103,7 +107,8 @@ class YswsReviewController < ApplicationController
         }
       end
 
-      @status_filter = params[:status].present? ? params[:status] : "pending_voting_and_waiting"
+      # Default to pending_voting_and_waiting if not provided or empty
+      @status_filter = params[:status].presence || "pending_voting_and_waiting"
       status_filter = @status_filter
 
       @user_data = @user_data.select do |user_id, data|
@@ -117,7 +122,7 @@ class YswsReviewController < ApplicationController
       end
 
       if current_user&.can_access_fraud_dashboard?
-        @fraud_status_filter = params[:fraud_status].present? ? params[:fraud_status] : "good_and_unchecked"
+        @fraud_status_filter = params[:fraud_status].presence || "good_and_unchecked"
         fraud_status_filter = @fraud_status_filter
 
         @user_data = @user_data.select do |user_id, data|
@@ -130,7 +135,7 @@ class YswsReviewController < ApplicationController
         end
       end
 
-      @airtable_status_filter = params[:airtable_status].present? ? params[:airtable_status] : "not_submitted"
+      @airtable_status_filter = params[:airtable_status].presence || "not_submitted"
       airtable_status_filter = @airtable_status_filter
 
       @user_data = @user_data.select do |user_id, data|

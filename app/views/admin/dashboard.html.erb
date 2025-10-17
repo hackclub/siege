@@ -1,0 +1,483 @@
+<% content_for :title, "Admin - Project Dashboard" %>
+
+<% content_for :head do %>
+  <style>
+    .admin-container {
+      max-width: 100%;
+      margin: 0;
+      padding: 2rem;
+    }
+    
+    .admin-header {
+      margin-bottom: 2rem;
+    }
+    
+    .admin-title {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      color: #402b20;
+    }
+    
+    .filters-section {
+      background: rgba(255, 255, 255, 0.9);
+      border: 2px solid rgba(64, 43, 32, 0.2);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    
+    .filter-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .filter-label {
+      font-weight: 600;
+      color: #402b20;
+      font-size: 0.9rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .filter-input, .filter-select {
+      padding: 0.5rem;
+      border: 2px solid rgba(64, 43, 32, 0.3);
+      border-radius: 6px;
+      font-size: 0.95rem;
+      background: white;
+    }
+    
+    .filter-buttons {
+      display: flex;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    
+    .apply-button, .reset-button {
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+    }
+    
+    .apply-button {
+      background: #059669;
+      color: white;
+    }
+    
+    .apply-button:hover {
+      background: #047857;
+    }
+    
+    .reset-button {
+      background: #6b7280;
+      color: white;
+    }
+    
+    .reset-button:hover {
+      background: #4b5563;
+    }
+    
+    .projects-grid {
+      display: grid;
+      gap: 1.5rem;
+      grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    }
+    
+    .project-card {
+      background: rgba(255, 255, 255, 0.95);
+      border: 2px solid rgba(64, 43, 32, 0.15);
+      border-radius: 16px;
+      padding: 1.5rem;
+      transition: all 0.2s ease;
+    }
+    
+    .project-card:hover {
+      border-color: rgba(64, 43, 32, 0.3);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    .project-header {
+      margin-bottom: 1rem;
+    }
+    
+    .project-name {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #402b20;
+      margin: 0 0 0.5rem 0;
+    }
+    
+    .project-user {
+      font-size: 1rem;
+      color: #6b7280;
+    }
+    
+    .project-screenshot {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+    }
+    
+    .project-links {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    
+    .link-button {
+      padding: 0.5rem 1rem;
+      background: #3b82f6;
+      color: white;
+      text-decoration: none;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      transition: background 0.2s;
+    }
+    
+    .link-button:hover {
+      background: #2563eb;
+    }
+    
+    .project-stats {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+      padding: 1rem;
+      background: rgba(64, 43, 32, 0.05);
+      border-radius: 8px;
+    }
+    
+    .stat-item {
+      font-size: 0.9rem;
+    }
+    
+    .stat-label {
+      font-weight: 600;
+      color: #6b7280;
+    }
+    
+    .stat-value {
+      color: #402b20;
+    }
+    
+    .coin-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      padding: 1rem;
+      background: rgba(5, 150, 105, 0.05);
+      border: 2px solid rgba(5, 150, 105, 0.2);
+      border-radius: 8px;
+    }
+    
+    .coin-input-group {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+    
+    .coin-input {
+      flex: 1;
+      padding: 0.5rem;
+      border: 2px solid rgba(64, 43, 32, 0.3);
+      border-radius: 6px;
+      font-size: 1rem;
+    }
+    
+    .award-button {
+      width: 100%;
+      padding: 0.75rem;
+      background: #059669;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    
+    .award-button:hover {
+      background: #047857;
+    }
+    
+    .award-button:disabled {
+      background: #9ca3af;
+      cursor: not-allowed;
+    }
+    
+    .status-badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+    
+    .status-building {
+      background: #fef3c7;
+      color: #92400e;
+    }
+    
+    .status-submitted {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+    
+    .status-pending_voting {
+      background: #e0e7ff;
+      color: #3730a3;
+    }
+    
+    .status-waiting_for_review {
+      background: #fce7f3;
+      color: #9f1239;
+    }
+    
+    .status-finished {
+      background: #d1fae5;
+      color: #065f46;
+    }
+    
+    .no-projects {
+      text-align: center;
+      padding: 3rem;
+      color: #6b7280;
+      font-size: 1.1rem;
+    }
+  </style>
+<% end %>
+
+<div class="admin-container">
+  <div class="admin-header">
+    <h1 class="admin-title">Project Dashboard</h1>
+  </div>
+
+  <!-- Filters Section -->
+  <div class="filters-section">
+    <%= form_with url: admin_dashboard_path, method: :get, local: true do |f| %>
+      <div class="filter-grid">
+        <div class="filter-group">
+          <label class="filter-label">Week Number</label>
+          <%= f.number_field :week, value: @selected_week, class: "filter-input", min: 1, max: 14 %>
+        </div>
+
+        <div class="filter-group">
+          <label class="filter-label">Project Name</label>
+          <%= f.text_field :project_name, value: @project_name_filter, class: "filter-input", placeholder: "Search projects..." %>
+        </div>
+
+        <div class="filter-group">
+          <label class="filter-label">User Name</label>
+          <%= f.text_field :user_name, value: @user_name_filter, class: "filter-input", placeholder: "Search users..." %>
+        </div>
+
+        <div class="filter-group">
+          <label class="filter-label">Project Status</label>
+          <%= f.select :status, 
+              options_for_select([
+                ["Building", "building"],
+                ["Submitted", "submitted"],
+                ["Pending Voting", "pending_voting"],
+                ["Waiting for Review", "waiting_for_review"],
+                ["Finished", "finished"]
+              ], @status_filter), 
+              {}, 
+              { class: "filter-select", multiple: true } %>
+        </div>
+
+        <div class="filter-group">
+          <label class="filter-label">Fraud Status</label>
+          <%= f.select :fraud_status, 
+              options_for_select([
+                ["Unchecked", "unchecked"],
+                ["Good", "good"],
+                ["Sus", "sus"],
+                ["Fraud", "fraud"]
+              ], @fraud_status_filter), 
+              {}, 
+              { class: "filter-select", multiple: true } %>
+        </div>
+
+        <div class="filter-group">
+          <label class="filter-label">Airtable Status</label>
+          <%= f.select :airtable_status, 
+              options_for_select([
+                ["All", ""],
+                ["Submitted", "submitted"],
+                ["Not Submitted", "not_submitted"]
+              ], @airtable_status_filter), 
+              {}, 
+              { class: "filter-select" } %>
+        </div>
+
+        <div class="filter-group">
+          <label class="filter-label">Min Vote Score</label>
+          <%= f.number_field :min_vote_score, value: @min_vote_score, class: "filter-input", placeholder: "0.0", step: "0.1", min: "0" %>
+        </div>
+
+        <div class="filter-group">
+          <label class="filter-label">Min Hours</label>
+          <%= f.number_field :min_hours, value: @min_hours, class: "filter-input", placeholder: "0.0", step: "0.5", min: "0" %>
+        </div>
+      </div>
+
+      <div class="filter-buttons">
+        <%= f.submit "Apply Filters", class: "apply-button" %>
+        <%= link_to "Reset", admin_dashboard_path, class: "reset-button" %>
+      </div>
+    <% end %>
+  </div>
+
+  <!-- Projects Grid -->
+  <% if @project_data.any? %>
+    <div class="projects-grid">
+      <% @project_data.each do |data| %>
+        <% project = data[:project] %>
+        <div class="project-card" id="project-card-<%= project.id %>">
+          <div class="project-header">
+            <h3 class="project-name"><%= project.name %></h3>
+            <p class="project-user">by <%= project.user.name %></p>
+            <span class="status-badge status-<%= project.status %>"><%= project.status.humanize %></span>
+          </div>
+
+          <% if project.screenshot.attached? %>
+            <%= image_tag project.screenshot, class: "project-screenshot", alt: "#{project.name} screenshot" %>
+          <% end %>
+
+          <div class="project-links">
+            <%= link_to "Repository", project.repo_url, class: "link-button", target: "_blank" if project.repo_url.present? %>
+            <%= link_to "Demo", project.demo_url, class: "link-button", target: "_blank" if project.demo_url.present? %>
+          </div>
+
+          <div class="project-stats">
+            <div class="stat-item">
+              <span class="stat-label">Hours:</span>
+              <span class="stat-value"><%= data[:raw_hours] %>h</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Vote Score:</span>
+              <span class="stat-value"><%= data[:average_score] %></span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Reviewer Multiplier:</span>
+              <span class="stat-value"><%= project.reviewer_multiplier || 2.0 %>x</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Vote Multiplier:</span>
+              <span class="stat-value"><%= data[:average_score] %>x</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Calculated Coins:</span>
+              <span class="stat-value"><%= data[:calculated_coins] %></span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Airtable:</span>
+              <span class="stat-value"><%= project.in_airtable? ? "✓ Submitted" : "✗ Not submitted" %></span>
+            </div>
+          </div>
+
+          <div class="coin-controls">
+            <label class="filter-label">Award Coins:</label>
+            <div class="coin-input-group">
+              <input 
+                type="number" 
+                id="coin-input-<%= project.id %>" 
+                class="coin-input" 
+                value="<%= data[:calculated_coins] %>"
+                data-calculated="<%= data[:calculated_coins] %>"
+              >
+              <button 
+                type="button" 
+                onclick="resetCoins(<%= project.id %>)" 
+                class="reset-button" 
+                style="padding: 0.5rem 1rem;"
+              >
+                Reset
+              </button>
+            </div>
+            <button 
+              type="button" 
+              onclick="awardCoins(<%= project.id %>, <%= @selected_week %>, <%= project.user.id %>)" 
+              class="award-button"
+              id="award-button-<%= project.id %>"
+            >
+              Award Coins & Mark Finished
+            </button>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  <% else %>
+    <div class="no-projects">
+      No projects found matching the selected filters.
+    </div>
+  <% end %>
+</div>
+
+<script>
+  function resetCoins(projectId) {
+    const input = document.getElementById(`coin-input-${projectId}`);
+    const calculated = input.dataset.calculated;
+    input.value = calculated;
+  }
+
+  function awardCoins(projectId, week, userId) {
+    const input = document.getElementById(`coin-input-${projectId}`);
+    const button = document.getElementById(`award-button-${projectId}`);
+    const coins = parseInt(input.value);
+
+    if (isNaN(coins) || coins < 0) {
+      alert('Please enter a valid coin amount');
+      return;
+    }
+
+    if (!confirm(`Award ${coins} coins and mark project as finished?`)) {
+      return;
+    }
+
+    button.disabled = true;
+    button.textContent = 'Processing...';
+
+    fetch(`/admin/weekly-overview/${week}/${userId}/update_coins`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': document.querySelector('[name="csrf-token"]').content
+      },
+      body: JSON.stringify({
+        coins: coins,
+        use_calculated: false
+      })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        alert(data.message);
+        button.textContent = '✓ Completed';
+        button.style.background = '#6b7280';
+      } else {
+        alert('Error: ' + data.error);
+        button.disabled = false;
+        button.textContent = 'Award Coins & Mark Finished';
+      }
+    })
+    .catch(error => {
+      alert('Error awarding coins: ' + error);
+      button.disabled = false;
+      button.textContent = 'Award Coins & Mark Finished';
+    });
+  }
+</script>

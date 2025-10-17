@@ -407,30 +407,30 @@
     <%= form_with url: admin_projects_path, method: :get, class: "filters-form", local: true do |form| %>
       <div class="filter-group">
         <%= form.label :name, "Project Name", class: "filter-label" %>
-        <%= form.text_field :name, value: params[:name], placeholder: "Search by name...", class: "filter-input" %>
+        <%= form.text_field :name, value: @name_filter, placeholder: "Search by name...", class: "filter-input" %>
       </div>
 
       <div class="filter-group">
         <%= form.label :owner, "Owner", class: "filter-label" %>
         <%= form.select :owner,
-            options_from_collection_for_select(@users, :name, :name, params[:owner]),
-            { prompt: "All owners" },
+            options_from_collection_for_select(@users, :name, :name, @owner_filter),
+            { include_blank: "All owners" },
             { class: "filter-select" } %>
       </div>
 
       <div class="filter-group">
         <%= form.label :status, "Status", class: "filter-label" %>
         <%= form.select :status,
-            options_for_select(@statuses.map { |s| [s.capitalize, s] }, params[:status]),
-            { prompt: "All statuses" },
+            options_for_select(@statuses.map { |s| [s.capitalize, s] }, @status_filter),
+            { include_blank: "All statuses" },
             { class: "filter-select" } %>
       </div>
 
       <div class="filter-group">
         <%= form.label :week, "Week", class: "filter-label" %>
         <%= form.select :week,
-            options_for_select(@available_weeks.map { |w| ["Week #{w}", w] }, params[:week]),
-            { prompt: "All weeks" },
+            options_for_select(@available_weeks.map { |w| ["Week #{w}", w] }, @week_filter),
+            { include_blank: "All weeks" },
             { class: "filter-select" } %>
       </div>
 
@@ -449,7 +449,7 @@
       </div>
     <% end %>
 
-    <% if params[:name].present? || params[:owner].present? || params[:status].present? || params[:week].present? || params[:show_hidden].present? %>
+    <% if @name_filter || @owner_filter || @status_filter || @week_filter || @show_hidden %>
       <div style="margin-top: 1rem;">
         <%= link_to "Clear All Filters", admin_projects_path, class: "clear-filters" %>
       </div>
@@ -459,7 +459,7 @@
   <!-- Projects Count -->
   <div class="projects-count">
     Showing <%= @projects.count %> project<%= @projects.count == 1 ? '' : 's' %>
-    <% if params[:name].present? || params[:owner].present? || params[:status].present? || params[:week].present? || params[:show_hidden].present? %>
+    <% if @name_filter || @owner_filter || @status_filter || @week_filter || @show_hidden %>
       (filtered)
     <% end %>
   </div>

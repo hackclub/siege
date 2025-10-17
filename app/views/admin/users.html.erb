@@ -399,27 +399,27 @@
     <%= form_with url: admin_users_path, method: :get, class: "filters-form", local: true do |form| %>
       <div class="filter-group">
         <%= form.label :name, "User Name", class: "filter-label" %>
-        <%= form.text_field :name, value: params[:name], placeholder: "Search by name...", class: "filter-input" %>
+        <%= form.text_field :name, value: @name_filter, placeholder: "Search by name...", class: "filter-input" %>
       </div>
       
       <div class="filter-group">
         <%= form.label :referred_by, "Referred By", class: "filter-label" %>
-        <%= form.text_field :referred_by, value: params[:referred_by], placeholder: "Referrer name or ID...", class: "filter-input" %>
+        <%= form.text_field :referred_by, value: @referred_by_filter, placeholder: "Referrer name or ID...", class: "filter-input" %>
       </div>
       
       <div class="filter-group">
         <%= form.label :status, "Status", class: "filter-label" %>
         <%= form.select :status,
-            options_for_select(@user_statuses.map { |s| [s.capitalize, s] }, params[:status]),
-            { prompt: "All statuses" },
+            options_for_select(@user_statuses.map { |s| [s.capitalize, s] }, @status_filter),
+            { include_blank: "All statuses" },
             { class: "filter-select" } %>
       </div>
       
       <div class="filter-group">
         <%= form.label :rank, "Rank", class: "filter-label" %>
         <%= form.select :rank,
-            options_for_select(@user_ranks.map { |r| [r.humanize, r] }, params[:rank]),
-            { prompt: "All ranks" },
+            options_for_select(@user_ranks.map { |r| [r.humanize, r] }, @rank_filter),
+            { include_blank: "All ranks" },
             { class: "filter-select" } %>
       </div>
       
@@ -427,25 +427,24 @@
         <%= form.label :hackatime_trust, "Hackatime Trust", class: "filter-label" %>
         <%= form.select :hackatime_trust,
             options_for_select([
-              ['All Trust Levels', ''],
               ['Trusted', 'trusted'],
               ['Neutral', 'neutral'],
               ['Banned', 'banned'],
               ['Unknown/Error', 'unknown']
-            ], params[:hackatime_trust]),
-            { prompt: "All trust levels" },
+            ], @hackatime_trust_filter),
+            { include_blank: "All trust levels" },
             { class: "filter-select" } %>
       </div>
       
       <% if current_user&.super_admin? %>
         <div class="filter-group">
           <%= form.label :min_age, "Min Age", class: "filter-label" %>
-          <%= form.number_field :min_age, value: params[:min_age], placeholder: "Minimum age", class: "filter-input", min: 0, max: 120 %>
+          <%= form.number_field :min_age, value: @min_age_filter, placeholder: "Minimum age", class: "filter-input", min: 0, max: 120 %>
         </div>
         
         <div class="filter-group">
           <%= form.label :max_age, "Max Age", class: "filter-label" %>
-          <%= form.number_field :max_age, value: params[:max_age], placeholder: "Maximum age", class: "filter-input", min: 0, max: 120 %>
+          <%= form.number_field :max_age, value: @max_age_filter, placeholder: "Maximum age", class: "filter-input", min: 0, max: 120 %>
         </div>
       <% end %>
       
@@ -454,7 +453,7 @@
       </div>
     <% end %>
     
-    <% if params[:name].present? || params[:referred_by].present? || params[:status].present? || params[:rank].present? || params[:hackatime_trust].present? || params[:min_age].present? || params[:max_age].present? %>
+    <% if @name_filter || @referred_by_filter || @status_filter || @rank_filter || @hackatime_trust_filter || @min_age_filter || @max_age_filter %>
       <div style="margin-top: 1rem;">
         <%= link_to "Clear All Filters", admin_users_path, class: "clear-filters" %>
       </div>
@@ -464,7 +463,7 @@
   <!-- Users Count -->
   <div class="users-count">
     Showing <%= @users.count %> user<%= @users.count == 1 ? '' : 's' %>
-    <% if params[:name].present? || params[:referred_by].present? || params[:status].present? || params[:rank].present? || params[:hackatime_trust].present? || params[:min_age].present? || params[:max_age].present? %>
+    <% if @name_filter || @referred_by_filter || @status_filter || @rank_filter || @hackatime_trust_filter || @min_age_filter || @max_age_filter %>
       (filtered)
     <% end %>
   </div>

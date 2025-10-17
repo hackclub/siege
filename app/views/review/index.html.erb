@@ -314,27 +314,27 @@
       <%= form_with url: review_path, method: :get, local: true, class: "filters-form" do |form| %>
         <div class="filter-group">
           <%= form.label :name, "Project Name", class: "filter-label" %>
-          <%= form.text_field :name, value: params[:name], placeholder: "Search by name...", class: "filter-input" %>
+          <%= form.text_field :name, value: @name_filter, placeholder: "Search by name...", class: "filter-input" %>
         </div>
 
         <div class="filter-group">
           <%= form.label :author_name, "Author", class: "filter-label" %>
-          <%= form.text_field :author_name, value: params[:author_name], placeholder: "Search by name...", class: "filter-input" %>
+          <%= form.text_field :author_name, value: @author_name_filter, placeholder: "Search by name...", class: "filter-input" %>
         </div>
 
         <div class="filter-group">
           <%= form.label :status, "Status", class: "filter-label" %>
           <%= form.select :status,
-              options_for_select(@statuses.map { |s| [s.capitalize, s] }, params[:status] || 'submitted'),
-              { prompt: "All statuses" },
+              options_for_select(@statuses.map { |s| [s.capitalize, s] }, @status_filter),
+              { include_blank: "All statuses" },
               { class: "filter-select" } %>
         </div>
 
         <div class="filter-group">
           <%= form.label :week, "Week", class: "filter-label" %>
           <%= form.select :week,
-              options_for_select(@available_weeks.map { |w| ["Week #{w}", w] }, params[:week]&.to_i),
-              { prompt: "All weeks" },
+              options_for_select(@available_weeks.map { |w| ["Week #{w}", w] }, @week_filter&.to_i),
+              { include_blank: "All weeks" },
               { class: "filter-select" } %>
         </div>
 
@@ -346,8 +346,8 @@
                 ['Oldest First', 'oldest'],
                 ['Most Hours', 'most_hours'],
                 ['Least Hours', 'least_hours']
-              ], params[:sort]),
-              { prompt: "Default (Newest)" },
+              ], @sort_filter),
+              { include_blank: "Default (Newest)" },
               { class: "filter-select" } %>
         </div>
 
@@ -356,7 +356,7 @@
         </div>
       <% end %>
 
-      <% if params[:name].present? || params[:author_name].present? || params[:status].present? || params[:week].present? || params[:sort].present? %>
+      <% if @name_filter || @author_name_filter || (@status_filter && @status_filter != 'submitted') || @week_filter || @sort_filter %>
         <div style="margin-top: 1rem;">
           <%= link_to "Clear All Filters", review_path, class: "clear-filters" %>
         </div>

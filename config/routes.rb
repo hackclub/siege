@@ -65,6 +65,7 @@ Rails.application.routes.draw do
 
 
   get "/admin", to: "admin#index", as: :admin
+  get "/admin/dashboard", to: "admin#dashboard", as: :admin_dashboard
   get "/admin/projects", to: "admin#projects", as: :admin_projects
   get "/admin/users", to: "admin#users", as: :admin_users
   get "/admin/ballots", to: "admin#ballots", as: :admin_ballots

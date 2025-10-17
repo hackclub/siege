@@ -18,37 +18,137 @@ class AdminController < ApplicationController
     @total_projects = Project.count
   end
 
+  def dashboard
+    # Set defaults if no filters provided
+    @selected_week = params[:week].present? ? params[:week].to_i : view_context.current_week_number - 1
+    @project_name_filter = params[:project_name]
+    @user_name_filter = params[:user_name]
+    
+    # Clean up array params by removing blank values
+    @status_filter = params[:status].is_a?(Array) ? params[:status].reject(&:blank?) : nil
+    @fraud_status_filter = params[:fraud_status].is_a?(Array) ? params[:fraud_status].reject(&:blank?) : nil
+    
+    @airtable_status_filter = params[:airtable_status]
+    @min_vote_score = params[:min_vote_score]
+    @min_hours = params[:min_hours]
+
+    # Default filters only when no params submitted (first page load)
+    # Use params.key? to detect if filter was explicitly set (even to empty)
+    @status_filter = %w[waiting_for_review pending_voting] if @status_filter.nil? || @status_filter.empty?
+    @fraud_status_filter = %w[unchecked good] if @fraud_status_filter.nil? || @fraud_status_filter.empty?
+    @airtable_status_filter = "submitted" if @airtable_status_filter.nil? && !params.key?(:airtable_status)
+
+    # Get week date range
+    week_range = view_context.week_date_range(@selected_week)
+    
+    if week_range
+      week_start_date = Date.parse(week_range[0])
+      week_end_date = Date.parse(week_range[1])
+
+      # Start with projects in the selected week
+      @projects = Project.includes(:user, :votes)
+                        .where(created_at: week_start_date.beginning_of_day..week_end_date.end_of_day)
+
+      # Apply filters
+      if @project_name_filter.present?
+        escaped_name = ActiveRecord::Base.connection.quote_string(@project_name_filter)
+        @projects = @projects.where("projects.name ILIKE ?", "%#{escaped_name}%")
+      end
+
+      if @user_name_filter.present?
+        escaped_user = ActiveRecord::Base.connection.quote_string(@user_name_filter)
+        @projects = @projects.joins(:user).where("users.name ILIKE ?", "%#{escaped_user}%")
+      end
+
+      if @status_filter.present?
+        statuses = @status_filter.is_a?(Array) ? @status_filter : [@status_filter]
+        @projects = @projects.where(status: statuses)
+      end
+
+      if @fraud_status_filter.present?
+        fraud_statuses = @fraud_status_filter.is_a?(Array) ? @fraud_status_filter : [@fraud_status_filter]
+        @projects = @projects.where(fraud_status: fraud_statuses)
+      end
+
+      case @airtable_status_filter
+      when "submitted"
+        @projects = @projects.where(in_airtable: true)
+      when "not_submitted"
+        @projects = @projects.where(in_airtable: false)
+      end
+
+      # Calculate vote scores and filter by min_vote_score
+      @project_data = @projects.map do |project|
+        votes = project.votes.where(voted: true)
+        average_score = votes.any? ? votes.average(:star_count).to_f.round(2) : 0
+        
+        # Calculate time and coins
+        time_seconds = view_context.user_hackatime_time_for_projects(project.user, [project], project.effective_time_range)
+        raw_hours = (time_seconds / 3600.0).round(2)
+        calculated_coins = calculate_project_coins(project.user, project, raw_hours, average_score, @selected_week)
+        
+        {
+          project: project,
+          average_score: average_score,
+          raw_hours: raw_hours,
+          calculated_coins: calculated_coins,
+          time_readable: view_context.format_time_from_seconds(time_seconds)
+        }
+      end
+
+      # Filter by min vote score if provided
+      if @min_vote_score.present? && @min_vote_score.to_f > 0
+        @project_data = @project_data.select { |data| data[:average_score] >= @min_vote_score.to_f }
+      end
+
+      # Filter by min hours if provided
+      if @min_hours.present? && @min_hours.to_f > 0
+        @project_data = @project_data.select { |data| data[:raw_hours] >= @min_hours.to_f }
+      end
+
+      # Sort by calculated coins descending
+      @project_data = @project_data.sort_by { |data| -data[:calculated_coins] }
+    else
+      @project_data = []
+    end
+  end
+
   def projects
+    # Store filter values (clean empty strings)
+    @name_filter = params[:name].presence
+    @owner_filter = params[:owner].presence
+    @status_filter = params[:status].presence
+    @week_filter = params[:week].presence
+    @show_hidden = current_user&.super_admin? && params[:show_hidden] == 'true'
+
     # Only show hidden projects if super admin has explicitly checked the box
-    if current_user&.super_admin? && params[:show_hidden] == 'true'
+    if @show_hidden
       @projects = Project.all.includes(:user)
-      @show_hidden = true
     else
       # Default: only show visible projects (for both super admins and regular users)
       @projects = Project.visible.includes(:user)
-      @show_hidden = false
     end
 
     # Filter by name if provided
-    if params[:name].present?
-      escaped_name = ActiveRecord::Base.connection.quote_string(params[:name])
+    if @name_filter
+      escaped_name = ActiveRecord::Base.connection.quote_string(@name_filter)
       @projects = @projects.where("name ILIKE ?", "%#{escaped_name}%")
     end
 
     # Filter by owner if provided
-    if params[:owner].present?
-      escaped_owner = ActiveRecord::Base.connection.quote_string(params[:owner])
+    if @owner_filter
+      escaped_owner = ActiveRecord::Base.connection.quote_string(@owner_filter)
       @projects = @projects.joins(:user).where("users.name ILIKE ?", "%#{escaped_owner}%")
     end
 
     # Filter by status if provided
-    if params[:status].present? && %w[building submitted pending_voting waiting_for_review finished].include?(params[:status])
-      @projects = @projects.where(status: params[:status])
+    if @status_filter && %w[building submitted pending_voting waiting_for_review finished].include?(@status_filter)
+      @projects = @projects.where(status: @status_filter)
     end
 
     # Filter by week if provided
-    if params[:week].present? && params[:week].to_i.to_s == params[:week]
-      week_number = params[:week].to_i
+    if @week_filter && @week_filter.to_i.to_s == @week_filter
+      week_number = @week_filter.to_i
       week_range = view_context.week_date_range(week_number)
 
       if week_range
@@ -83,42 +183,48 @@ class AdminController < ApplicationController
   end
 
   def users
+    # Store filter values (clean empty strings)
+    @name_filter = params[:name].presence
+    @referred_by_filter = params[:referred_by].presence
+    @status_filter = params[:status].presence
+    @rank_filter = params[:rank].presence
+    @hackatime_trust_filter = params[:hackatime_trust].presence
+    @min_age_filter = params[:min_age].presence
+    @max_age_filter = params[:max_age].presence
+
     @users = User.all.includes(:projects, :meeple, :address, :referrer)
 
     # Filter by name if provided (search name, display_name, and slack_id)
-    if params[:name].present?
-      escaped_name = ActiveRecord::Base.connection.quote_string(params[:name])
+    if @name_filter
+      escaped_name = ActiveRecord::Base.connection.quote_string(@name_filter)
       @users = @users.where("users.name ILIKE ? OR users.display_name ILIKE ? OR users.slack_id ILIKE ?", "%#{escaped_name}%", "%#{escaped_name}%", "%#{escaped_name}%")
     end
 
     # Filter by referred_by if provided (search by referrer name or ID)
-    if params[:referred_by].present?
+    if @referred_by_filter
       # Try to find users where the referrer matches the search term by ID, name, or display_name
-      escaped_referrer = ActiveRecord::Base.connection.quote_string(params[:referred_by])
+      escaped_referrer = ActiveRecord::Base.connection.quote_string(@referred_by_filter)
       @users = @users.joins("JOIN users AS referrers ON users.referrer_id = referrers.id")
                      .where("referrers.id::text = ? OR referrers.name ILIKE ? OR referrers.display_name ILIKE ?",
                             escaped_referrer, "%#{escaped_referrer}%", "%#{escaped_referrer}%")
     end
 
     # Filter by status if provided
-    if params[:status].present? && %w[out working completed].include?(params[:status])
-      @users = @users.where(status: params[:status])
+    if @status_filter && %w[out working completed].include?(@status_filter)
+      @users = @users.where(status: @status_filter)
     end
 
     # Filter by rank if provided
-    if params[:rank].present? && %w[user viewer admin super_admin].include?(params[:rank])
-      @users = @users.where(rank: params[:rank])
+    if @rank_filter && %w[user viewer admin super_admin].include?(@rank_filter)
+      @users = @users.where(rank: @rank_filter)
     end
 
-    # Filter by hackatime trust if provided
-    if params[:hackatime_trust].present? && %w[trusted neutral banned unknown].include?(params[:hackatime_trust])
-      # Store the filter value to apply after fetching trust data
-      @hackatime_trust_filter = params[:hackatime_trust]
-    end
+    # Filter by hackatime trust - stored for later use after fetching trust data
+    @hackatime_trust_filter = nil if @hackatime_trust_filter && !%w[trusted neutral banned unknown].include?(@hackatime_trust_filter)
 
     # Filter by age if provided (super admin only)
-    if current_user&.super_admin? && (params[:min_age].present? || params[:max_age].present?)
-      @users = filter_users_by_age(@users, params[:min_age], params[:max_age])
+    if current_user&.super_admin? && (@min_age_filter || @max_age_filter)
+      @users = filter_users_by_age(@users, @min_age_filter, @max_age_filter)
     end
 
     # Order by name with secondary sort by creation date
@@ -268,22 +374,27 @@ class AdminController < ApplicationController
   end
 
   def ballots
+    # Store filter values (clean empty strings)
+    @user_filter = params[:user].presence
+    @week_filter = params[:week].presence
+    @voted_filter = params[:voted].presence
+
     @ballots = Ballot.all.includes(:user, votes: [ project: :user ])
 
     # Filter by user if provided
-    if params[:user].present?
-      escaped_user = ActiveRecord::Base.connection.quote_string(params[:user])
+    if @user_filter
+      escaped_user = ActiveRecord::Base.connection.quote_string(@user_filter)
       @ballots = @ballots.joins(:user).where("users.name ILIKE ?", "%#{escaped_user}%")
     end
 
     # Filter by week if provided
-    if params[:week].present?
-      @ballots = @ballots.where(week: params[:week])
+    if @week_filter
+      @ballots = @ballots.where(week: @week_filter)
     end
 
     # Filter by voted status if provided
-    if params[:voted].present? && %w[true false].include?(params[:voted])
-      @ballots = @ballots.where(voted: params[:voted] == "true")
+    if @voted_filter && %w[true false].include?(@voted_filter)
+      @ballots = @ballots.where(voted: @voted_filter == "true")
     end
 
     # Order by week (descending) with secondary sort by user name

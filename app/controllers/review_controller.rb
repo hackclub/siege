@@ -3,30 +3,38 @@ class ReviewController < ApplicationController
   before_action :set_project, only: [ :show, :update_status, :submit_review, :remove_video ]
 
   def index
+    # Store filter values (clean empty strings)
+    @name_filter = params[:name].presence
+    @author_name_filter = params[:author_name].presence
+    @status_filter = params[:status].presence
+    @week_filter = params[:week].presence
+    @sort_filter = params[:sort].presence
+
     @projects = Project.visible_to_user(current_user).includes(:user)
 
     # Default to showing only submitted projects unless status is explicitly specified
-    if params[:status].present?
-      @projects = @projects.where(status: params[:status])
+    if @status_filter
+      @projects = @projects.where(status: @status_filter)
     else
       @projects = @projects.where(status: "submitted")
+      @status_filter = "submitted" # Set for form display
     end
 
     # Filter by name if provided
-    if params[:name].present?
-      escaped_name = ActiveRecord::Base.connection.quote_string(params[:name])
+    if @name_filter
+      escaped_name = ActiveRecord::Base.connection.quote_string(@name_filter)
       @projects = @projects.where("name ILIKE ?", "%#{escaped_name}%")
     end
 
     # Filter by author name if provided (search name, display_name, and slack_id)
-    if params[:author_name].present?
-      escaped_name = ActiveRecord::Base.connection.quote_string(params[:author_name])
+    if @author_name_filter
+      escaped_name = ActiveRecord::Base.connection.quote_string(@author_name_filter)
       @projects = @projects.joins(:user).where("users.name ILIKE ? OR users.display_name ILIKE ? OR users.slack_id ILIKE ?", "%#{escaped_name}%", "%#{escaped_name}%", "%#{escaped_name}%")
     end
 
     # Filter by week if provided
-    if params[:week].present?
-      week_number = params[:week].to_i
+    if @week_filter
+      week_number = @week_filter.to_i
       week_range = helpers.week_date_range(week_number)
       if week_range
         week_start_date = Date.parse(week_range[0])
@@ -36,7 +44,7 @@ class ReviewController < ApplicationController
     end
 
     # Sort based on sort parameter
-    case params[:sort]
+    case @sort_filter
     when "oldest"
       @projects = @projects.order(created_at: :asc)
     when "newest"
@@ -67,7 +75,8 @@ class ReviewController < ApplicationController
     @available_weeks = (1..helpers.current_week_number).to_a.reverse
 
     # Generate leaderboard for review actions this week
-    @leaderboard_week = params[:leaderboard_week].present? ? params[:leaderboard_week].to_i : helpers.current_week_number
+    @leaderboard_week_filter = params[:leaderboard_week].presence
+    @leaderboard_week = @leaderboard_week_filter ? @leaderboard_week_filter.to_i : helpers.current_week_number
     @review_leaderboard = generate_review_leaderboard(@leaderboard_week)
   end
 
