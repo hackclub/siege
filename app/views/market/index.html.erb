@@ -68,6 +68,8 @@
   const totalImages = 3;
   let mercenaryPrice = 30; // Default price, will be updated
   let mercenaryCount = 0; // Current mercenary count for this week
+  let timeTravellingMercenaryQuantity = 0; // Max quantity user can purchase
+  let timeTravellingMercenaryInventory = 0; // Current inventory count
   let userInSupportedRegion = <%= @user_in_supported_region ? 'true' : 'false' %>;
   let totalGrantAmount = 650; // Will be updated from server
   
@@ -152,6 +154,7 @@
   const allShopItems = {
     other: [
       { id: 1, title: "Mercenary", price: 35, description: "This meeple will fight for you for an hour. Purchase to skip a required hour of sieging!", image: '<%= asset_path("meeple/mercenary.png") %>', maxPerWeek: 10, priceIncreases: true, oneTime: false },
+      { id: 1.5, title: "Time travelling mercenary", price: 40, description: "This mercenary will go back in time to fight your past battles. It will help get you back in the siege if you failed previously. Contact @Olive after buying to have its effects applied. NOTE: buying time travelling mercenaries may cause you to lose coins and/or have shop items forcably refunded! Make sure you're aware of the dangers of time travel...", image: '<%= asset_path("meeple/time-kneeple.png") %>', limitedQuantity: true, dynamicQuantity: true, oneTime: false },
       { id: 2, title: "Unlock Orange Meeple", price: 50, description: "Not feeling your color? Try orange!", image: '<%= asset_path("meeple/meeple-orange.png") %>', oneTime: true }
       <% @purchasable_cosmetics.each_with_index do |cosmetic, index| %>
       ,{ id: <%= 100 + index %>, title: "<%= cosmetic.name %>", price: <%= cosmetic.cost %>, description: "<%= (cosmetic.description.present? ? cosmetic.description : 'A cosmetic item for your meeple!').html_safe %>", image: "<%= cosmetic.image.attached? ? rails_blob_path(cosmetic.image, only_path: false) : asset_path('meeple/meeple-red.png') %>", oneTime: true, isCosmetic: true }
@@ -180,14 +183,31 @@
   
   // Filter out purchased one-time items
   const purchasedOneTimeItems = <%= raw @purchased_one_time_items.to_json %>;
-  const shopItems = {};
+  let shopItems = {};
   
-  Object.keys(allShopItems).forEach(category => {
-    shopItems[category] = allShopItems[category].filter(item => {
-      // Keep item if it's not a one-time purchase or if it hasn't been purchased yet
-      return !item.oneTime || !purchasedOneTimeItems.includes(item.title);
+  // Function to filter shop items (will be called initially and after loading time travel data)
+  function filterShopItems() {
+    console.log('[TIME TRAVEL] Filtering shop items, quantity:', timeTravellingMercenaryQuantity);
+    shopItems = {};
+    Object.keys(allShopItems).forEach(category => {
+      shopItems[category] = allShopItems[category].filter(item => {
+        // Filter out time travelling mercenary if quantity is 0
+        if (item.title === 'Time travelling mercenary') {
+          console.log('[TIME TRAVEL] Filtering time travel item, quantity:', timeTravellingMercenaryQuantity);
+          if (timeTravellingMercenaryQuantity === 0) {
+            console.log('[TIME TRAVEL] Filtering OUT time travel item (quantity = 0)');
+            return false;
+          }
+          console.log('[TIME TRAVEL] Keeping time travel item (quantity > 0)');
+        }
+        // Keep item if it's not a one-time purchase or if it hasn't been purchased yet
+        return !item.oneTime || !purchasedOneTimeItems.includes(item.title);
+      });
     });
-  });
+  }
+  
+  // Initial filter (time travel item will be excluded since quantity starts at 0)
+  filterShopItems();
   
   // Navbar offset constants
   const NAVBAR_WIDTH = 272; // 13rem + 2.5rem margin = 17rem = 272px
@@ -302,6 +322,39 @@
       console.warn('Failed to load mercenary price:', error);
       mercenaryPrice = 30; // Fallback to default
       mercenaryCount = 0;
+    });
+  }
+
+  // Load time travelling mercenary data
+  function loadTimeTravellingMercenaryData() {
+    console.log('[TIME TRAVEL] Fetching time travelling mercenary data...');
+    fetch('/market/time_travelling_mercenary_data', {
+      method: 'GET',
+      headers: {
+        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      console.log('[TIME TRAVEL] Received data:', data);
+      timeTravellingMercenaryQuantity = data.quantity || 0;
+      timeTravellingMercenaryInventory = data.inventory_count || 0;
+      console.log('[TIME TRAVEL] Set quantity:', timeTravellingMercenaryQuantity, 'inventory:', timeTravellingMercenaryInventory);
+      
+      // Re-filter shop items now that we have the quantity
+      filterShopItems();
+      console.log('[TIME TRAVEL] Re-filtered shop items');
+      
+      // Reload shop item images to include time travelling mercenary
+      loadShopItemImages();
+      console.log('[TIME TRAVEL] Reloaded shop item images');
+      
+      throttledRender(); // Redraw to update display
+    })
+    .catch(error => {
+      console.error('[TIME TRAVEL] Failed to load data:', error);
+      timeTravellingMercenaryQuantity = 0;
+      timeTravellingMercenaryInventory = 0;
     });
   }
 
@@ -591,6 +644,7 @@
       if (imagesLoaded === totalImages) {
         loadShopItemImages();
         loadMercenaryPrice(); // Load mercenary price
+        loadTimeTravellingMercenaryData(); // Load time travelling mercenary data
         loadUserCoins(); // Load user coin balance
         loadUserPurchases(); // Load user purchases
         loadUserRegionInfo(); // Load user region info and grant amount
@@ -1887,8 +1941,8 @@
       
       // Calculate image size and positioning for hover detection
       let imageSize;
-      if (item.title === 'Mercenary' || item.title === 'Unlock Orange Meeple' || item.isCosmetic) {
-        imageSize = 200; // Mercenary, Orange Meeple, and Cosmetics all use the same size
+      if (item.title === 'Mercenary' || item.title === 'Time travelling mercenary' || item.title === 'Unlock Orange Meeple' || item.isCosmetic) {
+        imageSize = 200; // Mercenary, Time travelling mercenary, Orange Meeple, and Cosmetics all use the same size
       } else {
         imageSize = 80;
       }
@@ -1979,10 +2033,12 @@
       ctx.font = '12px "IM Fell English", serif';
       ctx.textAlign = 'center';
       
-      // Add count display for mercenaries
+      // Add count display for mercenaries and time travelling mercenaries
       let displayTitle = item.title;
       if (item.title === 'Mercenary') {
         displayTitle = `Mercenary (${mercenaryCount}/10)`;
+      } else if (item.title === 'Time travelling mercenary') {
+        displayTitle = `TT Mercenary (${timeTravellingMercenaryInventory}/${timeTravellingMercenaryQuantity})`;
       }
       
       ctx.fillText(displayTitle, itemX + itemSize / 2, itemY + itemSize - 25);
@@ -2042,8 +2098,8 @@
     
     // Draw item image - same logic as shop grid
     let imageSize;
-    if (item.title === 'Mercenary' || item.title === 'Unlock Orange Meeple' || item.isCosmetic) {
-      imageSize = 300; // Mercenary, Orange Meeple, and Cosmetics all use the same size
+    if (item.title === 'Mercenary' || item.title === 'Time travelling mercenary' || item.title === 'Unlock Orange Meeple' || item.isCosmetic) {
+      imageSize = 300; // Mercenary, Time travelling mercenary, Orange Meeple, and Cosmetics all use the same size
     } else {
       imageSize = 120;
     }
@@ -2053,6 +2109,8 @@
     let imageY;
     if (item.isPhysicalItem) {
       imageY = popupY + (popupHeight - imageSize) / 2 - 80; // Move physical items down in popup
+    } else if (item.title === 'Time travelling mercenary') {
+      imageY = popupY + (popupHeight - imageSize) / 2 - 180; // Move time travelling mercenary up for more description space
     } else {
       imageY = popupY + (popupHeight - imageSize) / 2 - 100; // Original positioning for other items
     }
@@ -2111,10 +2169,12 @@
     ctx.font = 'bold 20px "IM Fell English", serif';
     ctx.textAlign = 'center';
     
-    // Add count display for mercenaries
+    // Add count display for mercenaries and time travelling mercenaries
     let displayTitle = item.title;
     if (item.title === 'Mercenary') {
       displayTitle = `Mercenary (${mercenaryCount}/10)`;
+    } else if (item.title === 'Time travelling mercenary') {
+      displayTitle = `Time travelling mercenary (${timeTravellingMercenaryInventory}/${timeTravellingMercenaryQuantity})`;
     }
     
     ctx.fillText(displayTitle, popupX + popupWidth / 2, imageY + imageSize + 40);
@@ -2158,7 +2218,7 @@
     const purchaseButtonY = popupY + popupHeight - 60;
     
     // Check if user has enough coins
-    const itemPrice = item.title === 'Mercenary' ? mercenaryPrice : item.price;
+    const itemPrice = (item.title === 'Mercenary' ? mercenaryPrice : (item.title === 'Time travelling mercenary' ? 40 : item.price));
     const hasEnoughCoins = marketState.userCoins >= itemPrice;
     
     // Check if item is available for purchase
@@ -2166,6 +2226,9 @@
     if (item.title === 'Mercenary') {
       // Special handling for Mercenary - check weekly limit
       isAvailable = mercenaryCount < 10;
+    } else if (item.title === 'Time travelling mercenary') {
+      // Special handling for Time travelling mercenary - check dynamic limit
+      isAvailable = timeTravellingMercenaryInventory < timeTravellingMercenaryQuantity;
     } else {
       isAvailable = !item.purchased && 
                          (!item.maxPurchases || !item.currentPurchases || item.currentPurchases < item.maxPurchases);
@@ -2253,16 +2316,55 @@
       ctx.font = 'bold 18px "IM Fell English", serif';
       ctx.fillText('Purchase Successful!', centerX, centerY + 35);
       
-      // Draw message
+      // Draw message with text wrapping
       ctx.fillStyle = '#402b20';
       ctx.font = '14px "IM Fell English", serif';
-      ctx.fillText(marketState.statusPopupMessage, centerX, centerY + 60);
+      
+      // Wrap message text
+      const messageWords = marketState.statusPopupMessage.split(' ');
+      const messageLineHeight = 20;
+      const messageMaxWidth = popupWidth - 40;
+      let messageLine = '';
+      let messageY = centerY + 60;
+      
+      for (let word of messageWords) {
+        const testLine = messageLine + word + ' ';
+        const metrics = ctx.measureText(testLine);
+        
+        if (metrics.width > messageMaxWidth && messageLine !== '') {
+          ctx.fillText(messageLine, centerX, messageY);
+          messageLine = word + ' ';
+          messageY += messageLineHeight;
+        } else {
+          messageLine = testLine;
+        }
+      }
+      ctx.fillText(messageLine, centerX, messageY);
       
       // Draw fulfillment notice if present
       if (marketState.statusPopupFulfillment) {
         ctx.fillStyle = '#8b4513';
         ctx.font = 'italic 12px "IM Fell English", serif';
-        ctx.fillText(marketState.statusPopupFulfillment, centerX, centerY + 80);
+        
+        // Wrap fulfillment text
+        const fulfillmentWords = marketState.statusPopupFulfillment.split(' ');
+        const fulfillmentLineHeight = 18;
+        let fulfillmentLine = '';
+        let fulfillmentY = messageY + 20;
+        
+        for (let word of fulfillmentWords) {
+          const testLine = fulfillmentLine + word + ' ';
+          const metrics = ctx.measureText(testLine);
+          
+          if (metrics.width > messageMaxWidth && fulfillmentLine !== '') {
+            ctx.fillText(fulfillmentLine, centerX, fulfillmentY);
+            fulfillmentLine = word + ' ';
+            fulfillmentY += fulfillmentLineHeight;
+          } else {
+            fulfillmentLine = testLine;
+          }
+        }
+        ctx.fillText(fulfillmentLine, centerX, fulfillmentY);
       }
     } else if (marketState.statusPopupType === 'error') {
       // Draw error X
@@ -2283,10 +2385,30 @@
       ctx.font = 'bold 18px "IM Fell English", serif';
       ctx.fillText('Purchase Failed', centerX, centerY + 35);
       
-      // Draw message
+      // Draw message with text wrapping
       ctx.fillStyle = '#402b20';
       ctx.font = '14px "IM Fell English", serif';
-      ctx.fillText(marketState.statusPopupMessage, centerX, centerY + 60);
+      
+      // Wrap error message text
+      const errorWords = marketState.statusPopupMessage.split(' ');
+      const errorLineHeight = 20;
+      const errorMaxWidth = popupWidth - 40;
+      let errorLine = '';
+      let errorY = centerY + 60;
+      
+      for (let word of errorWords) {
+        const testLine = errorLine + word + ' ';
+        const metrics = ctx.measureText(testLine);
+        
+        if (metrics.width > errorMaxWidth && errorLine !== '') {
+          ctx.fillText(errorLine, centerX, errorY);
+          errorLine = word + ' ';
+          errorY += errorLineHeight;
+        } else {
+          errorLine = testLine;
+        }
+      }
+      ctx.fillText(errorLine, centerX, errorY);
     }
     
     // Draw close button for success/error
@@ -2904,7 +3026,7 @@
           y >= marketState.purchaseButton.y && y <= marketState.purchaseButton.y + marketState.purchaseButton.height) {
         // Check if user has enough coins and item is available before allowing purchase
         const item = marketState.currentItem;
-        const itemPrice = item.title === 'Mercenary' ? mercenaryPrice : item.price;
+        const itemPrice = (item.title === 'Mercenary' ? mercenaryPrice : (item.title === 'Time travelling mercenary' ? 40 : item.price));
         const isAvailable = !item.purchased && 
                            (!item.maxPurchases || !item.currentPurchases || item.currentPurchases < item.maxPurchases);
         
@@ -3278,6 +3400,10 @@
       // Mercenary - show remaining purchases
       const remaining = responseData.remaining_mercenaries || 0;
       return `You can buy up to ${remaining} more Mercenaries this week.`;
+    } else if (item.title === 'Time travelling mercenary') {
+      // Time travelling mercenary - show remaining purchases (subtract 1 for the one just purchased)
+      const remaining = timeTravellingMercenaryQuantity - timeTravellingMercenaryInventory - 1;
+      return `Successfully purchased ${item.title} for ${price} coins! You can buy up to ${remaining} more. Contact @Olive to have its effects applied.`;
     } else if (item.title === 'Random Sticker' || (item.isPhysicalItem && !item.digital)) {
       // Non-instant fulfillment item (Random Sticker or Non-Digital Physical Items) - return both messages
       return {
@@ -3351,6 +3477,11 @@
         // Refresh mercenary price and user coins if a mercenary was purchased
         if (item.title === 'Mercenary') {
           loadMercenaryPrice();
+        }
+        
+        // Refresh time travelling mercenary data if one was purchased
+        if (item.title === 'Time travelling mercenary') {
+          loadTimeTravellingMercenaryData(); // This will re-filter and re-render
         }
         
         // Refresh grant total if a grant item was purchased

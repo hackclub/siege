@@ -698,6 +698,21 @@ class AdminController < ApplicationController
     end
   end
 
+  def mark_time_traveller_used
+    purchase = ShopPurchase.find(params[:id])
+    
+    if purchase.item_name != "Time travelling mercenary"
+      redirect_to admin_user_details_path(purchase.user), alert: "This is not a time travelling mercenary purchase."
+      return
+    end
+    
+    if purchase.update(fulfilled: true)
+      redirect_to admin_user_details_path(purchase.user), notice: "Time travelling mercenary marked as used (fulfilled)."
+    else
+      redirect_to admin_user_details_path(purchase.user), alert: "Failed to mark as used."
+    end
+  end
+
   def toggle_fraud_team
     unless current_user.super_admin?
       render json: { success: false, error: "Access denied. Super admin privileges required." }
@@ -1816,6 +1831,8 @@ class AdminController < ApplicationController
       end
     when "Mercenary"
       # Mercenaries don't have permanent effects, so no reversal needed
+    when "Time travelling mercenary"
+      # Time travelling mercenaries don't have permanent effects, so no reversal needed
     when "Random Sticker"
       # Random stickers don't have permanent effects, so no reversal needed
     end
@@ -1852,6 +1869,8 @@ class AdminController < ApplicationController
       end
     when "Mercenary"
       # Mercenaries don't have permanent effects, so no reversal needed
+    when "Time travelling mercenary"
+      # Time travelling mercenaries don't have permanent effects, so no reversal needed
     when "Random Sticker"
       # Random stickers don't have permanent effects, so no reversal needed
     end

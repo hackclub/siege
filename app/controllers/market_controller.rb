@@ -31,6 +31,14 @@ class MarketController < ApplicationController
     render json: { price: price, count: count }
   end
 
+  def time_travelling_mercenary_data
+    Rails.logger.info "[TIME TRAVEL ENDPOINT] Request from user #{current_user.id} (#{current_user.name})"
+    quantity = ShopPurchase.time_travelling_mercenary_quantity(current_user)
+    inventory_count = ShopPurchase.time_travelling_mercenary_inventory_count(current_user)
+    Rails.logger.info "[TIME TRAVEL ENDPOINT] Returning quantity=#{quantity}, inventory_count=#{inventory_count}"
+    render json: { quantity: quantity, inventory_count: inventory_count }
+  end
+
   def user_coins
     render json: { coins: current_user.coins }
   end
@@ -47,6 +55,18 @@ class MarketController < ApplicationController
         return
       end
       coins_spent = ShopPurchase.mercenary_price(current_user)
+    when "Time travelling mercenary"
+      max_quantity = ShopPurchase.time_travelling_mercenary_quantity(current_user)
+      if max_quantity == 0
+        render json: { success: false, error: "You cannot purchase time travelling mercenaries!" }
+        return
+      end
+      current_inventory = ShopPurchase.time_travelling_mercenary_inventory_count(current_user)
+      if current_inventory >= max_quantity
+        render json: { success: false, error: "You've already purchased the maximum time travelling mercenaries!" }
+        return
+      end
+      coins_spent = 40
     when "Unlock Orange Meeple"
       if current_user.meeple&.unlocked_colors&.include?("orange")
         render json: { success: false, error: "You already have the orange meeple color!" }
@@ -291,6 +311,8 @@ class MarketController < ApplicationController
     case item_name
     when "Mercenary", "Unlock Orange Meeple"
       true
+    when "Time travelling mercenary"
+      false # Keep as unfulfilled by default
     else
       # Check if it's a tech tree item
       tech_tree_item = get_tech_tree_item(item_name)

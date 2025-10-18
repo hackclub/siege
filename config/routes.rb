@@ -41,6 +41,7 @@ Rails.application.routes.draw do
   get "/market", to: "market#index", as: :market
   post "/market/purchase", to: "market#purchase", as: :market_purchase
   get "/market/mercenary_price", to: "market#mercenary_price", as: :market_mercenary_price
+  get "/market/time_travelling_mercenary_data", to: "market#time_travelling_mercenary_data", as: :market_time_travelling_mercenary_data
   get "/market/user_coins", to: "market#user_coins", as: :market_user_coins
   post "/market/set_main_device", to: "market#set_main_device", as: :market_set_main_device
   post "/market/refund_item", to: "market#refund_item", as: :market_refund_item
@@ -111,6 +112,7 @@ Rails.application.routes.draw do
   post "/admin/users/:id/set_referrer", to: "admin#set_referrer", as: :admin_set_referrer
   post "/admin/users/:id/clear_referrer", to: "admin#clear_referrer", as: :admin_clear_referrer
   post "/admin/users/:id/clear_main_device", to: "admin#clear_main_device", as: :admin_clear_main_device
+  post "/admin/shop_purchases/:id/mark_time_traveller_used", to: "admin#mark_time_traveller_used", as: :admin_mark_time_traveller_used
   post "/admin/users/:id/set_out", to: "admin#set_out", as: :admin_set_out
   post "/admin/users/:id/set_active", to: "admin#set_active", as: :admin_set_active
   post "/admin/users/:id/add_cosmetic", to: "admin#add_cosmetic", as: :admin_add_cosmetic

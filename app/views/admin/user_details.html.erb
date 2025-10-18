@@ -952,8 +952,11 @@
                       </span>
                     </div>
                   </div>
-                  <div style="text-align: center;">
+                  <div style="text-align: center; display: flex; gap: 0.5rem; justify-content: center;">
                     <%= link_to "View Details", admin_shop_purchase_details_path(purchase), style: "display: inline-block; padding: 0.5rem 1rem; background: #402b20; color: white; text-decoration: none; border-radius: 6px; font-size: 0.9rem; font-weight: 500; transition: background 0.2s;" %>
+                    <% if purchase.item_name == "Time travelling mercenary" %>
+                      <%= button_to "Mark as Used", admin_mark_time_traveller_used_path(purchase), method: :post, data: { confirm: "Are you sure you want to mark this time travelling mercenary as used?" }, style: "padding: 0.5rem 1rem; background: #f59e0b; color: white; border: none; border-radius: 6px; font-size: 0.9rem; font-weight: 500; cursor: pointer; transition: background 0.2s;" %>
+                    <% end %>
                   </div>
                 </div>
               <% end %>
@@ -984,8 +987,11 @@
                       </span>
                     </div>
                   </div>
-                  <div style="text-align: center;">
+                  <div style="text-align: center; display: flex; gap: 0.5rem; justify-content: center;">
                     <%= link_to "View Details", admin_shop_purchase_details_path(purchase), style: "display: inline-block; padding: 0.5rem 1rem; background: #402b20; color: white; text-decoration: none; border-radius: 6px; font-size: 0.9rem; font-weight: 500; transition: background 0.2s;" %>
+                    <% if purchase.item_name == "Time travelling mercenary" %>
+                      <%= button_to "Mark as Used", admin_mark_time_traveller_used_path(purchase), method: :post, data: { confirm: "Are you sure you want to mark this time travelling mercenary as used?" }, style: "padding: 0.5rem 1rem; background: #f59e0b; color: white; border: none; border-radius: 6px; font-size: 0.9rem; font-weight: 500; cursor: pointer; transition: background 0.2s;" %>
+                    <% end %>
                   </div>
                 </div>
               <% end %>

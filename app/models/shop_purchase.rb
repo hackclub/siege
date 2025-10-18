@@ -41,6 +41,116 @@ class ShopPurchase < ApplicationRecord
     base_price + purchased_this_week
   end
 
+  def self.time_travelling_mercenary_quantity(user)
+    Rails.logger.info "[TIME TRAVEL] Starting calculation for user #{user.id} (#{user.name})"
+    Rails.logger.info "[TIME TRAVEL] User status: #{user.status}, working?: #{user.working?}, out?: #{user.out?}"
+    
+    # Don't show item at all if user is working
+    if user.working?
+      Rails.logger.info "[TIME TRAVEL] User is working, returning 0"
+      return 0
+    end
+    
+    # Only show if user is out
+    unless user.out?
+      Rails.logger.info "[TIME TRAVEL] User is not out, returning 0"
+      return 0
+    end
+    
+    current_week = ApplicationController.helpers.current_week_number
+    Rails.logger.info "[TIME TRAVEL] Current week: #{current_week}"
+    
+    if current_week < 6
+      Rails.logger.info "[TIME TRAVEL] Current week < 6, returning 0"
+      return 0
+    end
+    
+    # Look at weeks from 5 to (current_week - 1)
+    start_week = 5
+    end_week = current_week - 1
+    Rails.logger.info "[TIME TRAVEL] Checking weeks #{start_week} to #{end_week}"
+    
+    # Preload all user_weeks for the range to avoid N+1
+    user_weeks_by_week = UserWeek.where(user: user, week: start_week..end_week).index_by(&:week)
+    
+    # Get date range for all weeks to preload projects
+    first_week_range = ApplicationController.helpers.week_date_range(start_week)
+    last_week_range = ApplicationController.helpers.week_date_range(end_week)
+    
+    if first_week_range && last_week_range
+      # Preload all projects in the entire date range to avoid N+1
+      all_projects = user.projects.where(
+        "created_at >= ? AND created_at <= ?",
+        Date.parse(first_week_range[0]).beginning_of_day,
+        Date.parse(last_week_range[1]).end_of_day
+      ).to_a
+    else
+      all_projects = []
+    end
+    
+    total_hours_under = 0
+    
+    (start_week..end_week).each do |week|
+      Rails.logger.info "[TIME TRAVEL] --- Checking week #{week} ---"
+      user_week = user_weeks_by_week[week]
+      effective_goal = user_week&.effective_hour_goal || (week == 5 ? 9 : 10)
+      Rails.logger.info "[TIME TRAVEL] Effective goal for week #{week}: #{effective_goal}h"
+      
+      # Get user's actual hours for that week
+      # Use the helper to calculate total seconds, then convert to hours
+      time_range = ApplicationController.helpers.week_date_range(week)
+      unless time_range
+        Rails.logger.info "[TIME TRAVEL] No time range for week #{week}, skipping"
+        next
+      end
+      Rails.logger.info "[TIME TRAVEL] Time range: #{time_range[0]} to #{time_range[1]}"
+      
+      # Filter preloaded projects for this week
+      week_start = Date.parse(time_range[0]).beginning_of_day
+      week_end = Date.parse(time_range[1]).end_of_day
+      projects = all_projects.select do |project|
+        project.created_at >= week_start && project.created_at <= week_end
+      end
+      
+      total_seconds = 0
+      projects.each do |project|
+        # Get hackatime time for this project
+        if project.hackatime_projects.present? && project.effective_time_range
+          projs = ApplicationController.helpers.hackatime_projects_for_user(
+            user,
+            *project.effective_time_range
+          )
+          
+          project.hackatime_projects.each do |project_name|
+            match = projs.find { |p| p["name"].to_s == project_name.to_s }
+            total_seconds += match&.dig("total_seconds") || 0
+          end
+        end
+      end
+      
+      actual_hours = total_seconds / 3600.0
+      Rails.logger.info "[TIME TRAVEL] Week #{week} actual hours: #{actual_hours.round(2)}h"
+      
+      # If under goal, add the rounded up difference
+      if actual_hours < effective_goal
+        hours_under = effective_goal - actual_hours
+        hours_under_rounded = hours_under.ceil
+        Rails.logger.info "[TIME TRAVEL] Week #{week} UNDER by #{hours_under.round(2)}h (rounded: #{hours_under_rounded})"
+        total_hours_under += hours_under_rounded
+      else
+        Rails.logger.info "[TIME TRAVEL] Week #{week} met or exceeded goal"
+      end
+    end
+    
+    Rails.logger.info "[TIME TRAVEL] FINAL: Total hours under = #{total_hours_under}"
+    total_hours_under
+  end
+
+  def self.time_travelling_mercenary_inventory_count(user)
+    # Count only unfulfilled time travelling mercenaries
+    where(user: user, item_name: "Time travelling mercenary", fulfilled: false).count
+  end
+
   def self.one_time_items
     [ "Unlock Orange Meeple" ]
   end
