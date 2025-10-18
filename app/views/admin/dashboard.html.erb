@@ -349,7 +349,14 @@
         <div class="project-card" id="project-card-<%= project.id %>">
           <div class="project-header">
             <h3 class="project-name"><%= project.name %></h3>
-            <p class="project-user">by <%= project.user.name %></p>
+            <p class="project-user">
+              by <%= project.user.name %>
+              <% if data[:user_is_out] %>
+                <span style="color: #dc2626; font-weight: 600; margin-left: 0.5rem;">(OUT)</span>
+              <% elsif data[:under_goal] %>
+                <span style="color: #f59e0b; font-weight: 600; margin-left: 0.5rem;">(Under <%= data[:hour_goal] %>h goal)</span>
+              <% end %>
+            </p>
             <span class="status-badge status-<%= project.status %>"><%= project.status.humanize %></span>
           </div>
 
@@ -374,10 +381,6 @@
             <div class="stat-item">
               <span class="stat-label">Reviewer Multiplier:</span>
               <span class="stat-value"><%= project.reviewer_multiplier || 2.0 %>x</span>
-            </div>
-            <div class="stat-item">
-              <span class="stat-label">Vote Multiplier:</span>
-              <span class="stat-value"><%= data[:average_score] %>x</span>
             </div>
             <div class="stat-item">
               <span class="stat-label">Current Value:</span>
@@ -412,6 +415,17 @@
                 Reset
               </button>
             </div>
+            <% if data[:under_goal] %>
+              <button 
+                type="button" 
+                onclick="markUserAsOut(<%= project.user.id %>, <%= project.id %>)" 
+                class="award-button"
+                id="out-button-<%= project.id %>"
+                style="background: #dc2626; margin-bottom: 0.5rem;"
+              >
+                Mark User as Out
+              </button>
+            <% end %>
             <button 
               type="button" 
               onclick="awardCoins(<%= project.id %>, <%= @selected_week %>, <%= project.user.id %>)" 
@@ -436,6 +450,43 @@
     const input = document.getElementById(`coin-input-${projectId}`);
     const calculated = input.dataset.calculated;
     input.value = calculated;
+  }
+
+  function markUserAsOut(userId, projectId) {
+    const button = document.getElementById(`out-button-${projectId}`);
+    
+    if (!confirm('Mark this user as OUT? This will change their status.')) {
+      return;
+    }
+
+    button.disabled = true;
+    button.textContent = 'Processing...';
+
+    fetch(`/admin/users/${userId}/set_out`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': document.querySelector('[name="csrf-token"]').content
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        alert('User marked as OUT');
+        button.textContent = '✓ Marked as Out';
+        button.style.background = '#9ca3af';
+      } else {
+        alert('Error: ' + data.error);
+        button.disabled = false;
+        button.textContent = 'Mark User as Out';
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('Error marking user as out: ' + error.message);
+      button.disabled = false;
+      button.textContent = 'Mark User as Out';
+    });
   }
 
   function awardCoins(projectId, week, userId) {

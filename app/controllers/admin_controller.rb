@@ -85,14 +85,34 @@ class AdminController < ApplicationController
         # Calculate time and coins
         time_seconds = view_context.user_hackatime_time_for_projects(project.user, [project], project.effective_time_range)
         raw_hours = (time_seconds / 3600.0).round(2)
-        calculated_coins = calculate_project_coins(project.user, project, raw_hours, average_score, @selected_week)
+        
+        # Check if user is under goal (for weeks 5+, working users)
+        user_is_out = project.user.status == "out"
+        under_goal = false
+        hour_goal = view_context.effective_hour_goal(project.user, @selected_week)
+        
+        if @selected_week >= 5 && project.user.status == "working"
+          under_goal = raw_hours < hour_goal
+        end
+        
+        # Calculate coins using "out" formula if user is out OR under goal
+        if user_is_out || under_goal
+          reviewer_bonus = project&.reviewer_multiplier || 2.0
+          voting_bonus = [average_score || 1, 1].max
+          calculated_coins = (raw_hours * 2 * reviewer_bonus * voting_bonus).round
+        else
+          calculated_coins = calculate_project_coins(project.user, project, raw_hours, average_score, @selected_week)
+        end
         
         {
           project: project,
           average_score: average_score,
           raw_hours: raw_hours,
           calculated_coins: calculated_coins,
-          time_readable: view_context.format_time_from_seconds(time_seconds)
+          time_readable: view_context.format_time_from_seconds(time_seconds),
+          user_is_out: user_is_out,
+          under_goal: under_goal,
+          hour_goal: hour_goal
         }
       end
 
