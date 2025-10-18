@@ -86,6 +86,32 @@ class AdminController < ApplicationController
         time_seconds = view_context.user_hackatime_time_for_projects(project.user, [project], project.effective_time_range)
         raw_hours = (time_seconds / 3600.0).round(2)
         
+        # Determine if project followed theme by checking audit logs
+        theme_status = "unknown"
+        latest_status_update = project.user.audit_logs
+          .select { |log| log["action"] == "Project status updated" && log["details"]["project_id"] == project.id }
+          .max_by { |log| Time.parse(log["timestamp"]) rescue Time.at(0) }
+        
+        if latest_status_update
+          new_status = latest_status_update.dig("details", "new_status")
+          if new_status == "pending_voting"
+            theme_status = "yes"
+          elsif new_status == "waiting_for_review"
+            theme_status = "no"
+          end
+        end
+        
+        # Calculate default vote multiplier
+        if average_score > 0
+          vote_multiplier = average_score
+        elsif theme_status == "no"
+          vote_multiplier = 1.0
+        elsif theme_status == "yes"
+          vote_multiplier = 3.0
+        else
+          vote_multiplier = [average_score, 1].max
+        end
+        
         # Check if user is under goal (for weeks 5+, working users)
         user_is_out = project.user.status == "out"
         under_goal = false
@@ -98,10 +124,10 @@ class AdminController < ApplicationController
         # Calculate coins using "out" formula if user is out OR under goal
         if user_is_out || under_goal
           reviewer_bonus = project&.reviewer_multiplier || 2.0
-          voting_bonus = [average_score || 1, 1].max
+          voting_bonus = vote_multiplier
           calculated_coins = (raw_hours * 2 * reviewer_bonus * voting_bonus).round
         else
-          calculated_coins = calculate_project_coins(project.user, project, raw_hours, average_score, @selected_week)
+          calculated_coins = calculate_project_coins(project.user, project, raw_hours, vote_multiplier, @selected_week)
         end
         
         {
@@ -112,7 +138,9 @@ class AdminController < ApplicationController
           time_readable: view_context.format_time_from_seconds(time_seconds),
           user_is_out: user_is_out,
           under_goal: under_goal,
-          hour_goal: hour_goal
+          hour_goal: hour_goal,
+          theme_status: theme_status,
+          vote_multiplier: vote_multiplier
         }
       end
 

@@ -379,6 +379,19 @@
               <span class="stat-value"><%= data[:average_score] %></span>
             </div>
             <div class="stat-item">
+              <span class="stat-label">Followed Theme:</span>
+              <span class="stat-value">
+                <% case data[:theme_status] %>
+                <% when "yes" %>
+                  <span style="color: #059669;">✓ Yes</span>
+                <% when "no" %>
+                  <span style="color: #dc2626;">✗ No</span>
+                <% else %>
+                  <span style="color: #6b7280;">? Unknown</span>
+                <% end %>
+              </span>
+            </div>
+            <div class="stat-item">
               <span class="stat-label">Reviewer Multiplier:</span>
               <span class="stat-value"><%= project.reviewer_multiplier || 2.0 %>x</span>
             </div>
@@ -388,7 +401,7 @@
             </div>
             <div class="stat-item">
               <span class="stat-label">Calculated Coins:</span>
-              <span class="stat-value"><%= data[:calculated_coins] %></span>
+              <span class="stat-value" id="calculated-coins-<%= project.id %>"><%= data[:calculated_coins] %></span>
             </div>
             <div class="stat-item">
               <span class="stat-label">Airtable:</span>
@@ -397,6 +410,34 @@
           </div>
 
           <div class="coin-controls">
+            <label class="filter-label">Vote Multiplier:</label>
+            <div class="coin-input-group">
+              <input 
+                type="number" 
+                id="vote-multi-<%= project.id %>" 
+                class="coin-input" 
+                value="<%= data[:vote_multiplier] %>"
+                step="0.1"
+                min="0"
+                data-hours="<%= data[:raw_hours] %>"
+                data-reviewer-multi="<%= project.reviewer_multiplier || 2.0 %>"
+                data-week="<%= @selected_week %>"
+                data-user-out="<%= data[:user_is_out] %>"
+                data-under-goal="<%= data[:under_goal] %>"
+                data-hour-goal="<%= data[:hour_goal] %>"
+                data-user-status="<%= project.user.status %>"
+                oninput="recalculateCoins(<%= project.id %>)"
+              >
+              <button 
+                type="button" 
+                onclick="resetVoteMulti(<%= project.id %>, <%= data[:vote_multiplier] %>)" 
+                class="reset-button" 
+                style="padding: 0.5rem 1rem;"
+              >
+                Reset
+              </button>
+            </div>
+            
             <label class="filter-label">Award Coins:</label>
             <div class="coin-input-group">
               <input 
@@ -446,6 +487,50 @@
 </div>
 
 <script>
+  function resetVoteMulti(projectId, defaultValue) {
+    const input = document.getElementById(`vote-multi-${projectId}`);
+    input.value = defaultValue;
+    recalculateCoins(projectId);
+  }
+
+  function recalculateCoins(projectId) {
+    const voteMultiInput = document.getElementById(`vote-multi-${projectId}`);
+    const coinInput = document.getElementById(`coin-input-${projectId}`);
+    const calculatedDisplay = document.getElementById(`calculated-coins-${projectId}`);
+    
+    const hours = parseFloat(voteMultiInput.dataset.hours);
+    const reviewerMulti = parseFloat(voteMultiInput.dataset.reviewerMulti);
+    const voteMulti = parseFloat(voteMultiInput.value) || 0;
+    const week = parseInt(voteMultiInput.dataset.week);
+    const userOut = voteMultiInput.dataset.userOut === 'true';
+    const underGoal = voteMultiInput.dataset.underGoal === 'true';
+    const hourGoal = parseFloat(voteMultiInput.dataset.hourGoal);
+    const userStatus = voteMultiInput.dataset.userStatus;
+    
+    let calculatedCoins = 0;
+    
+    // Use "out" formula if user is out OR under goal
+    if (userOut || underGoal) {
+      calculatedCoins = Math.round(hours * 2 * reviewerMulti * voteMulti);
+    } else if (week <= 4) {
+      // Weeks 1-4 use simple formula
+      calculatedCoins = Math.round(hours * 2 * reviewerMulti * voteMulti);
+    } else if (userStatus === "out") {
+      // Out users use simple formula
+      calculatedCoins = Math.round(hours * 2 * reviewerMulti * voteMulti);
+    } else {
+      // Working users weeks 5+ use complex formula
+      const base = 5 * reviewerMulti * voteMulti;
+      const hoursPastGoal = Math.max(hours - hourGoal, 0);
+      const bonus = hoursPastGoal * 2 * reviewerMulti * voteMulti;
+      calculatedCoins = Math.round(base + bonus);
+    }
+    
+    coinInput.value = calculatedCoins;
+    coinInput.dataset.calculated = calculatedCoins;
+    calculatedDisplay.textContent = calculatedCoins;
+  }
+
   function resetCoins(projectId) {
     const input = document.getElementById(`coin-input-${projectId}`);
     const calculated = input.dataset.calculated;
