@@ -113,12 +113,13 @@ class AdminController < ApplicationController
         end
         
         # Check if user is under goal (for weeks 5+, working users)
+        # Allow up to 10 minutes (0.167 hours) under goal
         user_is_out = project.user.status == "out"
         under_goal = false
         hour_goal = view_context.effective_hour_goal(project.user, @selected_week)
         
         if @selected_week >= 5 && project.user.status == "working"
-          under_goal = raw_hours < hour_goal
+          under_goal = raw_hours < (hour_goal - 0.167)
         end
         
         # Calculate coins using "out" formula if user is out OR under goal
