@@ -1303,6 +1303,11 @@ class AdminController < ApplicationController
         # Set project's coin value to the new value
         project.skip_screenshot_validation!
         project.update!(coin_value: new_coin_value)
+        
+        # Mark project as finished if not already
+        if project.status != "finished"
+          project.update_status!("finished", current_user, "Coins awarded and project marked as finished")
+        end
 
         # Send Slack notification if project has reviewer feedback and coins were added
         if coin_difference > 0 && project.reviewer_feedback.present?

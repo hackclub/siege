@@ -380,6 +380,10 @@
               <span class="stat-value"><%= data[:average_score] %>x</span>
             </div>
             <div class="stat-item">
+              <span class="stat-label">Current Value:</span>
+              <span class="stat-value"><%= project.coin_value.to_i %></span>
+            </div>
+            <div class="stat-item">
               <span class="stat-label">Calculated Coins:</span>
               <span class="stat-value"><%= data[:calculated_coins] %></span>
             </div>
@@ -465,9 +469,10 @@
     .then(response => response.json())
     .then(data => {
       if (data.success) {
-        alert(data.message);
+        alert('Project finalized successfully!');
         button.textContent = '✓ Completed';
         button.style.background = '#6b7280';
+        setTimeout(() => location.reload(), 1000);
       } else {
         alert('Error: ' + data.error);
         button.disabled = false;
@@ -475,7 +480,8 @@
       }
     })
     .catch(error => {
-      alert('Error awarding coins: ' + error);
+      console.error('Error:', error);
+      alert('Error finalizing project: ' + error.message);
       button.disabled = false;
       button.textContent = 'Award Coins & Mark Finished';
     });
