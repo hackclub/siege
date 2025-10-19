@@ -271,10 +271,17 @@
     <!-- Admin Status Controls -->
     <div class="admin-controls-section">
       <h3 style="font-size: 1.1rem; font-weight: bold; margin-bottom: 0.5rem;">Admin Controls</h3>
-      <div style="margin-bottom: 1rem;">
+      <div style="margin-bottom: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
         <%= link_to admin_user_details_path(@project.user), class: "submit-button", style: "background-color: #7c3aed;" do %>
           <%= lucide_icon("user-search", class: "icon-sm") %>
           <span>Inspect User</span>
+        <% end %>
+        <% week_number = ApplicationController.helpers.week_number_for_date(@project.created_at.to_date) %>
+        <% if week_number %>
+          <%= link_to admin_weekly_overview_user_path(week: week_number, user_id: @project.user_id), class: "submit-button", style: "background-color: #059669;" do %>
+            <%= lucide_icon("calendar-check", class: "icon-sm") %>
+            <span>Week <%= week_number %> Overview</span>
+          <% end %>
         <% end %>
       </div>
       <form action="<%= update_status_project_path(@project) %>" method="post" style="display: inline-flex; align-items: center; gap: 0.5rem;">
