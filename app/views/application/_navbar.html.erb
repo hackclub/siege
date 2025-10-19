@@ -374,6 +374,10 @@
       <%= link_to "← Back", admin_path, class: "navbar-link" %>
     <% elsif controller_name == "admin" && action_name == "weekly_overview_user" %>
       <%= link_to "← Back", admin_weekly_overview_path(week: params[:week]), class: "navbar-link" %>
+    <% elsif controller_name == "ysws_review" && action_name == "show" %>
+      <%= link_to "← Back", ysws_review_path, class: "navbar-link" %>
+    <% elsif controller_name == "admin" && action_name == "analytics" %>
+      <%= link_to "← Back", admin_path, class: "navbar-link" %>
     <% elsif controller_name == "admin" && action_name == "shop_purchases" %>
       <%= link_to "← Back", admin_path, class: "navbar-link" %>
     <% elsif controller_name == "admin" && action_name == "shop_purchase_details" %>

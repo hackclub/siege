@@ -688,7 +688,7 @@ document.addEventListener('keydown', function(e) {
       .then(data => {
         if (data.data && data.data.user_id) {
           const hackamateId = data.data.user_id;
-          const billyUrl = `https://billy.3kh0.net/?u=${hackamateId}&d=${billyDateRange}`;
+          const billyUrl = `https://dash.fraud.land/billy?u=${hackamateId}&d=${billyDateRange}`;
           billyLink.href = billyUrl;
         } else {
           console.error('Hackatime user ID not found in API response');
