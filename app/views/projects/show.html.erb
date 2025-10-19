@@ -758,10 +758,8 @@
              }
              
              // Check if project can be submitted (same logic as server-side)
-             const isUserOut = <%= current_user&.out? || false %>;
              const isPreparationPhase = <%= Flipper.enabled?(:preparation_phase, current_user) %>;
-             const canSubmit = !isUserOut && 
-             projectData.repoUrl && projectData.repoUrl.trim() !== '' &&
+             const canSubmit = projectData.repoUrl && projectData.repoUrl.trim() !== '' &&
              projectData.demoUrl && projectData.demoUrl.trim() !== '' &&
              hasScreenshot && isScreenshotValid &&
              projectData.hackatimeProjects && projectData.hackatimeProjects.length > 0 &&
