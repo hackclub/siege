@@ -344,14 +344,27 @@
   <!-- Users Without Projects Section -->
   <% if @users_without_projects.any? %>
     <div style="margin-bottom: 2rem;">
-      <h2 style="font-size: 1.5rem; font-weight: 700; color: #402b20; margin-bottom: 1rem;">
-        Users Without Projects or Building Only (<%= @users_without_projects.size %>)
-      </h2>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h2 style="font-size: 1.5rem; font-weight: 700; color: #402b20; margin: 0;">
+          Users Without Projects or Building Only (<%= @users_without_projects.size %>)
+        </h2>
+        <button 
+          type="button" 
+          onclick="bulkMarkAsOut()" 
+          class="apply-button"
+          id="bulk-mark-out-button"
+          style="background: #dc2626; padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; cursor: pointer; border: none; color: white; transition: all 0.2s;"
+          onmouseover="this.style.background='#b91c1c'"
+          onmouseout="this.style.background='#dc2626'"
+        >
+          Bulk Mark Top 25 as Out
+        </button>
+      </div>
       <div class="projects-grid">
         <% @users_without_projects.each do |data| %>
           <% user = data[:user] %>
           <% project = data[:project] %>
-          <div class="project-card" style="border-color: rgba(220, 38, 38, 0.3);">
+          <div class="project-card" style="border-color: rgba(220, 38, 38, 0.3);" data-user-id="<%= user.id %>" id="user-card-<%= user.id %>">
             <div class="project-header">
               <h3 class="project-name"><%= user.name %></h3>
               <% if data[:status] == "no_project" %>
@@ -740,6 +753,95 @@
       alert('Error finalizing project: ' + error.message);
       button.disabled = false;
       button.textContent = 'Award Coins & Mark Finished';
+    });
+  }
+
+  function bulkMarkAsOut() {
+    // Collect user IDs from users without projects section (only working users, top 25)
+    const allUserCards = document.querySelectorAll('[data-user-id]');
+    const userIds = [];
+    
+    // Collect first 25 users that haven't been marked yet
+    for (let card of allUserCards) {
+      const userId = parseInt(card.dataset.userId);
+      const buttons = card.querySelectorAll('button');
+      let isAlreadyMarked = false;
+      
+      // Check if any button says "Marked as Out"
+      for (let btn of buttons) {
+        if (btn.textContent.includes('✓')) {
+          isAlreadyMarked = true;
+          break;
+        }
+      }
+      
+      if (!isAlreadyMarked && userIds.length < 25) {
+        userIds.push(userId);
+      }
+    }
+    
+    if (userIds.length === 0) {
+      alert('No users to mark as out (all already marked or none found)');
+      return;
+    }
+
+    const count = userIds.length;
+    if (!confirm(`Mark ${count} user${count !== 1 ? 's' : ''} as OUT? This will change their status.`)) {
+      return;
+    }
+
+    const button = document.getElementById('bulk-mark-out-button');
+    button.disabled = true;
+    button.textContent = 'Processing...';
+
+    fetch('/admin/users/bulk_set_out', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': document.querySelector('[name="csrf-token"]').content
+      },
+      body: JSON.stringify({
+        user_ids: userIds
+      })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        alert(data.message);
+        
+        // Update UI for each successfully updated user
+        if (data.updated_user_ids && data.updated_user_ids.length > 0) {
+          data.updated_user_ids.forEach(userId => {
+            const userCard = document.getElementById(`user-card-${userId}`);
+            if (userCard) {
+              // Find all buttons in the card and disable them
+              const buttons = userCard.querySelectorAll('button');
+              buttons.forEach(btn => {
+                btn.disabled = true;
+                btn.textContent = '✓ Marked as Out';
+                btn.style.background = '#9ca3af';
+              });
+              
+              // Update card border to show it's been processed
+              userCard.style.borderColor = 'rgba(156, 163, 175, 0.5)';
+              userCard.style.opacity = '0.7';
+            }
+          });
+        }
+        
+        button.textContent = '✓ Completed';
+        button.style.background = '#9ca3af';
+      } else {
+        alert('Error: ' + data.error);
+        button.disabled = false;
+        button.textContent = 'Bulk Mark Top 25 as Out';
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('Error marking users as out: ' + error.message);
+      button.disabled = false;
+      button.textContent = 'Bulk Mark Top 25 as Out';
     });
   }
 </script>

@@ -115,6 +115,7 @@ Rails.application.routes.draw do
   post "/admin/shop_purchases/:id/mark_time_traveller_used", to: "admin#mark_time_traveller_used", as: :admin_mark_time_traveller_used
   post "/admin/users/:id/set_out", to: "admin#set_out", as: :admin_set_out
   post "/admin/users/:id/set_active", to: "admin#set_active", as: :admin_set_active
+  post "/admin/users/bulk_set_out", to: "admin#bulk_set_out", as: :admin_bulk_set_out
   post "/admin/users/:id/add_cosmetic", to: "admin#add_cosmetic", as: :admin_add_cosmetic
   delete "/admin/users/:id/remove_cosmetic", to: "admin#remove_cosmetic", as: :admin_remove_cosmetic
   post "/admin/users/:id/set_banned", to: "admin#set_banned", as: :admin_set_banned

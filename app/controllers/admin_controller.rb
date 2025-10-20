@@ -870,6 +870,60 @@ class AdminController < ApplicationController
     end
   end
 
+  def bulk_set_out
+    user_ids = params[:user_ids]
+    
+    unless user_ids.is_a?(Array) && user_ids.any?
+      render json: { success: false, error: "No user IDs provided" }
+      return
+    end
+    
+    # Limit to 25 users for safety and filter to only "working" users
+    users = User.where(id: user_ids, status: "working").limit(25)
+    
+    if users.empty?
+      render json: { success: false, error: "No working users to mark as out" }
+      return
+    end
+    
+    success_count = 0
+    failed_users = []
+    updated_user_ids = []
+    
+    users.each do |user|
+      old_status = user.status
+      if user.update(status: "out")
+        # Log status change
+        user.add_audit_log(
+          action: "User marked as out by admin (bulk action)",
+          actor: current_user,
+          details: {
+            "previous_status" => old_status,
+            "new_status" => "out"
+          }
+        )
+        success_count += 1
+        updated_user_ids << user.id
+      else
+        failed_users << user.name
+      end
+    end
+    
+    if failed_users.empty?
+      render json: { 
+        success: true, 
+        message: "Successfully marked #{success_count} user#{success_count != 1 ? 's' : ''} as out",
+        updated_user_ids: updated_user_ids
+      }
+    else
+      render json: { 
+        success: true, 
+        message: "Marked #{success_count} user#{success_count != 1 ? 's' : ''} as out. Failed: #{failed_users.join(', ')}",
+        updated_user_ids: updated_user_ids
+      }
+    end
+  end
+
   def set_banned
     return unless find_user_safely
 
