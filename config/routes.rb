@@ -184,6 +184,7 @@ Rails.application.routes.draw do
   # Countdown timer page
   get "/countdown", to: "countdown#index"
   get "/castle", to: "castle#index", as: :castle
+  get "/catacombs", to: "catacombs#index", as: :catacombs
   get "/identity_verification_callback", to: "sessions#identity_verification_callback"
 
   # Slack webhook endpoints

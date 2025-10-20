@@ -14,7 +14,7 @@
     <%= image_tag "castle/7-armory.webp", class: "castle-layer armory" %>
     <%= image_tag "castle/8-market.webp", class: "castle-layer market" %>
     <%= image_tag "castle/9-fountain.webp", class: "castle-layer" %>
-    <%= image_tag "castle/10-catacombs.webp", class: "castle-layer" %>
+    <%= image_tag "castle/10-catacombs.webp", class: "castle-layer catacombs" %>
 		<%= image_tag "castle/11-foreground.webp", class: "castle-layer map" %>
 		<%= image_tag "castle/12-lighting.webp", class: "castle-layer lighting" %>
 	</div>
@@ -357,6 +357,18 @@
             scale: 1.0,
             targetLayer: 'map',
             navigateTo: '/map'
+          },
+          {
+            id: 'catacombs',
+            path: `M10 67.5L70.5 1L125 47L113 117.5L77 148L1.5 176L10 67.5Z`,
+            fill: "#C72C2C",
+            fillOpacity: "0",
+            stroke: "",
+            x: 1835,
+            y: 900,
+            scale: 1.0,
+            targetLayer: 'catacombs',
+            navigateTo: '/catacombs'
           }
         ];
         

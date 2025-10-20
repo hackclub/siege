@@ -6,7 +6,7 @@ Rails.application.configure do
     {
       time: event.time,
       user_id: event.payload[:user_id],
-      params: event.payload[:params].except('controller', 'action', 'format', 'authenticity_token')
+      params: event.payload[:params]&.except('controller', 'action', 'format', 'authenticity_token')
     }
   end
   
