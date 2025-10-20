@@ -1,0 +1,129 @@
+<% content_for :title, "Explore Projects" %>
+
+<% content_for :head do %>
+  <style>
+    .projects-explore {
+      width: 100%;
+    }
+
+    .projects-notice {
+      display: inline-block;
+      margin-bottom: 1.25rem;
+      font-weight: 500;
+      color: #3b2a1a;
+      padding: 0;
+      background: transparent !important;
+      border: 0;
+    }
+    .projects-notice::before,
+    .projects-notice::after {
+      content: "— — —";
+      opacity: 0.6;
+      margin: 0 0.5rem;
+    }
+
+    .projects-header {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      align-items: stretch;
+      justify-content: space-between;
+    }
+    @media (min-width: 640px) {
+      .projects-header {
+        flex-direction: row;
+        align-items: center;
+      }
+    }
+
+    .projects-title {
+      font-weight: 700;
+      font-size: 2.25rem;
+      margin: 0;
+    }
+
+    .projects-actions {
+      display: flex;
+      gap: 1.5rem;
+      align-items: center;
+    }
+    .projects-actions .hint {
+      margin: 0;
+    }
+
+    .projects-list {
+      margin-top: 2rem;
+    }
+    .projects-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+    @media (min-width: 768px) {
+      .projects-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+    @media (min-width: 1024px) {
+      .projects-grid {
+        grid-template-columns: 1fr 1fr 1fr;
+      }
+    }
+
+    .projects-empty {
+      text-align: center;
+      margin: 2.5rem 0;
+    }
+
+    /* Project card footer styles */
+    .project-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-top: 1rem;
+    }
+    .project-status-indicator {
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: inherit;
+      text-align: right;
+    }
+  </style>
+<% end %>
+
+<div class="projects-explore">
+  <% if notice.present? %>
+    <p class="projects-notice" id="notice"><%= notice %></p>
+  <% end %>
+
+  <div class="projects-header">
+    <h1 class="projects-title">Explore Projects</h1>
+    <div class="projects-actions">
+      <%= link_to "My Projects", projects_path, class: "submit-button" %>
+    </div>
+  </div>
+
+  <div id="projects" class="projects-list">
+    <% if @projects.any? %>
+      <% cache @projects do %>
+        <div class="projects-grid">
+          <% @projects.each do |project| %>
+            <%= render project %>
+          <% end %>
+        </div>
+      <% end %>
+    <% else %>
+      <p class="projects-empty">No projects available to explore yet.</p>
+    <% end %>
+  </div>
+</div>
+
+<script>
+  (function(){
+    var t = setTimeout(function(){
+      var n = document.getElementById('notice');
+      if (n && n.parentNode) { n.parentNode.removeChild(n); }
+      clearTimeout(t);
+    }, 5000);
+  })();
+</script>

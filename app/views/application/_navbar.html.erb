@@ -252,21 +252,37 @@
   }
   <% end %>
   
-  /* Add left margin on armory page to account for navbar */
-  <% if current_page?(projects_path) %>
-  .app-main {
-    margin-left: 20rem;
-    margin-right: 1rem;
-    margin-top: 2rem;
-  }
-  @media (max-width: 768px) {
-    .app-main {
-      margin-left: 0;
-      margin-top: 26rem; /* Position content below navbar (1.3x left margin) */
-      margin-right: 0.5rem;
-    }
-  }
-  <% end %>
+   /* Add left margin on projects page to account for navbar */
+   <% if current_page?(projects_path) %>
+   .app-main {
+     margin-left: 20rem;
+     margin-right: 1rem;
+     margin-top: 2rem;
+   }
+   @media (max-width: 768px) {
+     .app-main {
+       margin-left: 0;
+       margin-top: 26rem; /* Position content below navbar (1.3x left margin) */
+       margin-right: 0.5rem;
+     }
+   }
+   <% end %>
+
+   /* Add left margin on explore projects page to account for navbar */
+   <% if current_page?(explore_projects_path) %>
+   .app-main {
+     margin-left: 20rem;
+     margin-right: 1rem;
+     margin-top: 2rem;
+   }
+   @media (max-width: 768px) {
+     .app-main {
+       margin-left: 0;
+       margin-top: 26rem; /* Position content below navbar (1.3x left margin) */
+       margin-right: 0.5rem;
+     }
+   }
+   <% end %>
   
   /* Add left margin on admin pages to account for navbar */
   <% if controller_name == "admin" %>
@@ -393,11 +409,17 @@
       <span class="navbar-link active">Keep</span>
     <% end %>
     
-    <% unless current_page?(projects_path) %>
-      <%= link_to "Armory", projects_path, class: "navbar-link" %>
-    <% else %>
-      <span class="navbar-link active">Armory</span>
-    <% end %>
+     <% unless current_page?(projects_path) %>
+       <%= link_to "My Projects", projects_path, class: "navbar-link" %>
+     <% else %>
+       <span class="navbar-link active">Armory</span>
+     <% end %>
+
+     <% unless current_page?(explore_projects_path) %>
+       <%= link_to "Explore", explore_projects_path, class: "navbar-link" %>
+     <% else %>
+       <span class="navbar-link active">Explore</span>
+     <% end %>
     
     <% unless current_page?(great_hall_path) %>
       <%= link_to "Great Hall", great_hall_path, class: "navbar-link" %>

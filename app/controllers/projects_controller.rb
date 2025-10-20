@@ -24,12 +24,34 @@ class ProjectsController < ApplicationController
       if finished_projects.any?
         project_ids = finished_projects.map(&:id)
         @vote_averages = Vote.where(project_id: project_ids, voted: true)
-                             .group(:project_id)
-                             .average(:star_count)
-                             .transform_values { |avg| avg.to_f.round(2) }
+                              .group(:project_id)
+                              .average(:star_count)
+                              .transform_values { |avg| avg.to_f.round(2) }
       else
         @vote_averages = {}
       end
+    end
+  end
+
+  # GET /projects/explore
+  def explore
+    # Show all visible projects that are in public status (submitted or later)
+    @projects = Project.visible
+                       .where(status: %w[submitted pending_voting waiting_for_review finished])
+                       .includes(:user)
+                       .order(created_at: :desc)
+                       .decorate
+
+    # Pre-fetch votes for finished projects to calculate average scores
+    finished_projects = @projects.select(&:finished?)
+    if finished_projects.any?
+      project_ids = finished_projects.map(&:id)
+      @vote_averages = Vote.where(project_id: project_ids, voted: true)
+                            .group(:project_id)
+                            .average(:star_count)
+                            .transform_values { |avg| avg.to_f.round(2) }
+    else
+      @vote_averages = {}
     end
   end
 
