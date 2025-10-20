@@ -341,8 +341,76 @@
     <% end %>
   </div>
 
+  <!-- Users Without Projects Section -->
+  <% if @users_without_projects.any? %>
+    <div style="margin-bottom: 2rem;">
+      <h2 style="font-size: 1.5rem; font-weight: 700; color: #402b20; margin-bottom: 1rem;">
+        Users Without Projects or Building Only (<%= @users_without_projects.size %>)
+      </h2>
+      <div class="projects-grid">
+        <% @users_without_projects.each do |data| %>
+          <% user = data[:user] %>
+          <% project = data[:project] %>
+          <div class="project-card" style="border-color: rgba(220, 38, 38, 0.3);">
+            <div class="project-header">
+              <h3 class="project-name"><%= user.name %></h3>
+              <% if data[:status] == "no_project" %>
+                <span class="status-badge" style="background: #fee2e2; color: #991b1b;">No Project</span>
+              <% else %>
+                <span class="status-badge status-building">Building Only</span>
+                <% if project %>
+                  <p style="margin-top: 0.5rem; color: #6b7280; font-size: 0.9rem;">
+                    Project: <%= project.name %>
+                  </p>
+                <% end %>
+              <% end %>
+            </div>
+
+            <div style="padding: 1rem; background: rgba(220, 38, 38, 0.05); border-radius: 8px; margin-bottom: 1rem;">
+              <p style="color: #6b7280; font-size: 0.9rem; margin-bottom: 0.5rem;">
+                <strong>Status:</strong> <%= user.status.humanize %>
+              </p>
+              <% if user.slack_id.present? %>
+                <p style="color: #6b7280; font-size: 0.9rem;">
+                  <strong>Slack:</strong> <%= user.slack_id %>
+                </p>
+              <% end %>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+              <% if data[:status] == "no_project" %>
+                <button 
+                  type="button" 
+                  onclick="markUserAsOut(<%= user.id %>, 'no-project-<%= user.id %>')" 
+                  class="award-button"
+                  id="out-button-no-project-<%= user.id %>"
+                  style="background: #dc2626;"
+                >
+                  Mark User as Out
+                </button>
+              <% elsif data[:status] == "building_only" && project %>
+                <button 
+                  type="button" 
+                  onclick="hideProjectAndMarkOut(<%= project.id %>, <%= user.id %>)" 
+                  class="award-button"
+                  id="hide-button-<%= project.id %>"
+                  style="background: #dc2626;"
+                >
+                  Hide Project & Mark User as Out
+                </button>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+
   <!-- Projects Grid -->
   <% if @project_data.any? %>
+    <h2 style="font-size: 1.5rem; font-weight: 700; color: #402b20; margin-bottom: 1rem;">
+      Projects for Review (<%= @project_data.size %>)
+    </h2>
     <div class="projects-grid">
       <% @project_data.each do |data| %>
         <% project = data[:project] %>
@@ -537,8 +605,8 @@
     input.value = calculated;
   }
 
-  function markUserAsOut(userId, projectId) {
-    const button = document.getElementById(`out-button-${projectId}`);
+  function markUserAsOut(userId, buttonId) {
+    const button = document.getElementById(`out-button-${buttonId}`);
     
     if (!confirm('Mark this user as OUT? This will change their status.')) {
       return;
@@ -571,6 +639,59 @@
       alert('Error marking user as out: ' + error.message);
       button.disabled = false;
       button.textContent = 'Mark User as Out';
+    });
+  }
+
+  function hideProjectAndMarkOut(projectId, userId) {
+    const button = document.getElementById(`hide-button-${projectId}`);
+    
+    if (!confirm('Hide this project and mark user as OUT? This will hide the project and change the user status.')) {
+      return;
+    }
+
+    button.disabled = true;
+    button.textContent = 'Processing...';
+
+    // First hide the project
+    fetch(`/admin/projects/${projectId}/hide`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': document.querySelector('[name="csrf-token"]').content
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        // Then mark user as out
+        return fetch(`/admin/users/${userId}/set_out`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': document.querySelector('[name="csrf-token"]').content
+          }
+        });
+      } else {
+        throw new Error(data.error || 'Failed to hide project');
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        alert('Project hidden and user marked as OUT');
+        button.textContent = '✓ Completed';
+        button.style.background = '#9ca3af';
+        // Optionally reload the page to update the view
+        setTimeout(() => location.reload(), 1000);
+      } else {
+        throw new Error(data.error || 'Failed to mark user as out');
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('Error: ' + error.message);
+      button.disabled = false;
+      button.textContent = 'Hide Project & Mark User as Out';
     });
   }
 

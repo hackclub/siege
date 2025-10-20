@@ -45,8 +45,8 @@ class AdminController < ApplicationController
       week_start_date = Date.parse(week_range[0])
       week_end_date = Date.parse(week_range[1])
 
-      # Start with projects in the selected week
-      @projects = Project.includes(:user, :votes)
+      # Start with visible projects in the selected week (exclude hidden)
+      @projects = Project.visible.includes(:user, :votes)
                         .where(created_at: week_start_date.beginning_of_day..week_end_date.end_of_day)
 
       # Apply filters
@@ -155,10 +155,45 @@ class AdminController < ApplicationController
         @project_data = @project_data.select { |data| data[:raw_hours] >= @min_hours.to_f }
       end
 
+      # Find users with no projects or only building projects in this week
+      all_users_in_week = User.where(status: "working").includes(:projects)
+      
+      @users_without_projects = []
+      all_users_in_week.each do |user|
+        # Get user's visible projects in this week
+        user_projects = user.projects.visible.where(
+          created_at: week_start_date.beginning_of_day..week_end_date.end_of_day
+        )
+        
+        # Skip if filters don't match
+        if @user_name_filter.present?
+          escaped_name = ActiveRecord::Base.connection.quote_string(@user_name_filter)
+          next unless user.name.downcase.include?(@user_name_filter.downcase)
+        end
+        
+        if user_projects.empty?
+          # User has no projects this week
+          @users_without_projects << {
+            user: user,
+            project: nil,
+            status: "no_project"
+          }
+        elsif user_projects.all? { |p| p.status == "building" }
+          # User only has building projects
+          building_project = user_projects.first
+          @users_without_projects << {
+            user: user,
+            project: building_project,
+            status: "building_only"
+          }
+        end
+      end
+
       # Sort by calculated coins descending
       @project_data = @project_data.sort_by { |data| -data[:calculated_coins] }
     else
       @project_data = []
+      @users_without_projects = []
     end
   end
 
