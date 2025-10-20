@@ -306,7 +306,7 @@ class Project < ApplicationRecord
     created_at
   end
 
-  private
+
 
   def repo_url_must_be_github
     return if repo_url.blank?
