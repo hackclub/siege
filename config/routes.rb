@@ -169,6 +169,14 @@ Rails.application.routes.draw do
   # API endpoints
   get "/api/project_hours/:id", to: "projects#hours"
 
+  # Public Beta API endpoints
+  namespace :api do
+    get "public-beta", to: "public_beta#index"
+    get "public-beta/project/:id", to: "public_beta#project"
+    get "public-beta/user/:id_or_slack_id", to: "public_beta#user"
+    get "public-beta/shop", to: "public_beta#shop"
+  end
+
   # Submit API endpoints
   post "/api/submit/authorize", to: "submit_api#authorize"
   get "/api/submit/status/:auth_id", to: "submit_api#status"
