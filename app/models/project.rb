@@ -306,6 +306,12 @@ class Project < ApplicationRecord
     created_at
   end
 
+  # Get week badge text for display
+  def week_badge_text
+    week_num = ApplicationController.helpers.week_number_for_date(created_at)
+    "Week #{week_num}"
+  end
+
   private
 
   def repo_url_must_be_github
@@ -441,12 +447,6 @@ class Project < ApplicationRecord
     end
 
     save! if persisted?
-  end
-
-  # Get week badge text for display
-  def week_badge_text
-    week_num = ApplicationController.helpers.week_number_for_date(created_at)
-    "Week #{week_num}"
   end
 
   private
