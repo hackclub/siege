@@ -892,6 +892,13 @@ class AdminController < ApplicationController
     
     users.each do |user|
       old_status = user.status
+      
+      # Hide any building projects for this user
+      user.projects.where(status: "building", hidden: false).each do |project|
+        project.update(hidden: true)
+        Rails.logger.info "Bulk action: Hidden building project #{project.id} for user #{user.id}"
+      end
+      
       if user.update(status: "out")
         # Log status change
         user.add_audit_log(

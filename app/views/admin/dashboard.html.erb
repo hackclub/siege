@@ -341,8 +341,8 @@
     <% end %>
   </div>
 
-  <!-- Users Without Projects Section -->
-  <% if @users_without_projects.any? %>
+  <!-- Users Without Projects Section (only shown for weeks 5+, not prep weeks) -->
+  <% if @users_without_projects.any? && @selected_week >= 5 %>
     <div style="margin-bottom: 2rem;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
         <h2 style="font-size: 1.5rem; font-weight: 700; color: #402b20; margin: 0;">

@@ -242,7 +242,7 @@ class ProjectsController < ApplicationController
       Rails.logger.info "[ProjectHours] Fetching Hackatime data for date range: #{start_date_str} to #{end_date_str}"
 
       # Get Hackatime projects data for the current week
-      projects_data = hackatime_projects_for(start_date_str, end_date_str)
+      projects_data = view_context.hackatime_projects_for(start_date_str, end_date_str)
 
       Rails.logger.info "[ProjectHours] Received #{projects_data.length} projects from Hackatime API"
       Rails.logger.debug "[ProjectHours] Available projects: #{projects_data.map { |p| p['name'] }.join(', ')}"
