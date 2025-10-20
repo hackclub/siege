@@ -1399,25 +1399,55 @@
         // Calculate total milliseconds in the week
         const weekDuration = weekEnd - weekStart;
         
-        // Plot commits - position based on exact timestamp within the week
+        // Group commits within 6 hours of each other
+        const SIX_HOURS_MS = 6 * 60 * 60 * 1000;
+        const commitGroups = [];
+        let currentGroup = [];
+        
         commits.forEach((commit, i) => {
-          // Calculate exact position within the week (0 to 1)
-          const timeIntoWeek = commit.date - weekStart;
+          if (currentGroup.length === 0) {
+            currentGroup.push(commit);
+          } else {
+            const lastCommit = currentGroup[currentGroup.length - 1];
+            if (Math.abs(commit.date - lastCommit.date) <= SIX_HOURS_MS) {
+              currentGroup.push(commit);
+            } else {
+              commitGroups.push([...currentGroup]);
+              currentGroup = [commit];
+            }
+          }
+        });
+        if (currentGroup.length > 0) {
+          commitGroups.push(currentGroup);
+        }
+        
+        // Plot commits - position based on exact timestamp within the week
+        commitGroups.forEach(group => {
+          // Use the first commit's timestamp for the group position
+          const firstCommit = group[0];
+          const timeIntoWeek = firstCommit.date - weekStart;
           const positionRatio = Math.max(0, Math.min(1, timeIntoWeek / weekDuration));
           
-          // Calculate pixel position within the graph container (accounting for 1rem padding)
-          const pixelOffset = `calc(1rem + (100% - 2rem) * ${positionRatio} - 6px)`;
-          
-          const addHeight = Math.max((commit.additions / maxChanges) * 130, 3);
-          const delHeight = Math.max((commit.deletions / maxChanges) * 130, 3);
-          
-          const commitTitle = `${commit.message}\\nAdditions: +${commit.additions}\\nDeletions: -${commit.deletions}\\nAuthor: ${commit.author}`;
-          
-          // Addition bar (extends upward)
-          html += `<div style="position: absolute; left: ${pixelOffset}; bottom: calc(50% + 1px); width: 12px; background: #059669; height: ${addHeight}px; border-radius: 2px 2px 0 0; z-index: 2; cursor: pointer;" title="${commitTitle}"></div>`;
-          
-          // Deletion bar (extends downward)
-          html += `<div style="position: absolute; left: ${pixelOffset}; top: calc(50% + 1px); width: 12px; background: #dc2626; height: ${delHeight}px; border-radius: 0 0 2px 2px; z-index: 2; cursor: pointer;" title="${commitTitle}"></div>`;
+          // Plot each commit in the group with horizontal offset and different shades
+          group.forEach((commit, stackIndex) => {
+            // Calculate pixel position with stack offset
+            const stackOffset = stackIndex * 14; // 12px bar + 2px gap
+            const pixelOffset = `calc(1rem + (100% - 2rem) * ${positionRatio} - 6px + ${stackOffset}px)`;
+            
+            const addHeight = Math.max((commit.additions / maxChanges) * 130, 3);
+            const delHeight = Math.max((commit.deletions / maxChanges) * 130, 3);
+            
+            const commitTitle = `${commit.message}\\nAdditions: +${commit.additions}\\nDeletions: -${commit.deletions}\\nAuthor: ${commit.author}`;
+            
+            // Calculate opacity based on stack position (darker = more recent)
+            const opacity = 1 - (stackIndex * 0.15);
+            
+            // Addition bar (extends upward)
+            html += `<div style="position: absolute; left: ${pixelOffset}; bottom: calc(50% + 1px); width: 12px; background: rgba(5, 150, 105, ${opacity}); height: ${addHeight}px; border-radius: 2px 2px 0 0; z-index: ${2 + stackIndex}; cursor: pointer;" title="${commitTitle}"></div>`;
+            
+            // Deletion bar (extends downward)
+            html += `<div style="position: absolute; left: ${pixelOffset}; top: calc(50% + 1px); width: 12px; background: rgba(220, 38, 38, ${opacity}); height: ${delHeight}px; border-radius: 0 0 2px 2px; z-index: ${2 + stackIndex}; cursor: pointer;" title="${commitTitle}"></div>`;
+          });
         });
         
         html += '</div>'; // Close graph area
