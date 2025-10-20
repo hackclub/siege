@@ -172,9 +172,11 @@ Rails.application.routes.draw do
   # Public Beta API endpoints
   namespace :api do
     get "public-beta", to: "public_beta#index"
+    get "public-beta/projects", to: "public_beta#projects"
     get "public-beta/project/:id", to: "public_beta#project"
     get "public-beta/user/:id_or_slack_id", to: "public_beta#user"
     get "public-beta/shop", to: "public_beta#shop"
+    get "public-beta/leaderboard", to: "public_beta#leaderboard"
   end
 
   # Submit API endpoints

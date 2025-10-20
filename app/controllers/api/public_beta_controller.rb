@@ -8,11 +8,39 @@ class Api::PublicBetaController < ApplicationController
   def index
     render json: {
       endpoints: {
+        projects: "/api/public-beta/projects",
         project: "/api/public-beta/project/:id",
         user: "/api/public-beta/user/:id_or_slack_id",
-        shop: "/api/public-beta/shop"
+        shop: "/api/public-beta/shop",
+        leaderboard: "/api/public-beta/leaderboard"
       }
     }
+  end
+
+  # GET /api/public-beta/projects
+  def projects
+    projects = Project.visible.order(created_at: :desc).map do |project|
+      {
+        id: project.id,
+        name: project.name,
+        description: project.description,
+        status: project.status,
+        repo_url: project.repo_url,
+        demo_url: project.demo_url,
+        created_at: project.created_at,
+        updated_at: project.updated_at,
+        user: {
+          id: project.user.id,
+          name: project.user.name,
+          display_name: project.user.display_name
+        },
+        week_badge_text: project.week_badge_text,
+        coin_value: project.coin_value,
+        is_update: project.is_update
+      }
+    end
+
+    render json: { projects: projects }
   end
 
   # GET /api/public-beta/project/:id
@@ -108,6 +136,22 @@ class Api::PublicBetaController < ApplicationController
       cosmetics: cosmetics,
       physical_items: physical_items
     }
+  end
+
+  # GET /api/public-beta/leaderboard
+  def leaderboard
+    users = User.where.not(status: "banned").order(coins: :desc).limit(50).map do |user|
+      {
+        id: user.id,
+        slack_id: user.slack_id,
+        name: user.name,
+        display_name: user.display_name,
+        coins: user.coins,
+        rank: user.rank
+      }
+    end
+
+    render json: { leaderboard: users }
   end
 
   private

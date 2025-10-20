@@ -42,10 +42,42 @@ Returns a list of available endpoints.
 ```json
 {
   "endpoints": {
+    "projects": "/api/public-beta/projects",
     "project": "/api/public-beta/project/:id",
     "user": "/api/public-beta/user/:id_or_slack_id",
-    "shop": "/api/public-beta/shop"
+    "shop": "/api/public-beta/shop",
+    "leaderboard": "/api/public-beta/leaderboard"
   }
+}
+```
+
+#### GET /api/public-beta/projects
+
+Retrieves a list of all visible projects.
+
+**Response:**
+```json
+{
+  "projects": [
+    {
+      "id": 123,
+      "name": "My Awesome Project",
+      "description": "A description of the project",
+      "status": "finished",
+      "repo_url": "https://github.com/user/project",
+      "demo_url": "https://project.demo.com",
+      "created_at": "2024-01-01T00:00:00.000Z",
+      "updated_at": "2024-01-07T00:00:00.000Z",
+      "user": {
+        "id": 456,
+        "name": "John Doe",
+        "display_name": "johndoe"
+      },
+      "week_badge_text": "Week 1",
+      "coin_value": 100,
+      "is_update": false
+    }
+  ]
 }
 ```
 
@@ -137,6 +169,26 @@ Retrieves available cosmetics and physical items for purchase.
       "description": "Awesome stickers",
       "cost": 25,
       "digital": false
+    }
+  ]
+}
+```
+
+#### GET /api/public-beta/leaderboard
+
+Retrieves the top 50 users by coin count (excluding banned users).
+
+**Response:**
+```json
+{
+  "leaderboard": [
+    {
+      "id": 456,
+      "slack_id": "U1234567890",
+      "name": "John Doe",
+      "display_name": "johndoe",
+      "coins": 150,
+      "rank": "Apprentice"
     }
   ]
 }
