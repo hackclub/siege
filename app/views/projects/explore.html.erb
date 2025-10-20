@@ -99,7 +99,7 @@
   <div class="projects-header">
     <h1 class="projects-title">Explore Projects</h1>
     <div class="projects-actions">
-      <%= link_to "My Projects", projects_path, class: "submit-button" %>
+      <%= link_to "My armory", armory_path, class: "submit-button" %>
     </div>
   </div>
 
@@ -108,7 +108,7 @@
       <% cache @projects do %>
         <div class="projects-grid">
           <% @projects.each do |project| %>
-            <%= render project %>
+            <%= render project, hide_hackatime: true %>
           <% end %>
         </div>
       <% end %>

@@ -117,6 +117,7 @@
       <% end %>
       <%= link_to "New project", can_create ? new_project_path : "#", class: "submit-button mt #{can_create ? '' : 'is-disabled'}" %>
     </div>
+    <%= link_to "Explore Projects", explore_projects_path, class: "submit-button", style: "margin-left: auto;" %>
   </div>
 
   <div id="projects" class="projects-list">

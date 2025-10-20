@@ -252,8 +252,8 @@
   }
   <% end %>
   
-   /* Add left margin on projects page to account for navbar */
-   <% if current_page?(projects_path) %>
+   /* Add left margin on projects/armory page to account for navbar */
+   <% if current_page?(projects_path) || current_page?(armory_path) %>
    .app-main {
      margin-left: 20rem;
      margin-right: 1rem;
@@ -365,11 +365,13 @@
   <nav class="navbar-nav">
     <!-- Context-aware back button -->
     <% if controller_name == "projects" && action_name == "show" %>
-      <%= link_to "← Back", projects_path, class: "navbar-link" %>
+      <%= link_to "← Back", armory_path, class: "navbar-link" %>
     <% elsif controller_name == "projects" && action_name == "new" %>
-      <%= link_to "← Back", projects_path, class: "navbar-link" %>
+      <%= link_to "← Back", armory_path, class: "navbar-link" %>
     <% elsif controller_name == "projects" && action_name == "edit" %>
       <%= link_to "← Back", project_path(params[:id]), class: "navbar-link" %>
+    <% elsif controller_name == "projects" && action_name == "explore" %>
+      <%= link_to "← Back", armory_path, class: "navbar-link" %>
     <% elsif controller_name == "review" && action_name == "show" %>
       <%= link_to "← Back", review_path, class: "navbar-link" %>
     <% elsif controller_name == "greg" && action_name == "show" %>
@@ -409,16 +411,10 @@
       <span class="navbar-link active">Keep</span>
     <% end %>
     
-     <% unless current_page?(projects_path) %>
-       <%= link_to "My Projects", projects_path, class: "navbar-link" %>
+     <% unless current_page?(armory_path) || current_page?(projects_path) %>
+       <%= link_to "Armory", armory_path, class: "navbar-link" %>
      <% else %>
        <span class="navbar-link active">Armory</span>
-     <% end %>
-
-     <% unless current_page?(explore_projects_path) %>
-       <%= link_to "Explore", explore_projects_path, class: "navbar-link" %>
-     <% else %>
-       <span class="navbar-link active">Explore</span>
      <% end %>
     
     <% unless current_page?(great_hall_path) %>

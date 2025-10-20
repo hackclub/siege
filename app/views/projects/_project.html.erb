@@ -27,18 +27,20 @@
       <% end %>
     </div>
 
-    <% if project.hackatime_projects.present? %>
-      <div class="project-time">
-        Time spent: <%= project.week_time %>
-      </div>
-      <div class="project-tags">
-        <% Array(project.hackatime_projects).each do |hp_name| %>
-          <div class="project-tag">
-            <%= lucide_icon('clock', class: 'icon-xs') %>
-            <span><%= hp_name %></span>
-          </div>
-        <% end %>
-      </div>
+    <% unless local_assigns[:hide_hackatime] %>
+      <% if project.hackatime_projects.present? %>
+        <div class="project-time">
+          Time spent: <%= project.week_time %>
+        </div>
+        <div class="project-tags">
+          <% Array(project.hackatime_projects).each do |hp_name| %>
+            <div class="project-tag">
+              <%= lucide_icon('clock', class: 'icon-xs') %>
+              <span><%= hp_name %></span>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
     <% end %>
 
     <div class="project-footer">

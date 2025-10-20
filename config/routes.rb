@@ -4,10 +4,11 @@ Rails.application.routes.draw do
       post :submit
       patch :update_status
     end
-    collection do
-      get :explore
-    end
   end
+  
+  # Armory routes
+  get "/armory", to: "projects#index", as: :armory
+  get "/armory/explore", to: "projects#explore", as: :explore_projects
   
   root "sessions#new"
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
