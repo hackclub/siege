@@ -306,9 +306,6 @@ class Project < ApplicationRecord
     created_at
   end
 
-<<<<<<< HEAD
-
-=======
   # Get week badge text for display
   def week_badge_text
     week_num = ApplicationController.helpers.week_number_for_date(created_at)
@@ -316,7 +313,6 @@ class Project < ApplicationRecord
   end
 
   private
->>>>>>> cd4e46cb3fe090050207688f2ec204aaef6df06b
 
   def repo_url_must_be_github
     return if repo_url.blank?

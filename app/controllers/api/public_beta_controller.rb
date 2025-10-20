@@ -53,7 +53,7 @@ class Api::PublicBetaController < ApplicationController
     end
 
     # Only return visible projects
-    unless project.visible?
+    if project.hidden?
       render json: { error: "Project not found" }, status: :not_found
       return
     end
