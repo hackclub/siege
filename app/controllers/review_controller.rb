@@ -293,7 +293,7 @@ class ReviewController < ApplicationController
       }
     end
     
-    review_actions.sort_by { |entry| -entry[:count] }.take(10)
+    review_actions.sort_by { |entry| -entry[:count] }
   end
 
   def set_project

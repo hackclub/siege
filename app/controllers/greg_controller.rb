@@ -160,7 +160,7 @@ class GregController < ApplicationController
       }
     end
     
-    fraud_actions.sort_by { |entry| -entry[:count] }.take(10)
+    fraud_actions.sort_by { |entry| -entry[:count] }
   end
 
   def require_fraud_access

@@ -9,13 +9,13 @@ class AdminController < ApplicationController
     @total_users = User.count
     @users_working = User.where(status: "working").count
 
-    # Project statistics by status
-    @projects_building = Project.where(status: "building").count
-    @projects_submitted = Project.where(status: "submitted").count
-    @projects_pending_voting = Project.where(status: "pending_voting").count
-    @projects_waiting_for_review = Project.where(status: "waiting_for_review").count
-    @projects_finished = Project.where(status: "finished").count
-    @total_projects = Project.count
+    # Project statistics by status (exclude hidden projects)
+    @projects_building = Project.visible.where(status: "building").count
+    @projects_submitted = Project.visible.where(status: "submitted").count
+    @projects_pending_voting = Project.visible.where(status: "pending_voting").count
+    @projects_waiting_for_review = Project.visible.where(status: "waiting_for_review").count
+    @projects_finished = Project.visible.where(status: "finished").count
+    @total_projects = Project.visible.count
   end
 
   def dashboard
@@ -1892,18 +1892,20 @@ class AdminController < ApplicationController
   end
 
   def analytics
-    # User funnel data
+    # User funnel data (exclude hidden projects)
     total_users = User.count
     users_with_address = User.joins(:address).count
-    users_with_projects = User.joins(:projects).distinct.count
+    users_with_projects = User.joins(:projects).merge(Project.visible).distinct.count
 
     # Users with hackatime attached to a project
     users_with_hackatime = User.joins(:projects)
+                               .merge(Project.visible)
                                .where("json_array_length(projects.hackatime_projects) > 0")
                                .distinct.count
 
     # Pre-fetch hackatime data for users to avoid N+1 queries
     users_with_hackatime_ids = User.joins(:projects)
+                                   .merge(Project.visible)
                                    .where("json_array_length(projects.hackatime_projects) > 0")
                                    .distinct.pluck(:id)
 
@@ -1913,8 +1915,8 @@ class AdminController < ApplicationController
     # Preload all users and their projects with hackatime data to avoid N+1 queries
     users_with_hackatime_objects = User.includes(:projects).where(id: users_with_hackatime_ids)
 
-    # Preload all projects with hackatime data for these users
-    projects_with_hackatime = Project.where(user_id: users_with_hackatime_ids)
+    # Preload all projects with hackatime data for these users (exclude hidden)
+    projects_with_hackatime = Project.visible.where(user_id: users_with_hackatime_ids)
                                    .where("json_array_length(hackatime_projects) > 0")
                                    .includes(:user)
 
@@ -1937,8 +1939,9 @@ class AdminController < ApplicationController
       end
     end
 
-    # Users who've submitted at least one project
+    # Users who've submitted at least one project (exclude hidden)
     users_submitted = User.joins(:projects)
+                         .merge(Project.visible)
                          .where(projects: { status: [ "submitted", "pending_voting", "waiting_for_review", "finished" ] })
                          .distinct.count
 
