@@ -1892,20 +1892,18 @@ class AdminController < ApplicationController
   end
 
   def analytics
-    # User funnel data (exclude hidden projects)
+    # User funnel data
     total_users = User.count
     users_with_address = User.joins(:address).count
-    users_with_projects = User.joins(:projects).merge(Project.visible).distinct.count
+    users_with_projects = User.joins(:projects).distinct.count
 
     # Users with hackatime attached to a project
     users_with_hackatime = User.joins(:projects)
-                               .merge(Project.visible)
                                .where("json_array_length(projects.hackatime_projects) > 0")
                                .distinct.count
 
     # Pre-fetch hackatime data for users to avoid N+1 queries
     users_with_hackatime_ids = User.joins(:projects)
-                                   .merge(Project.visible)
                                    .where("json_array_length(projects.hackatime_projects) > 0")
                                    .distinct.pluck(:id)
 
@@ -1915,8 +1913,8 @@ class AdminController < ApplicationController
     # Preload all users and their projects with hackatime data to avoid N+1 queries
     users_with_hackatime_objects = User.includes(:projects).where(id: users_with_hackatime_ids)
 
-    # Preload all projects with hackatime data for these users (exclude hidden)
-    projects_with_hackatime = Project.visible.where(user_id: users_with_hackatime_ids)
+    # Preload all projects with hackatime data for these users
+    projects_with_hackatime = Project.where(user_id: users_with_hackatime_ids)
                                    .where("json_array_length(hackatime_projects) > 0")
                                    .includes(:user)
 
@@ -1939,14 +1937,13 @@ class AdminController < ApplicationController
       end
     end
 
-    # Users who've submitted at least one project (exclude hidden)
+    # Users who've submitted at least one project
     users_submitted = User.joins(:projects)
-                         .merge(Project.visible)
                          .where(projects: { status: [ "submitted", "pending_voting", "waiting_for_review", "finished" ] })
                          .distinct.count
 
-    # Pre-fetch all projects with hackatime data to avoid N+1 queries (only visible projects)
-    all_projects_with_hackatime = Project.visible.includes(:user)
+    # Pre-fetch all projects with hackatime data to avoid N+1 queries (includes hidden projects)
+    all_projects_with_hackatime = Project.includes(:user)
                                         .where("json_array_length(hackatime_projects) > 0")
 
     # Group projects by week for efficient processing
