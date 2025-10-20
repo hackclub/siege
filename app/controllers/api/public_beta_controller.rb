@@ -1,6 +1,8 @@
 class Api::PublicBetaController < ApplicationController
   # Skip CSRF protection for API endpoints
   skip_before_action :verify_authenticity_token
+  # Skip authentication for public API
+  skip_before_action :require_authentication
 
   # GET /api/public-beta
   def index
@@ -22,8 +24,8 @@ class Api::PublicBetaController < ApplicationController
       return
     end
 
-    # Only return visible projects unless user is admin
-    unless project.visible? || (current_user&.super_admin?)
+    # Only return visible projects
+    unless project.visible?
       render json: { error: "Project not found" }, status: :not_found
       return
     end
