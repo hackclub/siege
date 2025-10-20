@@ -829,8 +829,25 @@
           });
         }
         
-        button.textContent = '✓ Completed';
-        button.style.background = '#9ca3af';
+        // Check if there are more users to process
+        const remainingUsers = Array.from(document.querySelectorAll('[data-user-id]')).filter(card => {
+          const buttons = card.querySelectorAll('button');
+          for (let btn of buttons) {
+            if (btn.textContent.includes('✓')) return false;
+          }
+          return true;
+        });
+        
+        // Re-enable button if there are more users to process
+        button.disabled = false;
+        if (remainingUsers.length > 0) {
+          button.textContent = `Bulk Mark Top 25 as Out (${remainingUsers.length} remaining)`;
+          button.style.background = '#dc2626';
+        } else {
+          button.textContent = 'All Users Marked';
+          button.style.background = '#9ca3af';
+          button.disabled = true;
+        }
       } else {
         alert('Error: ' + data.error);
         button.disabled = false;
