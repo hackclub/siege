@@ -155,7 +155,7 @@ class AdminController < ApplicationController
         @project_data = @project_data.select { |data| data[:raw_hours] >= @min_hours.to_f }
       end
 
-      # Find users with no projects or only building projects in this week
+      # Find users with no projects or only building projects in this week (only "working" status, excludes banned/out/new)
       all_users_in_week = User.where(status: "working").includes(:projects)
       
       @users_without_projects = []
