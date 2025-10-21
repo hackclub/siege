@@ -1,14 +1,23 @@
 Rails.application.routes.draw do
-  resources :projects do
-    member do
-      post :submit
-      patch :update_status
-    end
-  end
-  
-  # Armory routes
-  get "/armory", to: "projects#index", as: :armory
+  # Armory routes (primary routes using /armory URL structure)
+  get "/armory", to: "projects#index", as: :projects
+  get "/armory/new", to: "projects#new", as: :new_project
+  post "/armory", to: "projects#create"
   get "/armory/explore", to: "projects#explore", as: :explore_projects
+  get "/armory/:id", to: "projects#show", as: :project
+  get "/armory/:id/edit", to: "projects#edit", as: :edit_project
+  patch "/armory/:id", to: "projects#update"
+  put "/armory/:id", to: "projects#update"
+  delete "/armory/:id", to: "projects#destroy"
+  post "/armory/:id/submit", to: "projects#submit", as: :submit_project
+  patch "/armory/:id/update_status", to: "projects#update_status", as: :update_status_project
+  
+  # Redirects from old /projects URLs to /armory equivalents
+  get "/projects", to: redirect("/armory")
+  get "/projects/new", to: redirect("/armory/new")
+  get "/projects/explore", to: redirect("/armory/explore")
+  get "/projects/:id", to: redirect { |params, _| "/armory/#{params[:id]}" }
+  get "/projects/:id/edit", to: redirect { |params, _| "/armory/#{params[:id]}/edit" }
   
   root "sessions#new"
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
