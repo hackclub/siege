@@ -19,7 +19,21 @@ class Api::PublicBetaController < ApplicationController
 
   # GET /api/public-beta/projects
   def projects
-    projects = Project.visible.order(created_at: :desc).map do |project|
+    projects = Project.visible.includes(:user).order(created_at: :desc).map do |project|
+      # Calculate hours from Hackatime
+      hours = 0
+      if project.effective_time_range && project.effective_time_range[0] && project.effective_time_range[1]
+        projs = ApplicationController.helpers.hackatime_projects_for_user(project.user, *project.effective_time_range)
+        total_seconds = 0
+        
+        project.hackatime_projects.each do |project_name|
+          match = projs.find { |p| p["name"].to_s == project_name.to_s }
+          total_seconds += match&.dig("total_seconds") || 0
+        end
+        
+        hours = (total_seconds / 3600.0).round(1)
+      end
+      
       {
         id: project.id,
         name: project.name,
@@ -36,7 +50,8 @@ class Api::PublicBetaController < ApplicationController
         },
         week_badge_text: project.week_badge_text,
         coin_value: project.coin_value,
-        is_update: project.is_update
+        is_update: project.is_update,
+        hours: hours
       }
     end
 
@@ -58,6 +73,20 @@ class Api::PublicBetaController < ApplicationController
       return
     end
 
+    # Calculate hours from Hackatime
+    hours = 0
+    if project.effective_time_range && project.effective_time_range[0] && project.effective_time_range[1]
+      projs = ApplicationController.helpers.hackatime_projects_for_user(project.user, *project.effective_time_range)
+      total_seconds = 0
+      
+      project.hackatime_projects.each do |project_name|
+        match = projs.find { |p| p["name"].to_s == project_name.to_s }
+        total_seconds += match&.dig("total_seconds") || 0
+      end
+      
+      hours = (total_seconds / 3600.0).round(1)
+    end
+    
     render json: {
       id: project.id,
       name: project.name,
@@ -74,7 +103,8 @@ class Api::PublicBetaController < ApplicationController
       },
       week_badge_text: project.week_badge_text,
       coin_value: project.coin_value,
-      is_update: project.is_update
+      is_update: project.is_update,
+      hours: hours
     }
   end
 
