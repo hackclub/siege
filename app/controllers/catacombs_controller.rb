@@ -73,31 +73,36 @@ class CatacombsController < ApplicationController
   end
   
   def calculate_week_global_hours(week_number)
-    week_range = ApplicationController.helpers.week_date_range(week_number)
-    return 0 unless week_range
-    
-    projects = Project
-      .where(status: ["submitted", "pending_voting", "waiting_for_review", "finished"])
-      .where("created_at >= ? AND created_at <= ?", week_range[0], week_range[1])
+    # Match analytics calculation exactly - filter by week_number_for_date
+    # Include all projects (even hidden) with hackatime data
+    all_projects = Project.unscoped
       .includes(:user)
+      .where("json_array_length(hackatime_projects) > 0")
     
-    total_hours = 0
-    projects.each do |project|
+    # Filter to only projects in this week with submitted status
+    week_projects = all_projects.select do |project|
+      project_week = ApplicationController.helpers.week_number_for_date(project.created_at.to_date)
+      project_week == week_number &&
+        project.status.in?(["submitted", "pending_voting", "waiting_for_review", "finished"])
+    end
+    
+    # Calculate total hours using same logic as analytics
+    total_seconds = 0
+    week_projects.each do |project|
+      next unless project.user
+      
       range = project.effective_time_range
-      if range && range[0] && range[1]
-        projs = ApplicationController.helpers.hackatime_projects_for_user(project.user, *range)
-        total_seconds = 0
-        
-        project.hackatime_projects.each do |project_name|
-          match = projs.find { |p| p["name"].to_s == project_name.to_s }
-          total_seconds += match&.dig("total_seconds") || 0
-        end
-        
-        total_hours += (total_seconds / 3600.0)
+      next unless range && range[0] && range[1]
+      
+      projs = ApplicationController.helpers.hackatime_projects_for_user(project.user, *range)
+      
+      project.hackatime_projects.each do |project_name|
+        match = projs.find { |p| p["name"].to_s == project_name.to_s }
+        total_seconds += match&.dig("total_seconds") || 0
       end
     end
     
-    total_hours.round(1)
+    (total_seconds / 3600.0).round(1)
   end
 
   def place_personal_bet
