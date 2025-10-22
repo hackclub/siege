@@ -36,12 +36,26 @@ class CatacombsController < ApplicationController
   def current_progress
     current_week = ApplicationController.helpers.current_week_number
     
-    # Calculate personal progress
+    # Calculate personal progress - only count hours from Siege projects
     week_range = ApplicationController.helpers.week_date_range(current_week)
     if week_range
-      projs = ApplicationController.helpers.hackatime_projects_for_user(current_user, *week_range)
-      personal_seconds = projs.sum { |p| p["total_seconds"] || 0 }
-      personal_hours = (personal_seconds / 3600.0).round(1)
+      # Get user's projects for this week
+      user_projects = current_user.projects.where("created_at >= ? AND created_at <= ?", week_range[0], week_range[1])
+      
+      total_seconds = 0
+      user_projects.each do |project|
+        range = project.effective_time_range
+        next unless range && range[0] && range[1]
+        
+        projs = ApplicationController.helpers.hackatime_projects_for_user(current_user, *range)
+        
+        project.hackatime_projects.each do |project_name|
+          match = projs.find { |p| p["name"].to_s == project_name.to_s }
+          total_seconds += match&.dig("total_seconds") || 0
+        end
+      end
+      
+      personal_hours = (total_seconds / 3600.0).round(1)
     else
       personal_hours = 0
     end
