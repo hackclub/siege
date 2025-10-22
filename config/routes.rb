@@ -209,6 +209,7 @@ Rails.application.routes.draw do
   post "/catacombs/place_global_bet", to: "catacombs#place_global_bet"
   post "/catacombs/collect_personal_bet", to: "catacombs#collect_personal_bet"
   post "/catacombs/collect_global_bet", to: "catacombs#collect_global_bet"
+  get "/catacombs/current_progress", to: "catacombs#current_progress"
   get "/identity_verification_callback", to: "sessions#identity_verification_callback"
 
   # Slack webhook endpoints

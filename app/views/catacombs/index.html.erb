@@ -847,29 +847,42 @@ async function submitBet() {
       hasPersonalBet = true;
       document.getElementById('betting-title').textContent = 'Your personal bet';
       
-      // Switch to bet status view
-      const personalContent = document.getElementById('personal-betting-content');
-      const payout = Math.floor(betAmount * selectedBetMultiplier);
-      
-      personalContent.innerHTML = `
-        <div class="bet-info">
-          <div class="global-stat">Goal: <span class="global-stat-value">${selectedBetHours}h</span></div>
-          <div class="global-stat">Coins bet: <span class="global-stat-value">${betAmount}</span></div>
-          <div class="global-payout">Estimated payout: <span class="global-payout-value">${payout}</span> coins</div>
-          
-          <div class="bet-progress">
-            <div class="bet-progress-label">Your progress:</div>
-            <div class="bet-progress-bar">
-              <div class="bet-progress-fill" style="width: 0%"></div>
+      // Fetch current progress
+      fetch('/catacombs/current_progress', {
+        headers: {
+          'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+        }
+      })
+      .then(res => res.json())
+      .then(progress => {
+        const currentHours = progress.personal_hours;
+        const payout = Math.floor(betAmount * selectedBetMultiplier);
+        const progressPercent = Math.min((currentHours / selectedBetHours * 100), 100);
+        
+        // Switch to bet status view
+        const personalContent = document.getElementById('personal-betting-content');
+        
+        personalContent.innerHTML = `
+          <div class="bet-info">
+            <div class="global-stat">Goal: <span class="global-stat-value">${selectedBetHours}h</span></div>
+            <div class="global-stat">Coins bet: <span class="global-stat-value">${betAmount}</span></div>
+            <div class="global-payout">Estimated payout: <span class="global-payout-value">${payout}</span> coins</div>
+            
+            <div class="bet-progress">
+              <div class="bet-progress-label">Your progress:</div>
+              <div class="bet-progress-bar">
+                <div class="bet-progress-fill" style="width: ${progressPercent}%"></div>
+              </div>
+              <div class="bet-progress-text">${currentHours}h / ${selectedBetHours}h</div>
             </div>
-            <div class="bet-progress-text">0h / ${selectedBetHours}h</div>
+            
+            <div class="betting-actions">
+              ${currentHours >= selectedBetHours ? `<button class="betting-button" onclick="collectPersonalBet()">Collect Bet</button>` : ''}
+              <button class="betting-button" onclick="closeBettingInterface()">Close</button>
+            </div>
           </div>
-          
-          <div class="betting-actions">
-            <button class="betting-button" onclick="closeBettingInterface()">Close</button>
-          </div>
-        </div>
-      `;
+        `;
+      });
     } else {
       showModalAlert(data.message, 'Error');
     }
@@ -981,29 +994,42 @@ async function submitGlobalBet() {
       hasGlobalBet = true;
       document.getElementById('betting-title').textContent = 'Your global bet';
       
-      // Switch to bet status view
-      const globalContent = document.getElementById('global-betting-content');
-      const payout = Math.floor(globalBetAmount * globalMultiplier);
-      
-      globalContent.innerHTML = `
-        <div class="bet-info">
-          <div class="global-stat">Your prediction: <span class="global-stat-value">${hoursPrediction}h</span></div>
-          <div class="global-stat">Coins bet: <span class="global-stat-value">${globalBetAmount}</span></div>
-          <div class="global-payout">Estimated payout: <span class="global-payout-value">${payout}</span> coins</div>
-          
-          <div class="bet-progress">
-            <div class="bet-progress-label">Global progress:</div>
-            <div class="bet-progress-bar">
-              <div class="bet-progress-fill" style="width: 0%"></div>
+      // Fetch current progress
+      fetch('/catacombs/current_progress', {
+        headers: {
+          'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+        }
+      })
+      .then(res => res.json())
+      .then(progress => {
+        const currentHours = progress.global_hours;
+        const payout = Math.floor(globalBetAmount * globalMultiplier);
+        const progressPercent = Math.min((currentHours / hoursPrediction * 100), 100);
+        
+        // Switch to bet status view
+        const globalContent = document.getElementById('global-betting-content');
+        
+        globalContent.innerHTML = `
+          <div class="bet-info">
+            <div class="global-stat">Your prediction: <span class="global-stat-value">${hoursPrediction}h</span></div>
+            <div class="global-stat">Coins bet: <span class="global-stat-value">${globalBetAmount}</span></div>
+            <div class="global-payout">Estimated payout: <span class="global-payout-value">${payout}</span> coins</div>
+            
+            <div class="bet-progress">
+              <div class="bet-progress-label">Global progress:</div>
+              <div class="bet-progress-bar">
+                <div class="bet-progress-fill" style="width: ${progressPercent}%"></div>
+              </div>
+              <div class="bet-progress-text">${currentHours}h / ${hoursPrediction}h</div>
             </div>
-            <div class="bet-progress-text">0h / ${hoursPrediction}h</div>
+            
+            <div class="betting-actions">
+              ${currentHours >= hoursPrediction ? `<button class="betting-button" onclick="collectGlobalBet()">Collect Bet</button>` : ''}
+              <button class="betting-button" onclick="closeBettingInterface()">Close</button>
+            </div>
           </div>
-          
-          <div class="betting-actions">
-            <button class="betting-button" onclick="closeBettingInterface()">Close</button>
-          </div>
-        </div>
-      `;
+        `;
+      });
     } else {
       showModalAlert(data.message, 'Error');
     }

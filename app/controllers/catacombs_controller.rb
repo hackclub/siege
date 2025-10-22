@@ -33,6 +33,28 @@ class CatacombsController < ApplicationController
 
   public
 
+  def current_progress
+    current_week = ApplicationController.helpers.current_week_number
+    
+    # Calculate personal progress
+    week_range = ApplicationController.helpers.week_date_range(current_week)
+    if week_range
+      projs = ApplicationController.helpers.hackatime_projects_for_user(current_user, *week_range)
+      personal_seconds = projs.sum { |p| p["total_seconds"] || 0 }
+      personal_hours = (personal_seconds / 3600.0).round(1)
+    else
+      personal_hours = 0
+    end
+    
+    # Calculate global progress
+    global_hours = calculate_week_global_hours(current_week)
+    
+    render json: { 
+      personal_hours: personal_hours,
+      global_hours: global_hours
+    }
+  end
+
   def last_week_hours
     # Get previous Siege week number
     current_week = ApplicationController.helpers.current_week_number
@@ -270,7 +292,7 @@ class CatacombsController < ApplicationController
     end
     
     # Check if goal is reached
-    current_global_hours = calculate_current_week_global_hours
+    current_global_hours = calculate_week_global_hours(current_week)
     
     unless current_global_hours >= bet.predicted_hours
       render json: { success: false, message: "Goal not reached yet. Currently #{current_global_hours}h / #{bet.predicted_hours.to_i}h" }, status: :unprocessable_entity
