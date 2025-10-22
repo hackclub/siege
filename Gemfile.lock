@@ -210,7 +210,7 @@ GEM
     hashie (5.0.0)
     health_check (3.1.0)
       railties (>= 5.0)
-    hotwire-livereload (2.0.0)
+    hotwire-livereload (2.1.1)
       actioncable (>= 7.0.0)
       listen (>= 3.0.0)
       railties (>= 7.0.0)
