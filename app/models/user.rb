@@ -28,6 +28,8 @@ class User < ApplicationRecord
   has_many :referrals, class_name: "User", foreign_key: "referrer_id", dependent: :nullify
   has_many :shop_purchases, class_name: "::ShopPurchase"
   has_many :user_weeks, dependent: :destroy
+  has_many :personal_bets, dependent: :destroy
+  has_many :global_bets, dependent: :destroy
 
   after_create :ensure_flipper_registration
   after_update :ensure_flipper_registration, if: :saved_change_to_rank?

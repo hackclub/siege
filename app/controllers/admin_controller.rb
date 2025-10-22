@@ -1987,6 +1987,113 @@ class AdminController < ApplicationController
     end
   end
 
+  def bets
+    @bet_type = params[:bet_type] || 'personal'
+    @user_filter = params[:user]
+    @week_filter = params[:week]
+    @min_coins = params[:min_coins]
+    @max_coins = params[:max_coins]
+    @paid_out_filter = params[:paid_out]
+    
+    if @bet_type == 'personal'
+      @hours_goal_filter = params[:hours_goal]
+      @goal_reached_filter = params[:goal_reached]
+      
+      bets = PersonalBet.includes(:user).order(created_at: :desc)
+      bets = bets.joins(:user).where("users.current_slack_display_name ILIKE ?", "%#{@user_filter}%") if @user_filter.present?
+      bets = bets.where(week: @week_filter) if @week_filter.present?
+      bets = bets.where("coin_amount >= ?", @min_coins) if @min_coins.present?
+      bets = bets.where("coin_amount <= ?", @max_coins) if @max_coins.present?
+      bets = bets.where(paid_out: @paid_out_filter == 'true') if @paid_out_filter.present?
+      bets = bets.where(hours_goal: @hours_goal_filter) if @hours_goal_filter.present?
+      
+      @bets = bets.map do |bet|
+        week_range = ApplicationController.helpers.week_date_range(bet.week)
+        if week_range
+          projs = ApplicationController.helpers.hackatime_projects_for_user(bet.user, *week_range)
+          current_seconds = projs.sum { |p| p["total_seconds"] || 0 }
+          current_hours = (current_seconds / 3600.0).round(1)
+        else
+          current_hours = 0
+        end
+        
+        {
+          bet: bet,
+          current_hours: current_hours,
+          goal_reached: current_hours >= bet.hours_goal
+        }
+      end
+      
+      @bets = @bets.select { |b| b[:goal_reached] == (@goal_reached_filter == 'true') } if @goal_reached_filter.present?
+    else
+      @min_hours = params[:min_hours]
+      @max_hours = params[:max_hours]
+      @goal_reached_filter = params[:goal_reached]
+      
+      bets = GlobalBet.includes(:user).order(created_at: :desc)
+      bets = bets.joins(:user).where("users.current_slack_display_name ILIKE ?", "%#{@user_filter}%") if @user_filter.present?
+      bets = bets.where(week: @week_filter) if @week_filter.present?
+      bets = bets.where("coin_amount >= ?", @min_coins) if @min_coins.present?
+      bets = bets.where("coin_amount <= ?", @max_coins) if @max_coins.present?
+      bets = bets.where(paid_out: @paid_out_filter == 'true') if @paid_out_filter.present?
+      bets = bets.where("predicted_hours >= ?", @min_hours) if @min_hours.present?
+      bets = bets.where("predicted_hours <= ?", @max_hours) if @max_hours.present?
+      
+      @bets = bets.map do |bet|
+        current_global_hours = calculate_week_global_hours(bet.week)
+        
+        {
+          bet: bet,
+          current_hours: current_global_hours,
+          goal_reached: current_global_hours >= bet.predicted_hours
+        }
+      end
+      
+      @bets = @bets.select { |b| b[:goal_reached] == (@goal_reached_filter == 'true') } if @goal_reached_filter.present?
+    end
+  end
+
+  def refund_bet
+    bet_type = params[:type]
+    bet = bet_type == 'personal' ? PersonalBet.find(params[:id]) : GlobalBet.find(params[:id])
+    user = bet.user
+    
+    ActiveRecord::Base.transaction do
+      user.update!(coins: user.coins + bet.coin_amount.to_i)
+      user.add_audit_log(
+        action: "bet_refunded",
+        actor: current_user,
+        details: { bet_type: bet_type, bet_id: bet.id, coin_amount: bet.coin_amount.to_i, week: bet.week }
+      )
+      bet.destroy!
+    end
+    
+    redirect_to admin_bets_path(bet_type: bet_type), notice: "Bet refunded successfully"
+  end
+
+  def payout_bet
+    bet_type = params[:type]
+    bet = bet_type == 'personal' ? PersonalBet.find(params[:id]) : GlobalBet.find(params[:id])
+    user = bet.user
+    
+    if bet.paid_out?
+      redirect_to admin_bets_path(bet_type: bet_type), alert: "Bet already paid out"
+      return
+    end
+    
+    ActiveRecord::Base.transaction do
+      user.update!(coins: user.coins + bet.estimated_payout.to_i)
+      user.add_audit_log(
+        action: "bet_paid_out",
+        actor: current_user,
+        details: { bet_type: bet_type, bet_id: bet.id, payout: bet.estimated_payout.to_i, week: bet.week }
+      )
+      bet.update!(paid_out: true)
+    end
+    
+    redirect_to admin_bets_path(bet_type: bet_type), notice: "Bet paid out successfully"
+  end
+
   def analytics
     # User funnel data
     total_users = User.count
@@ -2307,7 +2414,35 @@ class AdminController < ApplicationController
    
   private
 
-  def require_admin_access
+def calculate_week_global_hours(week_number)
+  week_range = ApplicationController.helpers.week_date_range(week_number)
+  return 0 unless week_range
+  
+  projects = Project
+    .where(status: ["submitted", "pending_voting", "waiting_for_review", "finished"])
+    .where("created_at >= ? AND created_at <= ?", week_range[0], week_range[1])
+    .includes(:user)
+  
+  total_hours = 0
+  projects.each do |project|
+    range = project.effective_time_range
+    if range && range[0] && range[1]
+      projs = ApplicationController.helpers.hackatime_projects_for_user(project.user, *range)
+      total_seconds = 0
+      
+      project.hackatime_projects.each do |project_name|
+        match = projs.find { |p| p["name"].to_s == project_name.to_s }
+        total_seconds += match&.dig("total_seconds") || 0
+      end
+      
+      total_hours += (total_seconds / 3600.0)
+    end
+  end
+  
+  total_hours.round(1)
+end
+
+def require_admin_access
     # Allow reviewers to access certain actions
     reviewer_allowed_actions = %w[
       update_reviewer_feedback 

@@ -78,6 +78,9 @@ Rails.application.routes.draw do
   get "/admin/referrals", to: "admin#referrals", as: :admin_referrals
   get "/admin/weekly-overview", to: "admin#weekly_overview", as: :admin_weekly_overview
   get "/admin/analytics", to: "admin#analytics", as: :admin_analytics
+  get "/admin/bets", to: "admin#bets", as: :admin_bets
+  post "/admin/bets/:id/refund", to: "admin#refund_bet", as: :admin_refund_bet
+  post "/admin/bets/:id/payout", to: "admin#payout_bet", as: :admin_payout_bet
   
   # YSWS Review routes (for reviewers)
   get "/ysws-review", to: "ysws_review#index", as: :ysws_review
@@ -201,6 +204,11 @@ Rails.application.routes.draw do
   get "/countdown", to: "countdown#index"
   get "/castle", to: "castle#index", as: :castle
   get "/catacombs", to: "catacombs#index", as: :catacombs
+  get "/catacombs/last_week_hours", to: "catacombs#last_week_hours"
+  post "/catacombs/place_personal_bet", to: "catacombs#place_personal_bet"
+  post "/catacombs/place_global_bet", to: "catacombs#place_global_bet"
+  post "/catacombs/collect_personal_bet", to: "catacombs#collect_personal_bet"
+  post "/catacombs/collect_global_bet", to: "catacombs#collect_global_bet"
   get "/identity_verification_callback", to: "sessions#identity_verification_callback"
 
   # Slack webhook endpoints

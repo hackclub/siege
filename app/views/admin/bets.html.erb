@@ -1,0 +1,314 @@
+<style>
+  @media (max-width: 768px) {
+    .app-main {
+      margin-left: 20rem;
+      margin-right: 1rem;
+    }
+  }
+  @media (min-width: 768px) {
+    .app-main {
+      margin-left: 20rem;
+      margin-right: 1rem;
+      margin-top: 12rem;
+    }
+  }
+  
+  .bets-container {
+    padding: 2rem;
+  }
+  
+  .bets-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+  }
+  
+  .bet-type-toggle {
+    display: flex;
+    gap: 1rem;
+  }
+  
+  .toggle-button {
+    padding: 0.5rem 1rem;
+    background: #f5e7b7;
+    border: 2px solid #402b20;
+    cursor: pointer;
+    font-family: "IM Fell English", serif;
+    transition: all 0.2s;
+  }
+  
+  .toggle-button.active {
+    background: #402b20;
+    color: #f5e7b7;
+  }
+  
+  .filters-container {
+    background: #f5e7b7;
+    padding: 1.5rem;
+    border: 2px solid #402b20;
+    margin-bottom: 2rem;
+  }
+  
+  .filters-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+  }
+  
+  .filter-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .filter-label {
+    font-weight: 700;
+    font-size: 0.9rem;
+  }
+  
+  .filter-input, .filter-select {
+    padding: 0.5rem;
+    border: 2px solid #402b20;
+    background: white;
+    font-family: "IM Fell English", serif;
+  }
+  
+  .bets-grid {
+    display: grid;
+    gap: 1.5rem;
+  }
+  
+  .bet-card {
+    background: #f5e7b7;
+    border: 3px solid #402b20;
+    padding: 1.5rem;
+  }
+  
+  .bet-card-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #402b20;
+  }
+  
+  .bet-user {
+    font-weight: 700;
+    font-size: 1.2rem;
+  }
+  
+  .bet-week {
+    color: #6b5b4a;
+  }
+  
+  .bet-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+  
+  .bet-detail {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .bet-detail-label {
+    font-size: 0.85rem;
+    color: #6b5b4a;
+  }
+  
+  .bet-detail-value {
+    font-weight: 700;
+    font-size: 1.1rem;
+  }
+  
+  .bet-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+  }
+  
+  .btn-refund {
+    padding: 0.5rem 1rem;
+    background: #dc2626;
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-family: "IM Fell English", serif;
+  }
+  
+  .btn-payout {
+    padding: 0.5rem 1rem;
+    background: #10b981;
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-family: "IM Fell English", serif;
+  }
+  
+  .btn-payout:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  
+  .goal-status {
+    padding: 0.25rem 0.75rem;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    font-weight: 700;
+  }
+  
+  .goal-reached {
+    background: #10b981;
+    color: white;
+  }
+  
+  .goal-not-reached {
+    background: #ef4444;
+    color: white;
+  }
+</style>
+
+<div class="bets-container">
+  <div class="bets-header">
+    <h1>Manage Bets</h1>
+    <div class="bet-type-toggle">
+      <a href="?bet_type=personal" class="toggle-button <%= 'active' if @bet_type == 'personal' %>">Personal Bets</a>
+      <a href="?bet_type=global" class="toggle-button <%= 'active' if @bet_type == 'global' %>">Global Bets</a>
+    </div>
+  </div>
+  
+  <%= form_with url: admin_bets_path, method: :get, local: true do |f| %>
+    <%= hidden_field_tag :bet_type, @bet_type %>
+    <div class="filters-container">
+      <div class="filters-grid">
+        <div class="filter-field">
+          <label class="filter-label">User</label>
+          <%= text_field_tag :user, @user_filter, class: 'filter-input', placeholder: 'Search user...' %>
+        </div>
+        
+        <div class="filter-field">
+          <label class="filter-label">Week</label>
+          <%= number_field_tag :week, @week_filter, class: 'filter-input', placeholder: 'Week number' %>
+        </div>
+        
+        <div class="filter-field">
+          <label class="filter-label">Min Coins</label>
+          <%= number_field_tag :min_coins, @min_coins, class: 'filter-input', placeholder: 'Min' %>
+        </div>
+        
+        <div class="filter-field">
+          <label class="filter-label">Max Coins</label>
+          <%= number_field_tag :max_coins, @max_coins, class: 'filter-input', placeholder: 'Max' %>
+        </div>
+        
+        <div class="filter-field">
+          <label class="filter-label">Paid Out</label>
+          <%= select_tag :paid_out, options_for_select([['All', ''], ['Yes', 'true'], ['No', 'false']], @paid_out_filter), class: 'filter-select' %>
+        </div>
+        
+        <div class="filter-field">
+          <label class="filter-label">Goal Reached</label>
+          <%= select_tag :goal_reached, options_for_select([['All', ''], ['Yes', 'true'], ['No', 'false']], @goal_reached_filter), class: 'filter-select' %>
+        </div>
+        
+        <% if @bet_type == 'personal' %>
+          <div class="filter-field">
+            <label class="filter-label">Hours Goal</label>
+            <%= select_tag :hours_goal, options_for_select([['All', ''], ['15h', '15'], ['20h', '20'], ['25h', '25']], @hours_goal_filter), class: 'filter-select' %>
+          </div>
+        <% else %>
+          <div class="filter-field">
+            <label class="filter-label">Min Hours</label>
+            <%= number_field_tag :min_hours, @min_hours, class: 'filter-input', placeholder: 'Min' %>
+          </div>
+          
+          <div class="filter-field">
+            <label class="filter-label">Max Hours</label>
+            <%= number_field_tag :max_hours, @max_hours, class: 'filter-input', placeholder: 'Max' %>
+          </div>
+        <% end %>
+      </div>
+      
+      <div style="margin-top: 1rem; display: flex; gap: 1rem;">
+        <%= submit_tag 'Apply Filters', class: 'submit-button' %>
+        <%= link_to 'Clear Filters', admin_bets_path(bet_type: @bet_type), class: 'submit-button' %>
+      </div>
+    </div>
+  <% end %>
+  
+  <div class="bets-grid">
+    <% if @bets.any? %>
+      <% @bets.each do |bet_data| %>
+        <% bet = bet_data[:bet] %>
+        <div class="bet-card">
+          <div class="bet-card-header">
+            <div>
+              <div class="bet-user"><%= bet.user.current_slack_display_name %></div>
+              <div class="bet-week">Week <%= bet.week %></div>
+            </div>
+            <div>
+              <span class="goal-status <%= bet_data[:goal_reached] ? 'goal-reached' : 'goal-not-reached' %>">
+                <%= bet_data[:goal_reached] ? 'Goal Reached' : 'In Progress' %>
+              </span>
+            </div>
+          </div>
+          
+          <div class="bet-details">
+            <% if @bet_type == 'personal' %>
+              <div class="bet-detail">
+                <span class="bet-detail-label">Goal</span>
+                <span class="bet-detail-value"><%= bet.hours_goal %>h</span>
+              </div>
+              <div class="bet-detail">
+                <span class="bet-detail-label">Current Progress</span>
+                <span class="bet-detail-value"><%= bet_data[:current_hours] %>h</span>
+              </div>
+            <% else %>
+              <div class="bet-detail">
+                <span class="bet-detail-label">Predicted Hours</span>
+                <span class="bet-detail-value"><%= bet.predicted_hours.to_i %>h</span>
+              </div>
+              <div class="bet-detail">
+                <span class="bet-detail-label">Current Global Hours</span>
+                <span class="bet-detail-value"><%= bet_data[:current_hours] %>h</span>
+              </div>
+            <% end %>
+            
+            <div class="bet-detail">
+              <span class="bet-detail-label">Coins Bet</span>
+              <span class="bet-detail-value"><%= bet.coin_amount.to_i %></span>
+            </div>
+            
+            <div class="bet-detail">
+              <span class="bet-detail-label">Est. Payout</span>
+              <span class="bet-detail-value"><%= bet.estimated_payout.to_i %></span>
+            </div>
+            
+            <div class="bet-detail">
+              <span class="bet-detail-label">Paid Out</span>
+              <span class="bet-detail-value"><%= bet.paid_out? ? 'Yes' : 'No' %></span>
+            </div>
+            
+            <div class="bet-detail">
+              <span class="bet-detail-label">Placed At</span>
+              <span class="bet-detail-value"><%= bet.created_at.strftime("%m/%d %H:%M") %></span>
+            </div>
+          </div>
+          
+          <div class="bet-actions">
+            <%= button_to 'Refund Bet', admin_refund_bet_path(bet.id, type: @bet_type), method: :post, class: 'btn-refund', 
+                data: { confirm: "Refund #{bet.coin_amount.to_i} coins to #{bet.user.current_slack_display_name}?" } %>
+            <%= button_to 'Pay Out Bet', admin_payout_bet_path(bet.id, type: @bet_type), method: :post, class: 'btn-payout', 
+                disabled: bet.paid_out?,
+                data: { confirm: "Pay out #{bet.estimated_payout.to_i} coins to #{bet.user.current_slack_display_name}?" } %>
+          </div>
+        </div>
+      <% end %>
+    <% else %>
+      <p style="text-align: center; color: #6b5b4a;">No bets found matching the filters.</p>
+    <% end %>
+  </div>
+</div>

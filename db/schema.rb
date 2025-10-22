@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_10_09_000000) do
+ActiveRecord::Schema[8.0].define(version: 2025_10_21_235240) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -157,6 +157,18 @@ ActiveRecord::Schema[8.0].define(version: 2025_10_09_000000) do
     t.index ["feature_key", "key", "value"], name: "index_flipper_gates_on_feature_key_and_key_and_value", unique: true
   end
 
+  create_table "global_bets", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.integer "week"
+    t.decimal "coin_amount"
+    t.decimal "estimated_payout"
+    t.decimal "predicted_hours"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.boolean "paid_out", default: false, null: false
+    t.index ["user_id"], name: "index_global_bets_on_user_id"
+  end
+
   create_table "hackatime_days", force: :cascade do |t|
     t.date "date", null: false
     t.float "total_hours", default: 0.0, null: false
@@ -187,6 +199,18 @@ ActiveRecord::Schema[8.0].define(version: 2025_10_09_000000) do
     t.datetime "updated_at", null: false
     t.json "unlocked_colors", default: ["blue", "red", "green", "purple"], null: false
     t.index ["user_id"], name: "index_meeples_on_user_id"
+  end
+
+  create_table "personal_bets", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.integer "week"
+    t.decimal "coin_amount"
+    t.decimal "estimated_payout"
+    t.integer "hours_goal"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.boolean "paid_out", default: false, null: false
+    t.index ["user_id"], name: "index_personal_bets_on_user_id"
   end
 
   create_table "physical_items", force: :cascade do |t|
@@ -302,9 +326,11 @@ ActiveRecord::Schema[8.0].define(version: 2025_10_09_000000) do
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "addresses", "users"
   add_foreign_key "ballots", "users"
+  add_foreign_key "global_bets", "users"
   add_foreign_key "meeple_cosmetics", "cosmetics"
   add_foreign_key "meeple_cosmetics", "meeples"
   add_foreign_key "meeples", "users"
+  add_foreign_key "personal_bets", "users"
   add_foreign_key "projects", "users"
   add_foreign_key "shop_purchases", "user_weeks", validate: false
   add_foreign_key "shop_purchases", "users"
