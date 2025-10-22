@@ -304,6 +304,8 @@
             <%= button_to 'Pay Out Bet', admin_payout_bet_path(bet.id, type: @bet_type), method: :post, class: 'btn-payout', 
                 disabled: bet.paid_out?,
                 data: { confirm: "Pay out #{bet.estimated_payout.to_i} coins to #{bet.user.current_slack_display_name}?" } %>
+            <%= button_to 'Delete Bet', admin_delete_bet_path(bet.id, type: @bet_type), method: :delete, class: 'btn-refund', 
+                data: { confirm: "Delete this bet? No coins will be refunded." } %>
           </div>
         </div>
       <% end %>

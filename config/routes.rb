@@ -81,6 +81,7 @@ Rails.application.routes.draw do
   get "/admin/bets", to: "admin#bets", as: :admin_bets
   post "/admin/bets/:id/refund", to: "admin#refund_bet", as: :admin_refund_bet
   post "/admin/bets/:id/payout", to: "admin#payout_bet", as: :admin_payout_bet
+  delete "/admin/bets/:id", to: "admin#delete_bet", as: :admin_delete_bet
   
   # YSWS Review routes (for reviewers)
   get "/ysws-review", to: "ysws_review#index", as: :ysws_review

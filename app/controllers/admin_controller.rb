@@ -2094,6 +2094,21 @@ class AdminController < ApplicationController
     redirect_to admin_bets_path(bet_type: bet_type), notice: "Bet paid out successfully"
   end
 
+  def delete_bet
+    bet_type = params[:type]
+    bet = bet_type == 'personal' ? PersonalBet.find(params[:id]) : GlobalBet.find(params[:id])
+    user = bet.user
+    
+    bet.destroy!
+    user.add_audit_log(
+      action: "bet_deleted",
+      actor: current_user,
+      details: { bet_type: bet_type, bet_id: bet.id, week: bet.week }
+    )
+    
+    redirect_to admin_bets_path(bet_type: bet_type), notice: "Bet deleted successfully"
+  end
+
   def analytics
     # User funnel data
     total_users = User.count
