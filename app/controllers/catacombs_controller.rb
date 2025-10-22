@@ -58,18 +58,31 @@ class CatacombsController < ApplicationController
   public
 
   def last_week_hours
-    # Get projects from last week with relevant statuses
-    one_week_ago = 1.week.ago
+    # Get previous Siege week number
+    current_week = ApplicationController.helpers.current_week_number
+    previous_week = current_week - 1
     
-    # Since hours are calculated dynamically from Hackatime, we'll calculate total hours manually
+    # Calculate hours for the previous week
+    total_hours = if previous_week >= 1
+      calculate_week_global_hours(previous_week)
+    else
+      0
+    end
+    
+    render json: { hours: total_hours }
+  end
+  
+  def calculate_week_global_hours(week_number)
+    week_range = ApplicationController.helpers.week_date_range(week_number)
+    return 0 unless week_range
+    
     projects = Project
-      .where(status: [ "submitted", "pending_voting", "waiting_for_review", "finished" ])
-      .where("created_at >= ?", one_week_ago)
+      .where(status: ["submitted", "pending_voting", "waiting_for_review", "finished"])
+      .where("created_at >= ? AND created_at <= ?", week_range[0], week_range[1])
       .includes(:user)
     
     total_hours = 0
     projects.each do |project|
-      # Calculate hours from Hackatime data for each project
       range = project.effective_time_range
       if range && range[0] && range[1]
         projs = ApplicationController.helpers.hackatime_projects_for_user(project.user, *range)
@@ -84,7 +97,7 @@ class CatacombsController < ApplicationController
       end
     end
     
-    render json: { hours: total_hours.round(1) }
+    total_hours.round(1)
   end
 
   def place_personal_bet
@@ -112,6 +125,12 @@ class CatacombsController < ApplicationController
     hours_goal = params[:hours_goal].to_i
     multiplier = params[:multiplier].to_f
     estimated_payout = (coin_amount * multiplier).floor
+    
+    # Validate coin amount
+    if coin_amount < 1 || coin_amount > 50
+      render json: { success: false, message: "Bet amount must be between 1 and 50 coins" }, status: :unprocessable_entity
+      return
+    end
     
     # Check if user has enough coins
     if current_user.coins < coin_amount
@@ -169,6 +188,12 @@ class CatacombsController < ApplicationController
     predicted_hours = params[:predicted_hours].to_f
     multiplier = params[:multiplier].to_f
     estimated_payout = (coin_amount * multiplier).floor
+    
+    # Validate coin amount
+    if coin_amount < 1 || coin_amount > 200
+      render json: { success: false, message: "Bet amount must be between 1 and 200 coins" }, status: :unprocessable_entity
+      return
+    end
     
     # Check if user has enough coins
     if current_user.coins < coin_amount
