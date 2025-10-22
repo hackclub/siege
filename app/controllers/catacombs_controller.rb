@@ -28,31 +28,7 @@ class CatacombsController < ApplicationController
   private
 
   def calculate_current_week_global_hours
-    week_range = ApplicationController.helpers.week_date_range(@current_week)
-    return 0 unless week_range
-    
-    projects = Project
-      .where(status: ["submitted", "pending_voting", "waiting_for_review", "finished"])
-      .where("created_at >= ? AND created_at <= ?", week_range[0], week_range[1])
-      .includes(:user)
-    
-    total_hours = 0
-    projects.each do |project|
-      range = project.effective_time_range
-      if range && range[0] && range[1]
-        projs = ApplicationController.helpers.hackatime_projects_for_user(project.user, *range)
-        total_seconds = 0
-        
-        project.hackatime_projects.each do |project_name|
-          match = projs.find { |p| p["name"].to_s == project_name.to_s }
-          total_seconds += match&.dig("total_seconds") || 0
-        end
-        
-        total_hours += (total_seconds / 3600.0)
-      end
-    end
-    
-    total_hours.round(1)
+    calculate_week_global_hours(@current_week)
   end
 
   public
