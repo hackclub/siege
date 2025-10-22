@@ -311,6 +311,137 @@
       cursor: not-allowed;
     }
 
+    .shop-interface {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 700px;
+      max-height: 80vh;
+      padding: 40px;
+      background: rgba(171, 171, 171, 0.95);
+      border: 3px solid #402b20;
+      z-index: 1000;
+      display: none;
+      overflow-y: auto;
+    }
+
+    .shop-interface.visible {
+      display: block;
+    }
+
+    .shop-items-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .shop-item-card {
+      background: #f5e7b7;
+      border: 3px solid #402b20;
+      padding: 1rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .shop-item-card:hover {
+      background: #e8d9a3;
+    }
+
+    .shop-item-card.disabled {
+      opacity: 0.5;
+      cursor: pointer;
+    }
+
+    .shop-item-image {
+      width: 100%;
+      height: 100px;
+      object-fit: contain;
+      margin-bottom: 0.5rem;
+    }
+
+    .shop-item-name {
+      font-family: "IM Fell English", serif;
+      font-weight: 700;
+      font-size: 1.1rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .shop-item-cost {
+      font-family: "IM Fell English", serif;
+      color: #8b5a3c;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .shop-item-stock {
+      font-size: 0.9rem;
+      color: #6b5b4a;
+    }
+
+    .shop-item-modal {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 500px;
+      padding: 2rem;
+      background: rgba(255, 255, 255, 0.95);
+      border: 3px solid #402b20;
+      z-index: 1100;
+      display: none;
+    }
+
+    .shop-item-modal.visible {
+      display: block;
+    }
+
+    .shop-item-modal-image {
+      width: 100%;
+      max-height: 200px;
+      object-fit: contain;
+      margin-bottom: 1rem;
+    }
+
+    .shop-item-modal-title {
+      font-family: "Jaini", "IM Fell English", serif;
+      font-size: 24px;
+      text-align: center;
+      margin-bottom: 1rem;
+      color: #402b20;
+    }
+
+    .shop-item-modal-description {
+      font-family: "IM Fell English", serif;
+      font-size: 16px;
+      line-height: 1.5;
+      margin-bottom: 1rem;
+      color: #402b20;
+    }
+
+    .shop-item-modal-price {
+      font-family: "IM Fell English", serif;
+      font-size: 20px;
+      text-align: center;
+      margin-bottom: 1rem;
+      color: #8b5a3c;
+      font-weight: 700;
+    }
+
+    .shop-item-modal-stock {
+      text-align: center;
+      margin-bottom: 1.5rem;
+      color: #6b5b4a;
+    }
+
+    .shop-modal-actions {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+    }
+
     .global-betting-content {
       display: none;
     }
@@ -450,7 +581,9 @@
   <div class="catacombs">
     <%= image_tag "catacombs/catacombs-bg.webp", class: "catacombs-layer" %>
     <%= image_tag "catacombs/catacombs-lines.webp", class: "catacombs-layer" %>
-    <%= image_tag "catacombs/catacombs-mystereeple.webp", class: "catacombs-layer mystereeple" %>
+    <% if @mystereeple_visible %>
+      <%= image_tag "catacombs/catacombs-mystereeple.webp", class: "catacombs-layer mystereeple" %>
+    <% end %>
   </div>
 </div>
 <div class="hover-overlay">
@@ -461,12 +594,7 @@
 
 <div class="mystereeple-dialogue" id="mystereeple-dialogue">
   <div class="mystereeple-dialogue-text" id="mystereeple-text"></div>
-  <div class="mystereeple-dialogue-buttons" id="mystereeple-buttons">
-    <button class="mystereeple-dialogue-button" id="btn-place-bet" onclick="handlePlaceBet()">Place a bet</button>
-    <button class="mystereeple-dialogue-button" id="btn-anything-else" onclick="handleAnythingElse()">Do you have anything else?</button>
-    <button class="mystereeple-dialogue-button" id="btn-see-items" onclick="handleSeeItems()" style="display: none;">See the items</button>
-    <button class="mystereeple-dialogue-button" id="btn-anything-else-2" onclick="handleAnythingElse2()" style="display: none;">Do you have anything else?</button>
-  </div>
+  <div class="mystereeple-dialogue-buttons" id="mystereeple-buttons"></div>
 </div>
 
 <div class="betting-interface" id="betting-interface">
@@ -615,6 +743,160 @@
   <% end %>
 </div>
 
+<div class="shop-interface" id="shop-interface">
+  <div class="betting-header">
+    <div class="betting-coins-display">
+      <%= image_tag "coin.png", class: "betting-coin-icon" %>
+      <span id="shop-user-coins-display">0</span>
+    </div>
+    <h2 class="betting-title">Mystereeple Shop</h2>
+    <button class="betting-mode-switch" onclick="closeShopInterface()">×</button>
+  </div>
+  
+  <div class="shop-items-grid" id="shop-items-grid">
+    <p style="text-align: center; grid-column: 1/-1;">Loading...</p>
+  </div>
+</div>
+
+<div class="shop-item-modal" id="shop-item-modal">
+  <div id="shop-modal-content"></div>
+</div>
+
+<script>
+async function loadShopItems() {
+  try {
+    const response = await fetch('/catacombs/shop_items');
+    const data = await response.json();
+    
+    userCoins = data.user_coins || 0;
+    document.getElementById('shop-user-coins-display').textContent = userCoins;
+    
+    const grid = document.getElementById('shop-items-grid');
+    grid.innerHTML = '';
+    
+    if (data.items.length === 0) {
+      grid.innerHTML = '<p style="text-align: center; grid-column: 1/-1;">No items available</p>';
+      return;
+    }
+    
+    data.items.forEach(item => {
+      const card = document.createElement('div');
+      card.className = 'shop-item-card';
+      const canPurchase = item.remaining > 0 && item.cost <= userCoins;
+      
+      if (!canPurchase) {
+        card.classList.add('disabled');
+      }
+      
+      card.onclick = () => showItemModal(item, canPurchase);
+      
+      card.innerHTML = `
+        ${item.image_url ? `<img src="${item.image_url}" class="shop-item-image" alt="${item.name}">` : ''}
+        <div class="shop-item-name">${item.name}</div>
+        <div class="shop-item-cost">${item.cost} coins</div>
+        <div class="shop-item-stock">${item.remaining} left</div>
+      `;
+      
+      grid.appendChild(card);
+    });
+  } catch (error) {
+    console.error('Error loading shop items:', error);
+    document.getElementById('shop-items-grid').innerHTML = '<p style="text-align: center; grid-column: 1/-1;">Failed to load items</p>';
+  }
+}
+
+async function purchaseShopItem(itemId, cost, name) {
+  if (cost > userCoins) {
+    showModalAlert('Not enough coins!', 'Error');
+    return;
+  }
+  
+  // Show processing modal
+  const modal = document.getElementById('shop-item-modal');
+  const content = document.getElementById('shop-modal-content');
+  content.innerHTML = `
+    <h2 class="shop-item-modal-title">Processing Purchase...</h2>
+    <p style="text-align: center; color: #402b20;">Please wait...</p>
+  `;
+  
+  try {
+    const response = await fetch('/catacombs/purchase_shop_item', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+      },
+      body: JSON.stringify({ item_id: itemId })
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      userCoins = data.new_balance;
+      document.getElementById('shop-user-coins-display').textContent = userCoins;
+      document.getElementById('user-coins-display').textContent = userCoins;
+      
+      // Show success and reload shop
+      content.innerHTML = `
+        <h2 class="shop-item-modal-title">Purchase Complete!</h2>
+        <p style="text-align: center; color: #402b20; margin-bottom: 2rem;">You purchased ${name}</p>
+        <div class="shop-modal-actions">
+          <button class="betting-button" onclick="closeItemModal(); loadShopItems();">Close</button>
+        </div>
+      `;
+    } else {
+      showModalAlert(data.message, 'Error');
+      modal.classList.remove('visible');
+    }
+  } catch (error) {
+    console.error('Error purchasing item:', error);
+    showModalAlert('Failed to purchase item', 'Error');
+    modal.classList.remove('visible');
+  }
+}
+
+function closeShopInterface() {
+  document.getElementById('shop-interface').classList.remove('visible');
+}
+
+function showItemModal(item, canPurchase) {
+  const modal = document.getElementById('shop-item-modal');
+  const content = document.getElementById('shop-modal-content');
+  
+  let purchaseButton = '';
+  if (canPurchase) {
+    purchaseButton = `<button class="betting-button" onclick="purchaseShopItemFromModal(${item.id}, ${item.cost}, '${item.name}')">Purchase for ${item.cost} coins</button>`;
+  } else if (item.remaining <= 0) {
+    purchaseButton = `<button class="betting-button" disabled>Out of Stock</button>`;
+  } else {
+    purchaseButton = `<button class="betting-button" disabled>Need ${item.cost - userCoins} more coins</button>`;
+  }
+  
+  content.innerHTML = `
+    ${item.image_url ? `<img src="${item.image_url}" class="shop-item-modal-image" alt="${item.name}">` : ''}
+    <h2 class="shop-item-modal-title">${item.name}</h2>
+    <div class="shop-item-modal-description">${item.description || 'No description available'}</div>
+    <div class="shop-item-modal-price">${item.cost} coins</div>
+    <div class="shop-item-modal-stock">${item.remaining} left</div>
+    <div class="shop-modal-actions">
+      ${purchaseButton}
+      <button class="betting-button" onclick="closeItemModal()">Close</button>
+    </div>
+  `;
+  
+  modal.classList.add('visible');
+}
+
+function closeItemModal() {
+  document.getElementById('shop-item-modal').classList.remove('visible');
+}
+
+async function purchaseShopItemFromModal(itemId, cost, name) {
+  await purchaseShopItem(itemId, cost, name);
+  // Don't close modal - purchaseShopItem handles showing success message
+}
+
+</script>
 <script>
 let typingInProgress = false;
 let currentTypingTimeout = null;
@@ -668,8 +950,8 @@ async function showMystereepleDialogue() {
   dialogue.classList.add('visible');
   buttons.classList.remove('visible');
   
-  // Check if betting is enabled
-  if (!bettingEnabled) {
+  // Check if mystereeple is visible (any windows available)
+  <% if !@mystereeple_visible %>
     try {
       await typeText(textElement, "Check back here later, I'll have something for you in a couple days :)");
       setTimeout(() => {
@@ -679,19 +961,63 @@ async function showMystereepleDialogue() {
       // Typing was cancelled, do nothing
     }
     return;
-  }
+  <% end %>
   
-  // Reset button visibility to initial state
-  document.getElementById('btn-place-bet').style.display = 'block';
-  document.getElementById('btn-anything-else').style.display = 'block';
-  document.getElementById('btn-see-items').style.display = 'none';
-  document.getElementById('btn-anything-else-2').style.display = 'none';
+  // Reset and show initial dialogue
+  currentWindowIndex = 0;
+  buttons.innerHTML = '';
   
   try {
     await typeText(textElement, "What are you looking for?");
+    
+    // Build buttons dynamically
+    if (availableWindows.length > 0) {
+      const firstWindow = availableWindows[0];
+      const buttonText = getWindowButtonText(firstWindow.type);
+      
+      const btn1 = document.createElement('button');
+      btn1.className = 'mystereeple-dialogue-button';
+      btn1.textContent = buttonText;
+      btn1.onclick = () => handleWindowAction(firstWindow.type);
+      buttons.appendChild(btn1);
+      
+      const btn2 = document.createElement('button');
+      btn2.className = 'mystereeple-dialogue-button';
+      btn2.textContent = 'Do you have anything else?';
+      btn2.onclick = handleAnythingElse;
+      buttons.appendChild(btn2);
+    }
+    
     buttons.classList.add('visible');
   } catch (e) {
     // Typing was cancelled, do nothing
+  }
+}
+
+function getWindowButtonText(windowType) {
+  switch(windowType) {
+    case 'betting': return 'Place a bet';
+    case 'shop': return 'See the items';
+    default: return 'View';
+  }
+}
+
+function getWindowQuestion(windowType) {
+  switch(windowType) {
+    case 'betting': return 'Would you like to place a bet?';
+    case 'shop': return 'Would you like some items?';
+    default: return 'Interested?';
+  }
+}
+
+function handleWindowAction(windowType) {
+  switch(windowType) {
+    case 'betting':
+      handlePlaceBet();
+      break;
+    case 'shop':
+      handleSeeItems();
+      break;
   }
 }
 
@@ -714,6 +1040,8 @@ let hasPersonalBet = <%= @personal_bet ? 'true' : 'false' %>;
 let hasGlobalBet = <%= @global_bet ? 'true' : 'false' %>;
 let bettingEnabled = <%= @betting_enabled ? 'true' : 'false' %>;
 let isBettingDay = <%= @is_betting_day ? 'true' : 'false' %>;
+let availableWindows = <%= @available_windows.map { |w| { type: w.window_type, name: w.name } }.to_json.html_safe %>;
+let currentWindowIndex = 0;
 
 async function loadUserCoins() {
   try {
@@ -1091,17 +1419,57 @@ async function collectGlobalBet() {
   }
 }
 
+async function handleSeeItems() {
+  closeMystereepleDialogue();
+  document.getElementById('shop-interface').classList.add('visible');
+  loadShopItems();
+}
+
 async function handleAnythingElse() {
+  currentWindowIndex++;
+  
   const textElement = document.getElementById('mystereeple-text');
   const buttons = document.getElementById('mystereeple-buttons');
   
+  buttons.innerHTML = '';
   buttons.classList.remove('visible');
   
-  await typeText(textElement, "The only other thing is this wall behind me... I wonder what's behind it...");
-  
-  setTimeout(() => {
-    closeMystereepleDialogue();
-  }, 3000);
+  // If there are more windows to show
+  if (currentWindowIndex < availableWindows.length) {
+    const window = availableWindows[currentWindowIndex];
+    const question = getWindowQuestion(window.type);
+    
+    try {
+      await typeText(textElement, question);
+      
+      // Build buttons
+      const btn1 = document.createElement('button');
+      btn1.className = 'mystereeple-dialogue-button';
+      btn1.textContent = 'Yes';
+      btn1.onclick = () => handleWindowAction(window.type);
+      buttons.appendChild(btn1);
+      
+      const btn2 = document.createElement('button');
+      btn2.className = 'mystereeple-dialogue-button';
+      btn2.textContent = 'Do you have anything else?';
+      btn2.onclick = handleAnythingElse;
+      buttons.appendChild(btn2);
+      
+      buttons.classList.add('visible');
+    } catch (e) {
+      // Typing was cancelled
+    }
+  } else {
+    // No more windows, show wall message
+    try {
+      await typeText(textElement, "The only other thing is this wall behind me... I wonder what's behind it...");
+      setTimeout(() => {
+        closeMystereepleDialogue();
+      }, 3000);
+    } catch (e) {
+      // Typing was cancelled
+    }
+  }
 }
 
 
@@ -1116,7 +1484,7 @@ async function handleAnythingElse() {
       this.originalHeight = 2358;
       this.glyphConfig = {
         x: 1560,
-        y: 1105,
+        y: 1100,
         fontSize: 50
       };
     }
@@ -1191,8 +1559,12 @@ async function handleAnythingElse() {
       const svgElement = document.createElement('div');
       svgElement.className = 'hover-box';
       
-      const clickAreas = [
-        {
+      const clickAreas = [];
+      
+      // Only add mystereeple click area if visible
+      const mystereepleVisible = <%= @mystereeple_visible ? 'true' : 'false' %>;
+      if (mystereepleVisible) {
+        clickAreas.push({
           id: 'mystereeple',
           path: `M177 754H109L91 687.5L148.5 516.5L68.5 499L1 466L17.5 426.5L68.5 368.5L152 321L148.5 265.5L160.5 252V205.5L176 158.5L112.5 131.5L100.5 112.5L124.5 87L198 82L234.5 1L338.5 19.5L347.5 40L363.5 19.5L470 32L474 121.5L539.5 150.5V180.5L516 193.5L451 205.5L459 269L430.5 321L486 351L539.5 404L559 438L550 473.5L525 486L436 512.5L413.5 648.5L418.5 717.5L360 773.5L293 712L221 704L177 754Z`,
           fill: "#E40000",
@@ -1203,8 +1575,8 @@ async function handleAnythingElse() {
           scale: 1,
           targetLayer: 'mystereeple',
           action: 'showMystereepleDialogue'
-        }
-      ];
+        });
+      }
       
       let svgContent = `<svg width="100%" height="100%" viewBox="0 0 ${this.originalWidth} ${this.originalHeight}" xmlns="http://www.w3.org/2000/svg">`;
       

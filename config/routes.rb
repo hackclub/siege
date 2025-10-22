@@ -78,10 +78,17 @@ Rails.application.routes.draw do
   get "/admin/referrals", to: "admin#referrals", as: :admin_referrals
   get "/admin/weekly-overview", to: "admin#weekly_overview", as: :admin_weekly_overview
   get "/admin/analytics", to: "admin#analytics", as: :admin_analytics
-  get "/admin/bets", to: "admin#bets", as: :admin_bets
-  post "/admin/bets/:id/refund", to: "admin#refund_bet", as: :admin_refund_bet
-  post "/admin/bets/:id/payout", to: "admin#payout_bet", as: :admin_payout_bet
-  delete "/admin/bets/:id", to: "admin#delete_bet", as: :admin_delete_bet
+  
+  # Mystereeple management routes
+  get "/admin/mystereeple", to: "admin/mystereeple#index", as: :admin_mystereeple
+  get "/admin/mystereeple/windows", to: "admin/mystereeple#windows", as: :admin_mystereeple_windows
+  patch "/admin/mystereeple/windows/:id/update_days", to: "admin/mystereeple#update_window_days", as: :admin_mystereeple_update_window_days
+  patch "/admin/mystereeple/windows/:id/toggle", to: "admin/mystereeple#toggle_window", as: :admin_mystereeple_toggle_window
+  
+  get "/admin/mystereeple/bets", to: "admin#bets", as: :admin_bets
+  post "/admin/mystereeple/bets/:id/refund", to: "admin#refund_bet", as: :admin_refund_bet
+  post "/admin/mystereeple/bets/:id/payout", to: "admin#payout_bet", as: :admin_payout_bet
+  delete "/admin/mystereeple/bets/:id", to: "admin#delete_bet", as: :admin_delete_bet
   
   # YSWS Review routes (for reviewers)
   get "/ysws-review", to: "ysws_review#index", as: :ysws_review
@@ -147,6 +154,7 @@ Rails.application.routes.draw do
   namespace :admin do
     resources :cosmetics, only: [:index, :show, :new, :create, :edit, :update, :destroy]
     resources :physical_items, only: [:index, :show, :new, :create, :edit, :update, :destroy]
+    resources :mystereeple_shop_items, only: [:index, :show, :new, :create, :edit, :update, :destroy]
   end
 
   # Super admin constraint for monitoring tools
@@ -211,6 +219,8 @@ Rails.application.routes.draw do
   post "/catacombs/collect_personal_bet", to: "catacombs#collect_personal_bet"
   post "/catacombs/collect_global_bet", to: "catacombs#collect_global_bet"
   get "/catacombs/current_progress", to: "catacombs#current_progress"
+  get "/catacombs/shop_items", to: "catacombs#shop_items"
+  post "/catacombs/purchase_shop_item", to: "catacombs#purchase_shop_item"
   get "/identity_verification_callback", to: "sessions#identity_verification_callback"
 
   # Slack webhook endpoints

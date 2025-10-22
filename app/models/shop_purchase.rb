@@ -1,6 +1,7 @@
 class ShopPurchase < ApplicationRecord
   belongs_to :user
   belongs_to :user_week, optional: true
+  belongs_to :mystereeple_shop_item, optional: true
 
   validates :item_name, presence: true
   validates :coins_spent, presence: true, numericality: { greater_than_or_equal_to: 0 }

@@ -7,6 +7,15 @@ class CatacombsController < ApplicationController
     @global_bet = current_user.global_bets.find_by(week: @current_week) if current_user
     @is_betting_day = (1..4).include?(Date.current.wday)
     
+    # Check which mystereeple windows are available today
+    @available_windows = MystereepleWindow.available_windows_today
+    @mystereeple_visible = @available_windows.any?
+    
+    # Check if user has active bets (for bet progress widget when betting window closed)
+    @has_active_bets = @personal_bet.present? || @global_bet.present?
+    @betting_window_open = @available_windows.any? { |w| w.window_type == 'betting' } && @betting_enabled
+    @show_bet_widget = @has_active_bets && !@betting_window_open
+    
     # Calculate current hours for personal bet if exists
     if @personal_bet
       week_range = ApplicationController.helpers.week_date_range(@current_week)
@@ -88,7 +97,6 @@ class CatacombsController < ApplicationController
     # Match analytics calculation exactly - filter by week_number_for_date
     # Include all projects (even hidden) with hackatime data
     all_projects = Project.unscoped
-      .includes(:user)
       .where("json_array_length(hackatime_projects) > 0")
     
     # Filter to only projects in this week with submitted status
@@ -329,6 +337,74 @@ class CatacombsController < ApplicationController
     rescue => e
       Rails.logger.error "Failed to collect global bet: #{e.message}"
       render json: { success: false, message: "Failed to collect bet: #{e.message}" }, status: :unprocessable_entity
+    end
+  end
+
+  def shop_items
+    items = MystereepleShopItem.where(enabled: true).map do |item|
+      purchased_count = ShopPurchase.where(mystereeple_shop_item_id: item.id).count
+      remaining = [item.limit - purchased_count, 0].max
+      
+      {
+        id: item.id,
+        name: item.name,
+        description: item.description,
+        cost: item.cost.to_i,
+        limit: item.limit,
+        remaining: remaining,
+        image_url: item.image.attached? ? url_for(item.image) : nil
+      }
+    end
+    
+    render json: { items: items, user_coins: current_user.coins }
+  end
+
+  def purchase_shop_item
+    item = MystereepleShopItem.find(params[:item_id])
+    
+    unless item.enabled
+      render json: { success: false, message: "Item not available" }, status: :unprocessable_entity
+      return
+    end
+    
+    # Check stock
+    purchased_count = ShopPurchase.where(mystereeple_shop_item_id: item.id).count
+    remaining = item.limit - purchased_count
+    
+    if remaining <= 0
+      render json: { success: false, message: "Item out of stock" }, status: :unprocessable_entity
+      return
+    end
+    
+    # Check coins
+    if current_user.coins < item.cost
+      render json: { success: false, message: "Not enough coins" }, status: :unprocessable_entity
+      return
+    end
+    
+    begin
+      ActiveRecord::Base.transaction do
+        purchase = ShopPurchase.create!(
+          user: current_user,
+          mystereeple_shop_item_id: item.id,
+          coins_spent: item.cost.to_i,
+          item_name: item.name,
+          purchased_at: Time.current,
+          fulfilled: false
+        )
+        
+        current_user.update!(coins: current_user.coins - item.cost.to_i)
+        current_user.add_audit_log(
+          action: "purchased_mystereeple_item",
+          actor: current_user,
+          details: { item_id: item.id, item_name: item.name, cost: item.cost.to_i }
+        )
+      end
+      
+      render json: { success: true, new_balance: current_user.coins }
+    rescue => e
+      Rails.logger.error "Failed to purchase shop item: #{e.message}"
+      render json: { success: false, message: "Failed to purchase: #{e.message}" }, status: :unprocessable_entity
     end
   end
 end

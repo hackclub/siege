@@ -1,0 +1,111 @@
+<div class="admin-section">
+  <div class="admin-header">
+    <h1>Mystereeple Management</h1>
+  </div>
+
+  <div class="admin-content">
+    <div class="mystereeple-grid">
+      <!-- Windows Management -->
+      <div class="management-card">
+        <h2>Window Schedule</h2>
+        <p>Control which days mystereeple windows are available</p>
+        <%= link_to 'Manage Windows', admin_mystereeple_windows_path, class: 'btn btn-primary' %>
+        
+        <div class="current-status">
+          <h3>Today's Status</h3>
+          <% @windows.each do |window| %>
+            <div class="window-status">
+              <strong><%= window.name %></strong>
+              <% if window.available_today? %>
+                <span class="badge badge-success">Available</span>
+              <% else %>
+                <span class="badge badge-secondary">Not Available</span>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+      </div>
+
+      <!-- Shop Items Management -->
+      <div class="management-card">
+        <h2>Shop Items</h2>
+        <p>Manage mystereeple shop inventory</p>
+        <%= link_to 'Manage Shop Items', admin_mystereeple_shop_items_path, class: 'btn btn-primary' %>
+        
+        <div class="shop-summary">
+          <h3>Quick Stats</h3>
+          <p><strong>Total Items:</strong> <%= @shop_items.count %></p>
+          <p><strong>Enabled:</strong> <%= @shop_items.where(enabled: true).count %></p>
+        </div>
+      </div>
+
+      <!-- Betting Management -->
+      <div class="management-card">
+        <h2>Betting</h2>
+        <p>View and manage user bets</p>
+        <%= link_to 'View Bets', admin_bets_path, class: 'btn btn-primary' %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .mystereeple-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+  }
+
+  .management-card {
+    padding: 2rem;
+    background: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  .management-card h2 {
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+    font-size: 1.5rem;
+  }
+
+  .management-card p {
+    color: #6b7280;
+    margin-bottom: 1.5rem;
+  }
+
+  .current-status, .shop-summary {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #e5e7eb;
+  }
+
+  .current-status h3, .shop-summary h3 {
+    font-size: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .window-status {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+  }
+
+  .badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+
+  .badge-success {
+    background-color: #10b981;
+    color: white;
+  }
+
+  .badge-secondary {
+    background-color: #6b7280;
+    color: white;
+  }
+</style>

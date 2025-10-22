@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_10_21_235240) do
+ActiveRecord::Schema[8.0].define(version: 2025_10_22_000004) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -201,6 +201,29 @@ ActiveRecord::Schema[8.0].define(version: 2025_10_21_235240) do
     t.index ["user_id"], name: "index_meeples_on_user_id"
   end
 
+  create_table "mystereeple_shop_items", force: :cascade do |t|
+    t.string "name", null: false
+    t.text "description"
+    t.integer "cost", default: 0, null: false
+    t.integer "limit", null: false
+    t.boolean "enabled", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["enabled"], name: "index_mystereeple_shop_items_on_enabled"
+    t.index ["name"], name: "index_mystereeple_shop_items_on_name"
+  end
+
+  create_table "mystereeple_windows", force: :cascade do |t|
+    t.string "name", null: false
+    t.string "window_type", null: false
+    t.json "days_available", default: [], null: false
+    t.boolean "enabled", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["enabled"], name: "index_mystereeple_windows_on_enabled"
+    t.index ["window_type"], name: "index_mystereeple_windows_on_window_type"
+  end
+
   create_table "personal_bets", force: :cascade do |t|
     t.bigint "user_id", null: false
     t.integer "week"
@@ -263,8 +286,10 @@ ActiveRecord::Schema[8.0].define(version: 2025_10_21_235240) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.bigint "user_week_id"
+    t.bigint "mystereeple_shop_item_id"
     t.index ["fulfilled"], name: "index_shop_purchases_on_fulfilled"
     t.index ["item_name"], name: "index_shop_purchases_on_item_name"
+    t.index ["mystereeple_shop_item_id"], name: "index_shop_purchases_on_mystereeple_shop_item_id"
     t.index ["user_id", "item_name"], name: "index_shop_purchases_unique_one_time", unique: true, where: "((item_name)::text = ANY ((ARRAY['Unlock Orange Meeple'::character varying, 'Random Sticker'::character varying])::text[]))"
     t.index ["user_id", "purchased_at"], name: "index_shop_purchases_on_user_id_and_purchased_at"
     t.index ["user_id"], name: "index_shop_purchases_on_user_id"

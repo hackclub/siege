@@ -1,0 +1,213 @@
+<div class="admin-section">
+  <div class="admin-header">
+    <h1><%= @shop_item.name %></h1>
+    <div class="header-actions">
+      <%= link_to 'Edit', edit_admin_mystereeple_shop_item_path(@shop_item), class: 'btn btn-primary' %>
+      <%= link_to '← Back to Shop Items', admin_mystereeple_shop_items_path, class: 'btn btn-outline' %>
+    </div>
+  </div>
+
+  <div class="admin-content">
+    <div class="item-details">
+      <div class="item-image-section">
+        <% if @shop_item.image.attached? %>
+          <%= image_tag @shop_item.image, class: 'item-detail-image', alt: @shop_item.name %>
+        <% else %>
+          <div class="no-image-placeholder">
+            <p>No image uploaded</p>
+          </div>
+        <% end %>
+      </div>
+
+      <div class="item-info">
+        <div class="info-row">
+          <span class="info-label">Cost:</span>
+          <span class="info-value"><%= @shop_item.cost %> 🪙</span>
+        </div>
+
+        <div class="info-row">
+          <span class="info-label">Limit:</span>
+          <span class="info-value"><%= @shop_item.limit %></span>
+        </div>
+
+        <div class="info-row">
+          <span class="info-label">Remaining:</span>
+          <span class="info-value <%= @shop_item.remaining_quantity > 0 ? 'text-success' : 'text-danger' %>">
+            <%= @shop_item.remaining_quantity %>
+          </span>
+        </div>
+
+        <div class="info-row">
+          <span class="info-label">Status:</span>
+          <span class="info-value">
+            <% if @shop_item.enabled? %>
+              <span class="badge badge-success">Enabled</span>
+            <% else %>
+              <span class="badge badge-secondary">Disabled</span>
+            <% end %>
+          </span>
+        </div>
+
+        <% if @shop_item.description.present? %>
+          <div class="info-row">
+            <span class="info-label">Description:</span>
+            <p class="description"><%= @shop_item.description %></p>
+          </div>
+        <% end %>
+      </div>
+    </div>
+
+    <% if @purchases.any? %>
+      <div class="purchases-section">
+        <h2>Purchase History (<%= @purchases.count %>)</h2>
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>User</th>
+              <th>Purchase Date</th>
+              <th>Coins Spent</th>
+              <th>Fulfilled</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @purchases.each do |purchase| %>
+              <tr>
+                <td><%= link_to purchase.user.name, admin_user_details_path(purchase.user) %></td>
+                <td><%= purchase.purchased_at.strftime("%Y-%m-%d %H:%M") %></td>
+                <td><%= purchase.coins_spent %> 🪙</td>
+                <td>
+                  <% if purchase.fulfilled? %>
+                    <span class="badge badge-success">Yes</span>
+                  <% else %>
+                    <span class="badge badge-warning">No</span>
+                  <% end %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <div class="no-purchases">
+        <p>No purchases yet for this item.</p>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<style>
+  .header-actions {
+    display: flex;
+    gap: 1rem;
+  }
+
+  .item-details {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 2rem;
+    margin-bottom: 3rem;
+  }
+
+  .item-image-section {
+    background: #f9fafb;
+    border-radius: 0.5rem;
+    padding: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .item-detail-image {
+    max-width: 100%;
+    max-height: 300px;
+    border-radius: 0.375rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  }
+
+  .no-image-placeholder {
+    text-align: center;
+    color: #9ca3af;
+    padding: 3rem;
+  }
+
+  .item-info {
+    background: white;
+    padding: 2rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  .info-row {
+    display: flex;
+    padding: 1rem 0;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .info-row:last-child {
+    border-bottom: none;
+  }
+
+  .info-label {
+    font-weight: 600;
+    color: #374151;
+    min-width: 150px;
+  }
+
+  .info-value {
+    color: #1f2937;
+  }
+
+  .description {
+    margin: 0;
+    color: #6b7280;
+    line-height: 1.6;
+  }
+
+  .text-success {
+    color: #10b981;
+    font-weight: 500;
+  }
+
+  .text-danger {
+    color: #ef4444;
+    font-weight: 500;
+  }
+
+  .badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+
+  .badge-success {
+    background-color: #10b981;
+    color: white;
+  }
+
+  .badge-secondary {
+    background-color: #6b7280;
+    color: white;
+  }
+
+  .badge-warning {
+    background-color: #f59e0b;
+    color: white;
+  }
+
+  .purchases-section {
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 2px solid #e5e7eb;
+  }
+
+  .purchases-section h2 {
+    margin-bottom: 1.5rem;
+  }
+
+  .no-purchases {
+    text-align: center;
+    padding: 3rem;
+    color: #9ca3af;
+  }
+</style>
