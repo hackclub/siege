@@ -1259,20 +1259,20 @@ function updateGlobalMultiplier() {
     const percentage = hoursPrediction / lastWeekHours;
     
     // Piecewise quadratic formula for smooth curves:
-    // 0.8 → 1.0x, 1.0 → 1.5x, 1.05 → 2.0x
+    // 0.8 → 1.0x, 1.0 → 2.0x, 1.05 → 2.5x
     if (percentage < 0.8) {
       globalMultiplier = 1.0;
     } else if (percentage < 1.0) {
       // Quadratic curve from 0.8 to 1.0
       const t = (percentage - 0.8) / 0.2; // normalize to 0-1
-      globalMultiplier = 1.0 + 0.5 * (t * t);
+      globalMultiplier = 1.0 + 1.0 * (t * t);
     } else if (percentage < 1.05) {
       // Quadratic curve from 1.0 to 1.05
       const t = (percentage - 1.0) / 0.05; // normalize to 0-1
-      globalMultiplier = 1.5 + 0.5 * (t * t);
+      globalMultiplier = 2.0 + 0.5 * (t * t);
     } else {
-      // Cap at 2.0x for predictions above 1.05
-      globalMultiplier = 2.0 + 0.5 * Math.pow((percentage - 1.05) / 0.05, 2);
+      // Continue quadratic growth above 1.05
+      globalMultiplier = 2.5 + 0.5 * Math.pow((percentage - 1.05) / 0.05, 2);
     }
   }
   
