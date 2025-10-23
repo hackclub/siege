@@ -597,6 +597,7 @@
   <div class="mystereeple-dialogue-buttons" id="mystereeple-buttons"></div>
 </div>
 
+<% if @available_windows.any? { |w| w.window_type == 'betting' } %>
 <div class="betting-interface" id="betting-interface">
   <div class="betting-header">
     <div class="betting-coins-display">
@@ -742,7 +743,9 @@
     <% end %>
   <% end %>
 </div>
+<% end %>
 
+<% if @available_windows.any? { |w| w.window_type == 'shop' } %>
 <div class="shop-interface" id="shop-interface">
   <div class="betting-header">
     <div class="betting-coins-display">
@@ -761,6 +764,7 @@
 <div class="shop-item-modal" id="shop-item-modal">
   <div id="shop-modal-content"></div>
 </div>
+<% end %>
 
 <script>
 async function loadShopItems() {
