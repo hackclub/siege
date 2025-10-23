@@ -26,14 +26,7 @@ class CatacombsController < ApplicationController
     
     # Calculate current hours for personal bet if exists
     if @personal_bet
-      week_range = ApplicationController.helpers.week_date_range(@current_week)
-      if week_range
-        projs = ApplicationController.helpers.hackatime_projects_for_user(current_user, *week_range)
-        @current_week_seconds = projs.sum { |p| p["total_seconds"] || 0 }
-        @current_week_hours = (@current_week_seconds / 3600.0).round(1)
-      else
-        @current_week_hours = 0
-      end
+      @current_week_hours = @personal_bet.current_hours
     end
     
     # Calculate current global hours if global bet exists
@@ -274,17 +267,8 @@ class CatacombsController < ApplicationController
     end
     
     # Check if goal is reached
-    week_range = ApplicationController.helpers.week_date_range(current_week)
-    if week_range
-      projs = ApplicationController.helpers.hackatime_projects_for_user(current_user, *week_range)
-      current_seconds = projs.sum { |p| p["total_seconds"] || 0 }
-      current_hours = (current_seconds / 3600.0).round(1)
-    else
-      current_hours = 0
-    end
-    
-    unless current_hours >= bet.hours_goal
-      render json: { success: false, message: "Goal not reached yet. You have #{current_hours}h / #{bet.hours_goal}h" }, status: :unprocessable_entity
+    unless bet.goal_reached?
+      render json: { success: false, message: "Goal not reached yet. You have #{bet.current_hours}h / #{bet.hours_goal}h" }, status: :unprocessable_entity
       return
     end
     

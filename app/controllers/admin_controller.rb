@@ -160,6 +160,10 @@ class AdminController < ApplicationController
       
       @users_without_projects = []
       all_users_in_week.each do |user|
+        # Skip users with effective hour goal of 0 (mercenaries with full offset)
+        effective_goal = view_context.effective_hour_goal(user, @selected_week)
+        next if effective_goal <= 0
+        
         # Get user's visible projects in this week
         user_projects = user.projects.visible.where(
           created_at: week_start_date.beginning_of_day..week_end_date.end_of_day
@@ -2008,19 +2012,10 @@ class AdminController < ApplicationController
       bets = bets.where(hours_goal: @hours_goal_filter) if @hours_goal_filter.present?
       
       @bets = bets.map do |bet|
-        week_range = ApplicationController.helpers.week_date_range(bet.week)
-        if week_range
-          projs = ApplicationController.helpers.hackatime_projects_for_user(bet.user, *week_range)
-          current_seconds = projs.sum { |p| p["total_seconds"] || 0 }
-          current_hours = (current_seconds / 3600.0).round(1)
-        else
-          current_hours = 0
-        end
-        
         {
           bet: bet,
-          current_hours: current_hours,
-          goal_reached: current_hours >= bet.hours_goal
+          current_hours: bet.current_hours,
+          goal_reached: bet.goal_reached?
         }
       end
       
