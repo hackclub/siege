@@ -717,28 +717,43 @@ document.addEventListener('DOMContentLoaded', function() {
     .then(response => response.json())
     .then(data => {
       // Update the display with the trust status
-      let statusHtml = '';
+      element.innerHTML = '';
+      const span = document.createElement('span');
+      span.style.fontWeight = '600';
+      
       switch(data.status) {
         case 'trusted':
-          statusHtml = '<span style="color: #059669; font-weight: 600;">✓ Trusted</span>';
+          span.style.color = '#059669';
+          span.textContent = '✓ Trusted';
           break;
         case 'neutral':
-          statusHtml = '<span style="color: #2563eb; font-weight: 600;">○ Neutral</span>';
+          span.style.color = '#2563eb';
+          span.textContent = '○ Neutral';
           break;
         case 'banned':
-          statusHtml = '<span style="color: #dc2626; font-weight: 600;">✗ Banned</span>';
+          span.style.color = '#dc2626';
+          span.textContent = '✗ Banned';
           break;
         case 'error':
-          statusHtml = `<span style="color: #dc2626; font-weight: 600;" title="${data.message || 'API Error'}">⚠ Error</span>`;
+          span.style.color = '#dc2626';
+          span.textContent = '⚠ Error';
+          span.title = data.message || 'API Error';
           break;
         default:
-          statusHtml = `<span style="color: #6b7280; font-weight: 600;" title="${data.message || 'Unknown status'}">? Unknown</span>`;
+          span.style.color = '#6b7280';
+          span.textContent = '? Unknown';
+          span.title = data.message || 'Unknown status';
       }
-      element.innerHTML = statusHtml;
+      element.appendChild(span);
     })
     .catch(error => {
       console.error('Error loading hackatime trust for user', userId, ':', error);
-      element.innerHTML = '<span style="color: #dc2626; font-weight: 600;">⚠ Error</span>';
+      element.innerHTML = '';
+      const span = document.createElement('span');
+      span.style.color = '#dc2626';
+      span.style.fontWeight = '600';
+      span.textContent = '⚠ Error';
+      element.appendChild(span);
     });
   });
 });

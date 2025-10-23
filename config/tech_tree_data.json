@@ -49,8 +49,8 @@
 				"up2": {
 					"id": "framework_13_upgrade",
 					"title": "Framework 13",
-					"price": 600,
-					"description": "woah is that 1 more inch? that'll be 600 coins! (ts is the Ultra 5 125H) (sorry the cheaper fw12 went out of stock :()",
+					"price": 300,
+					"description": "woah is that 1 more inch? that'll be 300 coins! (ts is the 7640U)",
 					"requires": "CPU Upgrade",
 					"purchased": false
 				},
@@ -62,7 +62,7 @@
 					"requires": "1TB SSD",
 					"purchased": false
 				},
-				"left2": {
+				"left3": {
 					"id": "display_2k8_12",
 					"title": "2.8K Display",
 					"price": 900,
@@ -73,17 +73,25 @@
 				"up3": {
 					"id": "cpu2_12",
 					"title": "CPU Upgrade 2",
+					"price": 300,
+					"description": "intel thingy (Ultra 5 125H)",
+					"requires": "Framework 13",
+					"purchased": false
+				},
+				"up4": {
+					"id": "cpu3_12",
+					"title": "CPU Upgrade 3",
 					"price": 600,
 					"description": "the latest gen and super quick (Ryzen AI 5 340)",
 					"requires": "Framework 13",
 					"purchased": false
 				},
-				"up4": {
+				"up5": {
 					"id": "framework_16_upgrade_12",
 					"title": "Framework 16",
 					"price": 2400,
 					"description": "woah that's like... a lot more inches... I guess it's gonna cost you (7840HS)",
-					"requires": "CPU Upgrade 2",
+					"requires": "CPU Upgrade 3",
 					"purchased": false
 				},
 				"left1": {
@@ -253,17 +261,17 @@
 				{
 					"id": "ipad_mini",
 					"title": "iPad Mini",
-					"description": "Compact Apple tablet with excellent performance"
+					"description": "awwww it's so tiny!! (A17 Pro)"
 				},
 				{
 					"id": "oneplus_pad_2",
 					"title": "OnePlus Pad 2",
-					"description": "Android tablet with great value"
+					"description": "super good value (I'm a oneplus fan)"
 				},
 				{
 					"id": "galaxy_tab_s10_fe",
 					"title": "Galaxy Tab S10 FE+",
-					"description": "Samsung tablet with premium features"
+					"description": "woah is that a better operating system I see?"
 				}
 			]
 		},
@@ -280,14 +288,14 @@
 					"id": "ipad_air_11",
 					"title": "iPad Air 11",
 					"price": 300,
-					"description": "11-inch iPad Air with better performance",
+					"description": "a good bit bigger (M3)",
 					"purchased": false
 				},
 				"right": {
 					"id": "smart_folio",
 					"title": "Smart Folio",
 					"price": 400,
-					"description": "Protective case with stand functionality",
+					"description": "flippy floppy case!!",
 					"purchased": false
 				},
 				"leftleft1": {
@@ -302,7 +310,7 @@
 					"id": "ipad_air_13",
 					"title": "iPad Air 13",
 					"price": 1200,
-					"description": "Larger 13-inch iPad Air",
+					"description": "2 more inches?!?! (still M3)",
 					"requires": "iPad Air 11",
 					"purchased": false
 				},
@@ -310,7 +318,7 @@
 					"id": "ipad_pro_11",
 					"title": "iPad Pro 11",
 					"price": 1200,
-					"description": "Professional iPad with M2 chip",
+					"description": "1 more M per inch lost? (11in but M5)",
 					"requires": "iPad Air 13",
 					"purchased": false
 				},
@@ -318,7 +326,7 @@
 					"id": "magic_keyboard_folio",
 					"title": "Magic Keyboard Folio",
 					"price": 1200,
-					"description": "Full keyboard case with trackpad",
+					"description": "does this make it a laptop?",
 					"requires": "Smart Folio,iPad Air 11",
 					"purchased": false
 				}
@@ -335,21 +343,21 @@
 					"id": "oneplus_pad_3",
 					"title": "OnePlus Pad 3",
 					"price": 900,
-					"description": "Upgraded OnePlus tablet",
+					"description": "more powerful and bigger (this is what I have and it's awesome!)",
 					"purchased": false
 				},
 				"right": {
 					"id": "smart_folio_op",
 					"title": "Smart Folio",
 					"price": 250,
-					"description": "Protective case with stand functionality",
+					"description": "flippy floppy case!!",
 					"purchased": false
 				},
 				"rightright1": {
 					"id": "smart_keyboard_op",
 					"title": "Smart Keyboard",
 					"price": 900,
-					"description": "Keyboard case for productivity",
+					"description": "does this make it a laptop?",
 					"requires": "Smart Folio,OnePlus Pad 3",
 					"purchased": false
 				}
@@ -366,14 +374,14 @@
 					"id": "galaxy_tab_s11",
 					"title": "Galaxy Tab S11",
 					"price": 1250,
-					"description": "Latest Samsung tablet with enhanced features",
+					"description": "smaller but more powerful",
 					"purchased": false
 				},
 				"right": {
 					"id": "smart_book_cover",
 					"title": "Smart Book Cover",
 					"price": 400,
-					"description": "Protective book-style case",
+					"description": "flippy floppy case!!",
 					"purchased": false
 				},
 				"leftleft1": {
@@ -388,7 +396,7 @@
 					"id": "galaxy_tab_s10_plus",
 					"title": "Galaxy Tab S10+",
 					"price": 500,
-					"description": "Premium Samsung tablet with larger display",
+					"description": "slightly bigger but about equal power",
 					"requires": "Galaxy Tab S11",
 					"purchased": false
 				},
@@ -396,7 +404,7 @@
 					"id": "book_cover_keyboard",
 					"title": "Book Cover Keyboard Slim",
 					"price": 500,
-					"description": "Slim keyboard case for productivity",
+					"description": "does this make it a laptop?",
 					"requires": "Smart Book Cover",
 					"purchased": false
 				}

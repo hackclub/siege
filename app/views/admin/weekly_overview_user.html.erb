@@ -1437,7 +1437,8 @@
             const addHeight = Math.max((commit.additions / maxChanges) * 130, 3);
             const delHeight = Math.max((commit.deletions / maxChanges) * 130, 3);
             
-            const commitTitle = `${commit.message}\\nAdditions: +${commit.additions}\\nDeletions: -${commit.deletions}\\nAuthor: ${commit.author}`;
+            const escapeAttr = (str) => String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+            const commitTitle = escapeAttr(`${commit.message}\nAdditions: +${commit.additions}\nDeletions: -${commit.deletions}\nAuthor: ${commit.author}`);
             
             // Calculate opacity based on stack position (darker = more recent)
             const opacity = 1 - (stackIndex * 0.15);

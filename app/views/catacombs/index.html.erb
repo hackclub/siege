@@ -779,6 +779,13 @@
 <% end %>
 
 <script>
+function escapeHtml(str) {
+  if (!str) return '';
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
 async function loadShopItems() {
   try {
     const response = await fetch('/catacombs/shop_items');
@@ -807,10 +814,10 @@ async function loadShopItems() {
       card.onclick = () => showItemModal(item, canPurchase);
       
       card.innerHTML = `
-        ${item.image_url ? `<img src="${item.image_url}" class="shop-item-image" alt="${item.name}">` : ''}
-        <div class="shop-item-name">${item.name}</div>
-        <div class="shop-item-cost">${item.cost} coins</div>
-        <div class="shop-item-stock">${item.remaining} left</div>
+        ${item.image_url ? `<img src="${escapeHtml(item.image_url)}" class="shop-item-image" alt="${escapeHtml(item.name)}">` : ''}
+        <div class="shop-item-name">${escapeHtml(item.name)}</div>
+        <div class="shop-item-cost">${escapeHtml(String(item.cost))} coins</div>
+        <div class="shop-item-stock">${escapeHtml(String(item.remaining))} left</div>
       `;
       
       grid.appendChild(card);
@@ -855,7 +862,7 @@ async function purchaseShopItem(itemId, cost, name) {
       // Show success and reload shop
       content.innerHTML = `
         <h2 class="shop-item-modal-title">Purchase Complete!</h2>
-        <p style="text-align: center; color: #402b20; margin-bottom: 2rem;">You purchased ${name}</p>
+        <p style="text-align: center; color: #402b20; margin-bottom: 2rem;">You purchased ${escapeHtml(name)}</p>
         <div class="shop-modal-actions">
           <button class="betting-button" onclick="closeItemModal(); loadShopItems();">Close</button>
         </div>
@@ -880,20 +887,21 @@ function showItemModal(item, canPurchase) {
   const content = document.getElementById('shop-modal-content');
   
   let purchaseButton = '';
+  const escapedName = escapeHtml(item.name).replace(/'/g, "\\'");
   if (canPurchase) {
-    purchaseButton = `<button class="betting-button" onclick="purchaseShopItemFromModal(${item.id}, ${item.cost}, '${item.name}')">Purchase for ${item.cost} coins</button>`;
+    purchaseButton = `<button class="betting-button" onclick="purchaseShopItemFromModal(${item.id}, ${item.cost}, '${escapedName}')">Purchase for ${escapeHtml(String(item.cost))} coins</button>`;
   } else if (item.remaining <= 0) {
     purchaseButton = `<button class="betting-button" disabled>Out of Stock</button>`;
   } else {
-    purchaseButton = `<button class="betting-button" disabled>Need ${item.cost - userCoins} more coins</button>`;
+    purchaseButton = `<button class="betting-button" disabled>Need ${escapeHtml(String(item.cost - userCoins))} more coins</button>`;
   }
   
   content.innerHTML = `
-    ${item.image_url ? `<img src="${item.image_url}" class="shop-item-modal-image" alt="${item.name}">` : ''}
-    <h2 class="shop-item-modal-title">${item.name}</h2>
-    <div class="shop-item-modal-description">${item.description || 'No description available'}</div>
-    <div class="shop-item-modal-price">${item.cost} coins</div>
-    <div class="shop-item-modal-stock">${item.remaining} left</div>
+    ${item.image_url ? `<img src="${escapeHtml(item.image_url)}" class="shop-item-modal-image" alt="${escapeHtml(item.name)}">` : ''}
+    <h2 class="shop-item-modal-title">${escapeHtml(item.name)}</h2>
+    <div class="shop-item-modal-description">${escapeHtml(item.description || 'No description available')}</div>
+    <div class="shop-item-modal-price">${escapeHtml(String(item.cost))} coins</div>
+    <div class="shop-item-modal-stock">${escapeHtml(String(item.remaining))} left</div>
     <div class="shop-modal-actions">
       ${purchaseButton}
       <button class="betting-button" onclick="closeItemModal()">Close</button>
@@ -965,6 +973,19 @@ async function showMystereepleDialogue() {
   
   dialogue.classList.add('visible');
   buttons.classList.remove('visible');
+  
+  // Check if user is out
+  <% if @user_is_out %>
+    try {
+      await typeText(textElement, "Sorry, but I cannot talk to you if you aren't still in the siege...");
+      setTimeout(() => {
+        closeMystereepleDialogue();
+      }, 3000);
+    } catch (e) {
+      // Typing was cancelled, do nothing
+    }
+    return;
+  <% end %>
   
   // Check if mystereeple is visible (any windows available)
   <% if !@mystereeple_visible %>
@@ -1208,16 +1229,16 @@ async function submitBet() {
         
         personalContent.innerHTML = `
           <div class="bet-info">
-            <div class="global-stat">Goal: <span class="global-stat-value">${selectedBetHours}h</span></div>
-            <div class="global-stat">Coins bet: <span class="global-stat-value">${betAmount}</span></div>
-            <div class="global-payout">Estimated payout: <span class="global-payout-value">${payout}</span> coins</div>
+            <div class="global-stat">Goal: <span class="global-stat-value">${escapeHtml(String(selectedBetHours))}h</span></div>
+            <div class="global-stat">Coins bet: <span class="global-stat-value">${escapeHtml(String(betAmount))}</span></div>
+            <div class="global-payout">Estimated payout: <span class="global-payout-value">${escapeHtml(String(payout))}</span> coins</div>
             
             <div class="bet-progress">
               <div class="bet-progress-label">Your progress:</div>
               <div class="bet-progress-bar">
-                <div class="bet-progress-fill" style="width: ${progressPercent}%"></div>
+                <div class="bet-progress-fill" style="width: ${escapeHtml(String(progressPercent))}%"></div>
               </div>
-              <div class="bet-progress-text">${currentHours}h / ${selectedBetHours}h</div>
+              <div class="bet-progress-text">${escapeHtml(String(currentHours))}h / ${escapeHtml(String(selectedBetHours))}h</div>
             </div>
             
             <div class="betting-actions">
@@ -1355,16 +1376,16 @@ async function submitGlobalBet() {
         
         globalContent.innerHTML = `
           <div class="bet-info">
-            <div class="global-stat">Your prediction: <span class="global-stat-value">${hoursPrediction}h</span></div>
-            <div class="global-stat">Coins bet: <span class="global-stat-value">${globalBetAmount}</span></div>
-            <div class="global-payout">Estimated payout: <span class="global-payout-value">${payout}</span> coins</div>
+            <div class="global-stat">Your prediction: <span class="global-stat-value">${escapeHtml(String(hoursPrediction))}h</span></div>
+            <div class="global-stat">Coins bet: <span class="global-stat-value">${escapeHtml(String(globalBetAmount))}</span></div>
+            <div class="global-payout">Estimated payout: <span class="global-payout-value">${escapeHtml(String(payout))}</span> coins</div>
             
             <div class="bet-progress">
               <div class="bet-progress-label">Global progress:</div>
               <div class="bet-progress-bar">
-                <div class="bet-progress-fill" style="width: ${progressPercent}%"></div>
+                <div class="bet-progress-fill" style="width: ${escapeHtml(String(progressPercent))}%"></div>
               </div>
-              <div class="bet-progress-text">${currentHours}h / ${hoursPrediction}h</div>
+              <div class="bet-progress-text">${escapeHtml(String(currentHours))}h / ${escapeHtml(String(hoursPrediction))}h</div>
             </div>
             
             <div class="betting-actions">
@@ -1681,20 +1702,38 @@ async function handleAnythingElse() {
 
 // Glyph input system
 (function() {
-  let glyphBuffer = '<%= j @current_runes || "" %>';
+  let glyphBuffer = '';
   let glyphOffsets = []; // Store offsets for each character
-  const glyphDisplay = document.getElementById('glyph-display');
+  let glyphDisplay = null;
   const allowedChars = /^[a-zA-Z0-9!@%&()"';:,.+\-=?]$/;
   
-  // Initialize offsets for existing runes on page load
-  for (let i = 0; i < glyphBuffer.length; i++) {
-    const position = (i - 2) / 5;
-    const curveOffset = -5 * (1 - 4 * position * position);
-    const randomOffset = (Math.random() - 0.5) * 4;
-    glyphOffsets.push(curveOffset + randomOffset);
+  function initGlyphSystem() {
+    glyphDisplay = document.getElementById('glyph-display');
+    if (!glyphDisplay) {
+      setTimeout(initGlyphSystem, 50);
+      return;
+    }
+    
+    // Load saved runes from server
+    glyphBuffer = '<%= j @current_runes || "" %>';
+    
+    // Initialize offsets for existing runes on page load
+    for (let i = 0; i < glyphBuffer.length; i++) {
+      const position = (i - 2) / 5;
+      const curveOffset = -5 * (1 - 4 * position * position);
+      const randomOffset = (Math.random() - 0.5) * 4;
+      glyphOffsets.push(curveOffset + randomOffset);
+    }
+    
+    // Restore runes on page load
+    if (glyphBuffer.length > 0) {
+      updateGlyphDisplay();
+    }
   }
   
   function updateGlyphDisplay() {
+    if (!glyphDisplay) return;
+    
     glyphDisplay.innerHTML = '';
     
     for (let i = 0; i < glyphBuffer.length; i++) {
@@ -1709,9 +1748,11 @@ async function handleAnythingElse() {
     }
   }
   
-  // Restore runes on page load
-  if (glyphBuffer.length > 0) {
-    updateGlyphDisplay();
+  // Initialize when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initGlyphSystem);
+  } else {
+    initGlyphSystem();
   }
   
   function logRunes(runes) {
@@ -1753,10 +1794,8 @@ async function handleAnythingElse() {
     // Update display
     updateGlyphDisplay();
     
-    // Log to backend when 5 characters are entered
-    if (glyphBuffer.length === 5) {
-      logRunes(glyphBuffer);
-    }
+    // Log to backend on every keystroke
+    logRunes(glyphBuffer);
   });
   
   document.addEventListener('keydown', function(e) {

@@ -194,8 +194,15 @@
        { text: 'Cancel', action: onCancel || (() => {}) },
        { text: 'Confirm', primary: true, danger: danger, action: onConfirm || (() => {}) }
      ]);
-   }
-  
+     }
+     
+     function escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
   function showModalPrompt(message, title, onConfirm, onCancel, placeholder) {
     const modal = document.getElementById('modal');
     const modalTitle = document.getElementById('modal-title');
@@ -289,7 +296,7 @@
         checkbox.style.cssText = 'cursor: pointer; user-select: none;';
         
        const text = document.createElement('span');
-       text.innerHTML = item.text.replace(/\n/g, '<br>');
+       text.innerHTML = escapeHtml(item.text).replace(/\n/g, '<br>');
        text.className = 'checklist-text';
        text.style.cssText = 'cursor: pointer; user-select: none;';
        
@@ -324,7 +331,7 @@
           checkbox.className = 'checklist-checkbox ' + (item.checked ? 'checked' : 'unchecked');
           
           const text = document.createElement('span');
-          text.innerHTML = item.text.replace(/\n/g, '<br>');
+          text.innerHTML = escapeHtml(item.text).replace(/\n/g, '<br>');
           text.className = 'checklist-text ' + (item.checked ? 'checked' : 'unchecked');
           
           itemDiv.appendChild(checkbox);

@@ -87,8 +87,6 @@ class MarketController < ApplicationController
             render json: { success: false, error: "You've already purchased the maximum amount of this item! (#{purchased_count}/#{max_purchases})" }
             return
           end
-        elsif tech_tree_item[:maxPurchases].nil?
-          # Infinite purchases (like grants) - no purchase limit
         elsif tech_tree_item[:maxPurchases] && tech_tree_item[:maxPurchases] > 1
           # Multi-purchase item with static limit
           if purchased_count >= tech_tree_item[:maxPurchases]
@@ -96,7 +94,7 @@ class MarketController < ApplicationController
             return
           end
         else
-          # Single purchase item
+          # Default: Single purchase item (maxPurchases nil or 1)
           if purchased_count > 0
             render json: { success: false, error: "You already own this item!" }
             return
@@ -206,9 +204,15 @@ class MarketController < ApplicationController
 
   def set_main_device
     device_id = params[:device_id]
+    should_refund = params[:refund] == true || params[:refund] == "true"
+
+    if should_refund
+      refunded_coins = current_user.refund_tech_tree_purchases
+      Rails.logger.info "Refunded #{refunded_coins} coins to user #{current_user.id}"
+    end
 
     if current_user.set_main_device(device_id)
-      render json: { success: true, message: "Main device updated successfully" }
+      render json: { success: true, message: "Main device updated successfully", refunded: should_refund }
     else
       render json: { success: false, error: "Invalid device selection" }
     end

@@ -349,6 +349,39 @@ class User < ApplicationRecord
     update(main_device: device_id)
   end
 
+  def refund_tech_tree_purchases
+    # Load tech tree data to get the list of actual tech tree items
+    tech_tree_data = JSON.parse(File.read(Rails.root.join("config", "tech_tree_data.json")))
+    tech_tree_item_names = []
+
+    # Extract all tech tree item names
+    tech_tree_data.each do |category_name, category_data|
+      next unless category_data["branches"]
+
+      category_data["branches"].each do |device_name, device_branches|
+        device_branches.each do |direction, item|
+          tech_tree_item_names << item["title"] if item["title"]
+        end
+      end
+    end
+
+    # Find purchases that match tech tree items
+    tech_tree_purchases = shop_purchases.where(item_name: tech_tree_item_names)
+    total_refund = 0
+
+    tech_tree_purchases.each do |purchase|
+      total_refund += purchase.coins_spent
+    end
+
+    tech_tree_purchases.destroy_all
+
+    if total_refund > 0
+      update(coins: coins + total_refund)
+    end
+
+    total_refund
+  end
+
   def main_device_name
     case main_device
     when "framework_12"

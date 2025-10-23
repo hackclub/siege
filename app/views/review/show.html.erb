@@ -536,15 +536,25 @@ function previewVideoFile() {
   const videoURL = URL.createObjectURL(file);
   const fileSize = (file.size / (1024 * 1024)).toFixed(2); // Convert to MB
   
-  embedDiv.innerHTML = `
-    <video controls style="width: 100%; max-height: 250px; border-radius: 6px;">
-      <source src="${videoURL}" type="${file.type}">
-      Your browser does not support the video tag.
-    </video>
-    <div style="margin-top: 0.5rem; font-size: 0.85rem; color: #374151;">
-      <strong>File:</strong> ${file.name} (${fileSize} MB)
-    </div>
-  `;
+  embedDiv.innerHTML = '';
+  
+  const video = document.createElement('video');
+  video.controls = true;
+  video.style.cssText = 'width: 100%; max-height: 250px; border-radius: 6px;';
+  const source = document.createElement('source');
+  source.src = videoURL;
+  source.type = file.type;
+  video.appendChild(source);
+  video.appendChild(document.createTextNode('Your browser does not support the video tag.'));
+  embedDiv.appendChild(video);
+  
+  const fileInfo = document.createElement('div');
+  fileInfo.style.cssText = 'margin-top: 0.5rem; font-size: 0.85rem; color: #374151;';
+  const fileLabel = document.createElement('strong');
+  fileLabel.textContent = 'File:';
+  fileInfo.appendChild(fileLabel);
+  fileInfo.appendChild(document.createTextNode(` ${file.name} (${fileSize} MB)`));
+  embedDiv.appendChild(fileInfo);
 }
 
 function removeCurrentVideo() {

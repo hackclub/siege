@@ -1,6 +1,13 @@
 class CatacombsController < ApplicationController
+  before_action :check_user_eligibility, except: [:index]
 
   def index
+    # Redirect banned users away from catacombs
+    if current_user&.banned?
+      redirect_to root_path, alert: "You cannot access the catacombs."
+      return
+    end
+    
     @betting_enabled = Flipper.enabled?(:betting, current_user)
     @current_week = ApplicationController.helpers.current_week_number
     @personal_bet = current_user.personal_bets.find_by(week: @current_week) if current_user
@@ -22,6 +29,7 @@ class CatacombsController < ApplicationController
       @emerald_unlocked = current_user.emerald_unlocked
       @amethyst_unlocked = current_user.amethyst_unlocked
       @current_runes = current_user.current_runes
+      @user_is_out = current_user.out?
     end
     
     # Calculate current hours for personal bet if exists
@@ -411,5 +419,13 @@ class CatacombsController < ApplicationController
     # Future: Add rune processing logic here
     
     render json: { success: true }
+  end
+
+  private
+
+  def check_user_eligibility
+    if current_user&.out?
+      render json: { success: false, message: "You cannot use catacombs actions while out of Siege" }, status: :forbidden
+    end
   end
 end
