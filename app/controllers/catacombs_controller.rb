@@ -16,6 +16,14 @@ class CatacombsController < ApplicationController
     @betting_window_open = @available_windows.any? { |w| w.window_type == 'betting' } && @betting_enabled
     @show_bet_widget = @has_active_bets && !@betting_window_open
     
+    # Pass rune unlock status and current runes to the view
+    if current_user
+      @ruby_unlocked = current_user.ruby_unlocked
+      @emerald_unlocked = current_user.emerald_unlocked
+      @amethyst_unlocked = current_user.amethyst_unlocked
+      @current_runes = current_user.current_runes
+    end
+    
     # Calculate current hours for personal bet if exists
     if @personal_bet
       week_range = ApplicationController.helpers.week_date_range(@current_week)
@@ -406,5 +414,18 @@ class CatacombsController < ApplicationController
       Rails.logger.error "Failed to purchase shop item: #{e.message}"
       render json: { success: false, message: "Failed to purchase: #{e.message}" }, status: :unprocessable_entity
     end
+  end
+
+  def log_runes
+    rune_text = params[:runes]
+    
+    Rails.logger.info "User #{current_user.id} (#{current_user.name}) typed runes: #{rune_text}"
+    
+    # Save the current runes to the user
+    current_user.update(current_runes: rune_text)
+    
+    # Future: Add rune processing logic here
+    
+    render json: { success: true }
   end
 end

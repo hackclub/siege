@@ -45,6 +45,9 @@
     .catacombs-layer:nth-child(1) { z-index: 1; }
     .catacombs-layer:nth-child(2) { z-index: 2; }
     .catacombs-layer:nth-child(3) { z-index: 3; }
+    .catacombs-layer:nth-child(4) { z-index: 4; }
+    .catacombs-layer:nth-child(5) { z-index: 5; }
+    .catacombs-layer:nth-child(6) { z-index: 6; }
 
     .catacombs-layer.highlighted {
       filter: drop-shadow(4px 0 0 rgba(191, 177, 131, 0.8)) drop-shadow(-4px 0 0 rgba(191, 177, 131, 0.8)) drop-shadow(0 4px 0 rgba(191, 177, 131, 0.8)) drop-shadow(0 -4px 0 rgba(245, 231, 183, 0.8));
@@ -581,6 +584,15 @@
   <div class="catacombs">
     <%= image_tag "catacombs/catacombs-bg.webp", class: "catacombs-layer" %>
     <%= image_tag "catacombs/catacombs-lines.webp", class: "catacombs-layer" %>
+    <% if @emerald_unlocked %>
+      <%= image_tag "catacombs/catacombs-emerald.webp", class: "catacombs-layer" %>
+    <% end %>
+    <% if @ruby_unlocked %>
+      <%= image_tag "catacombs/catacombs-ruby.webp", class: "catacombs-layer" %>
+    <% end %>
+    <% if @amethyst_unlocked %>
+      <%= image_tag "catacombs/catacombs-amethyst.webp", class: "catacombs-layer" %>
+    <% end %>
     <% if @mystereeple_visible %>
       <%= image_tag "catacombs/catacombs-mystereeple.webp", class: "catacombs-layer mystereeple" %>
     <% end %>
@@ -1669,10 +1681,18 @@ async function handleAnythingElse() {
 
 // Glyph input system
 (function() {
-  let glyphBuffer = '';
+  let glyphBuffer = '<%= j @current_runes || "" %>';
   let glyphOffsets = []; // Store offsets for each character
   const glyphDisplay = document.getElementById('glyph-display');
   const allowedChars = /^[a-zA-Z0-9!@%&()"';:,.+\-=?]$/;
+  
+  // Initialize offsets for existing runes on page load
+  for (let i = 0; i < glyphBuffer.length; i++) {
+    const position = (i - 2) / 5;
+    const curveOffset = -5 * (1 - 4 * position * position);
+    const randomOffset = (Math.random() - 0.5) * 4;
+    glyphOffsets.push(curveOffset + randomOffset);
+  }
   
   function updateGlyphDisplay() {
     glyphDisplay.innerHTML = '';
@@ -1687,6 +1707,24 @@ async function handleAnythingElse() {
       span.style.transform = `translateY(${glyphOffsets[i]}px)`;
       glyphDisplay.appendChild(span);
     }
+  }
+  
+  // Restore runes on page load
+  if (glyphBuffer.length > 0) {
+    updateGlyphDisplay();
+  }
+  
+  function logRunes(runes) {
+    fetch('/catacombs/log_runes', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+      },
+      body: JSON.stringify({ runes: runes })
+    }).catch(error => {
+      console.error('Error logging runes:', error);
+    });
   }
   
   document.addEventListener('keypress', function(e) {
@@ -1714,14 +1752,25 @@ async function handleAnythingElse() {
     
     // Update display
     updateGlyphDisplay();
+    
+    // Log to backend when 5 characters are entered
+    if (glyphBuffer.length === 5) {
+      logRunes(glyphBuffer);
+    }
   });
   
   document.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && glyphBuffer.length > 0) {
+      e.preventDefault();
+      logRunes(glyphBuffer);
+    }
+    
     if (e.key === 'Backspace' && glyphBuffer.length > 0) {
       e.preventDefault();
       glyphBuffer = glyphBuffer.slice(0, -1);
       glyphOffsets = glyphOffsets.slice(0, -1); // Remove last offset
       updateGlyphDisplay();
+      logRunes(glyphBuffer); // Save updated runes to backend
     }
   });
 })();

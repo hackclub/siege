@@ -221,6 +221,7 @@ Rails.application.routes.draw do
   get "/catacombs/current_progress", to: "catacombs#current_progress"
   get "/catacombs/shop_items", to: "catacombs#shop_items"
   post "/catacombs/purchase_shop_item", to: "catacombs#purchase_shop_item"
+  post "/catacombs/log_runes", to: "catacombs#log_runes"
   get "/identity_verification_callback", to: "sessions#identity_verification_callback"
 
   # Slack webhook endpoints

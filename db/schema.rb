@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_10_22_000004) do
+ActiveRecord::Schema[8.0].define(version: 2025_10_23_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -329,6 +329,10 @@ ActiveRecord::Schema[8.0].define(version: 2025_10_22_000004) do
     t.string "display_name"
     t.json "audit_logs", default: []
     t.boolean "on_fraud_team", default: false, null: false
+    t.boolean "ruby_unlocked", default: false, null: false
+    t.boolean "emerald_unlocked", default: false, null: false
+    t.boolean "amethyst_unlocked", default: false, null: false
+    t.string "current_runes", default: "", null: false
     t.index ["rank"], name: "index_users_on_rank"
     t.index ["referrer_id"], name: "index_users_on_referrer_id"
     t.index ["slack_id"], name: "index_users_on_slack_id", unique: true
