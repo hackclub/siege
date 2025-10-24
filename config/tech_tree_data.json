@@ -83,7 +83,7 @@
 					"title": "CPU Upgrade 3",
 					"price": 600,
 					"description": "the latest gen and super quick (Ryzen AI 5 340)",
-					"requires": "Framework 13",
+					"requires": "CPU Upgrade 2",
 					"purchased": false
 				},
 				"up5": {

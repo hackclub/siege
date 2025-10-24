@@ -461,6 +461,14 @@
     <% end %>
   </div>
 
+  <!-- Randomize Toggle -->
+  <div style="margin-bottom: 1rem;">
+    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 1rem; font-weight: 500; color: #402b20;">
+      <input type="checkbox" id="randomize-toggle" checked style="width: 18px; height: 18px; cursor: pointer;">
+      <span>Randomize Order</span>
+    </label>
+  </div>
+
   <!-- Users Count -->
   <div style="margin-bottom: 1rem; font-size: 0.9rem; color: #6b5b4a;">
     Showing <%= @user_data.count %> user<%= @user_data.count == 1 ? '' : 's' %>
@@ -622,3 +630,54 @@
     <% end %>
   </div>
 </div>
+
+<script>
+(function() {
+  const usersGrid = document.querySelector('.users-grid');
+  const randomizeToggle = document.getElementById('randomize-toggle');
+  
+  if (!usersGrid || !randomizeToggle) return;
+  
+  // Store original order
+  let originalCards = Array.from(usersGrid.children);
+  let currentlyRandomized = false;
+  
+  // Fisher-Yates shuffle algorithm
+  function shuffleArray(array) {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  }
+  
+  function randomizeUsers() {
+    const cards = Array.from(usersGrid.children);
+    const shuffled = shuffleArray(cards);
+    
+    // Clear and re-append in random order
+    usersGrid.innerHTML = '';
+    shuffled.forEach(card => usersGrid.appendChild(card));
+    currentlyRandomized = true;
+  }
+  
+  function restoreOriginalOrder() {
+    usersGrid.innerHTML = '';
+    originalCards.forEach(card => usersGrid.appendChild(card));
+    currentlyRandomized = false;
+  }
+  
+  // Randomize on page load (since toggle is checked by default)
+  randomizeUsers();
+  
+  // Toggle randomization when checkbox changes
+  randomizeToggle.addEventListener('change', function() {
+    if (this.checked) {
+      randomizeUsers();
+    } else {
+      restoreOriginalOrder();
+    }
+  });
+})();
+</script>
