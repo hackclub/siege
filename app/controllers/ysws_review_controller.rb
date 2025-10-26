@@ -270,14 +270,14 @@ class YswsReviewController < ApplicationController
     end
     
     # Calculate default vote multiplier (same as admin dashboard)
-    if average_score > 0
+    if average_score && average_score > 0
       vote_multiplier = average_score
     elsif theme_status == "no"
       vote_multiplier = 1.0
     elsif theme_status == "yes"
       vote_multiplier = 3.0
     else
-      vote_multiplier = [average_score, 1].max
+      vote_multiplier = [average_score || 0, 1].max
     end
     
     # Check if user is under goal (for weeks 5+, working users)
