@@ -42,16 +42,17 @@ class ProjectsController < ApplicationController
                        .order(created_at: :desc)
                        .decorate
 
-    # Pre-fetch votes for finished projects to calculate average scores
-    finished_projects = @projects.select(&:finished?)
-    if finished_projects.any?
-      project_ids = finished_projects.map(&:id)
-      @vote_averages = Vote.where(project_id: project_ids, voted: true)
-                            .group(:project_id)
-                            .average(:star_count)
-                            .transform_values { |avg| avg.to_f.round(2) }
-    else
-      @vote_averages = {}
+    # Pre-fetch votes for finished projects to calculate average scores (reviewers and above only)
+    @vote_averages = {}
+    if can_access_review?
+      finished_projects = @projects.select(&:finished?)
+      if finished_projects.any?
+        project_ids = finished_projects.map(&:id)
+        @vote_averages = Vote.where(project_id: project_ids, voted: true)
+                              .group(:project_id)
+                              .average(:star_count)
+                              .transform_values { |avg| avg.to_f.round(2) }
+      end
     end
   end
 
