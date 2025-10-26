@@ -223,7 +223,7 @@ class YswsReviewController < ApplicationController
       @time_readable = view_context.format_time_from_seconds(@time_seconds)
       @votes = @project ? Vote.joins(:ballot).includes(ballot: :user).where(project: @project).order("ballots.created_at DESC") : []
       
-      cast_votes = @votes.where(voted: true)
+      cast_votes = @project ? @votes.where(voted: true) : []
       @average_score = cast_votes.any? ? cast_votes.average(:star_count).to_f.round(2) : nil
       @raw_hours = (@time_seconds / 3600.0).round(2)
       

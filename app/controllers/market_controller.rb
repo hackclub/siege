@@ -16,10 +16,10 @@ class MarketController < ApplicationController
                                           .pluck(:item_name)
     @purchasable_cosmetics = Cosmetic.purchasable
                                     .where.not(name: purchased_cosmetic_names)
-                                    .includes(image_attachment: :blob)
+                                    .includes(:image_attachment)
     
     # Get all purchasable physical items (can be bought multiple times)
-    @purchasable_physical_items = PhysicalItem.purchasable.includes(image_attachment: :blob)
+    @purchasable_physical_items = PhysicalItem.purchasable.includes(:image_attachment)
     
     # Check if user is in supported region for regular tech tree
     @user_in_supported_region = user_in_supported_region?
@@ -87,6 +87,9 @@ class MarketController < ApplicationController
             render json: { success: false, error: "You've already purchased the maximum amount of this item! (#{purchased_count}/#{max_purchases})" }
             return
           end
+        elsif tech_tree_item[:maxPurchases].nil?
+          # Unlimited purchases (maxPurchases is null)
+          # No purchase limit check needed
         elsif tech_tree_item[:maxPurchases] && tech_tree_item[:maxPurchases] > 1
           # Multi-purchase item with static limit
           if purchased_count >= tech_tree_item[:maxPurchases]
@@ -94,7 +97,7 @@ class MarketController < ApplicationController
             return
           end
         else
-          # Default: Single purchase item (maxPurchases nil or 1)
+          # Default: Single purchase item (maxPurchases is 1)
           if purchased_count > 0
             render json: { success: false, error: "You already own this item!" }
             return

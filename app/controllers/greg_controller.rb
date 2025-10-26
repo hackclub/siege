@@ -5,6 +5,12 @@ class GregController < ApplicationController
     @projects = Project.includes(:user)
                       .where(status: [ "submitted", "pending_voting", "waiting_for_review", "finished" ])
 
+    # Filter out hidden projects by default, unless super admin explicitly shows them
+    @show_hidden = current_user&.super_admin? && params[:show_hidden] == 'true'
+    unless @show_hidden
+      @projects = @projects.where(hidden: false)
+    end
+
     # Default to showing only sus projects
     fraud_status_filter = params[:fraud_status].presence || "sus"
 
@@ -120,6 +126,46 @@ class GregController < ApplicationController
     end
   end
 
+  def hide_project
+    unless current_user&.super_admin?
+      render json: { success: false, error: "Access denied. Super admin privileges required." }
+      return
+    end
+
+    @project = Project.find(params[:id])
+    
+    # Skip screenshot validation when hiding project
+    @project.skip_screenshot_validation!
+    
+    if @project.update(hidden: true)
+      render json: { success: true, message: "Project '#{@project.name}' has been hidden." }
+    else
+      render json: { success: false, error: "Failed to hide project." }
+    end
+  rescue ActiveRecord::RecordNotFound
+    render json: { success: false, error: "Project not found." }
+  end
+
+  def unhide_project
+    unless current_user&.super_admin?
+      render json: { success: false, error: "Access denied. Super admin privileges required." }
+      return
+    end
+
+    @project = Project.find(params[:id])
+    
+    # Skip screenshot validation when unhiding project
+    @project.skip_screenshot_validation!
+    
+    if @project.update(hidden: false)
+      render json: { success: true, message: "Project '#{@project.name}' has been unhidden." }
+    else
+      render json: { success: false, error: "Failed to unhide project." }
+    end
+  rescue ActiveRecord::RecordNotFound
+    render json: { success: false, error: "Project not found." }
+  end
+
   private
 
   def generate_fraud_leaderboard(week_number)
@@ -172,12 +218,18 @@ class GregController < ApplicationController
   def get_project_navigation(current_project, filter_params)
     # Convert params to hash safely
     safe_params = filter_params.respond_to?(:permit) ?
-      filter_params.permit(:name, :author, :week, :fraud_status, :reasoning).to_h :
+      filter_params.permit(:name, :author, :week, :fraud_status, :reasoning, :show_hidden).to_h :
       filter_params.to_h
 
     # Build the same query as index action to get the filtered list
     projects = Project.includes(:user)
                      .where(status: [ "submitted", "pending_voting", "waiting_for_review", "finished" ])
+
+    # Apply hidden filter (same logic as index action)
+    show_hidden = current_user&.super_admin? && (safe_params[:show_hidden] == 'true' || safe_params["show_hidden"] == 'true')
+    unless show_hidden
+      projects = projects.where(hidden: false)
+    end
 
     # Apply the same filters as index action
     fraud_status_filter = safe_params[:fraud_status].presence || safe_params["fraud_status"].presence || "sus"

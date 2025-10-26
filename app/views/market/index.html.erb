@@ -898,6 +898,9 @@
     <button class="shop-back-button" id="switch-device-btn" onclick="switchViewedDevice()" style="display: none; margin-left: 0.5rem;">Switch to <span id="switch-device-text">Tablet</span></button>
     <h2 class="tech-tree-title">Device Upgrades</h2>
     <div class="tech-tree-controls">
+      <div class="grant-total-display" id="grant-total-display" style="display: none;">
+        <span style="font-weight: bold; color: #8b4513;">Total Grant: $<span id="grant-total-amount">650</span></span>
+      </div>
       <div class="coins-display">
         <%= image_tag "coin.png", class: "coin-icon" %>
         <span id="tech-tree-coins">0</span>
@@ -1083,9 +1086,7 @@
           card.classList.add('disabled');
         }
 
-        if (item.isPhysicalItem && !item.digital && !userInSupportedRegion) {
-          card.classList.add('disabled');
-        }
+        // Physical items are no longer region locked
 
         // Create image container
         const imageContainer = document.createElement('div');
@@ -1202,9 +1203,8 @@
 
     const buyButton = document.getElementById('modal-buy-button');
     const canAfford = userCoins >= price;
-    const canPurchasePhysical = !item.isPhysicalItem || item.digital || userInSupportedRegion;
     
-    buyButton.disabled = !canAfford || !canPurchasePhysical;
+    buyButton.disabled = !canAfford;
     
     const modal = document.getElementById('shop-item-modal');
     modal.classList.add('visible');
@@ -1379,11 +1379,20 @@
     
     if (!techTreeData || userMainDeviceBranchId === null) {
       showStatus('loading', 'Loading tech tree data...');
+      let attempts = 0;
+      const maxAttempts = 100; // 10 seconds timeout
+      
       const checkInterval = setInterval(() => {
+        attempts++;
+        
         if (techTreeData && userMainDeviceBranchId !== null) {
           clearInterval(checkInterval);
           closeStatusModal();
           initializeTechTree();
+        } else if (attempts >= maxAttempts) {
+          clearInterval(checkInterval);
+          console.error('Timeout waiting for tech tree data or main device');
+          showStatus('error', 'Failed to load tech tree data. Please refresh the page.');
         }
       }, 100);
       return;
@@ -1434,10 +1443,21 @@
     title.textContent = 'Choose your device type';
     optionsContainer.innerHTML = '';
     
-    const devices = [
-      { id: 'laptop', title: 'Laptop', description: 'Get a framework' },
-      { id: 'tablet', title: 'Tablet', description: 'Apple, Samsung, or OnePlus!' }
-    ];
+    const devices = [];
+    
+    if (userInSupportedRegion) {
+      // User is in supported region - show both laptop and tablet options
+      devices.push(
+        { id: 'laptop', title: 'Laptop', description: 'Get a framework' },
+        { id: 'tablet', title: 'Tablet', description: 'Apple, Samsung, or OnePlus!' }
+      );
+    } else {
+      // User is not in supported region - show laptop grant and tablet options
+      devices.push(
+        { id: 'laptop_grant', title: 'Laptop Grant', description: 'Get a $650 laptop grant to buy your own device' },
+        { id: 'tablet', title: 'Tablet', description: 'Apple, Samsung, or OnePlus!' }
+      );
+    }
     
     devices.forEach(device => {
       const btn = document.createElement('button');
@@ -1453,8 +1473,62 @@
     modal.classList.add('visible');
   }
 
+  function setMainDevice(deviceId) {
+    showStatus('loading', 'Switching your device...');
+    
+    fetch('/market/set_main_device', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+      },
+      body: JSON.stringify({ device_id: deviceId, refund: false })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        console.log('Main device set successfully');
+        userMainDeviceBranchId = deviceId;
+        currentBranchId = deviceId;
+        viewingDeviceType = findDeviceTypeForBranch(deviceId);
+        closeStatusModal();
+        updateSwitchButton();
+        renderTechTree();
+      } else {
+        closeStatusModal();
+        showStatus('error', data.error || 'Failed to set device');
+      }
+    })
+    .catch(error => {
+      console.error('Failed to set main device:', error);
+      closeStatusModal();
+      showStatus('error', 'Failed to set device');
+    });
+  }
+
   function selectDeviceType(deviceType) {
     document.getElementById('initial-selection-modal').classList.remove('visible');
+    
+    if (deviceType === 'laptop_grant') {
+      // For unsupported regions, check if user has upgrades and offer refund
+      const hasUpgrades = hasDeviceSpecificUpgrades();
+      
+      if (hasUpgrades) {
+        // User has upgrades - offer refund confirmation
+        showConfirmationModal(
+          'You have device-specific upgrades. Selecting the laptop grant will refund all your tech tree purchases. Continue?',
+          () => {
+            // User confirmed - proceed with refund and device selection
+            saveMainDevice('laptop_grant_base', true);
+          }
+        );
+      } else {
+        // No upgrades - proceed normally
+        setMainDevice('laptop_grant_base');
+      }
+      return;
+    }
+    
     currentDevice = deviceType;
     selectedBranch = null;
     updateSwitchButton();
@@ -1479,6 +1553,7 @@
 
   function updateTechTreeCoins() {
     return fetch('/market/user_coins', {
+      method: 'GET',
       headers: {
         'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
       }
@@ -1490,20 +1565,62 @@
     });
   }
 
+  function calculateGrantTotal() {
+    let total = 650; // Base grant amount
+    
+    // Add purchased grant upgrades
+    if (techTreePurchases['+$10 Grant']) {
+      total += techTreePurchases['+$10 Grant'] * 10;
+    }
+    if (techTreePurchases['+$50 Grant']) {
+      total += techTreePurchases['+$50 Grant'] * 50;
+    }
+    if (techTreePurchases['+$100 Grant']) {
+      total += techTreePurchases['+$100 Grant'] * 100;
+    }
+    
+    return total;
+  }
+
+  function updateGrantTotal() {
+    const grantDisplay = document.getElementById('grant-total-display');
+    const grantAmount = document.getElementById('grant-total-amount');
+    
+    if (viewingDeviceType === 'laptop_grant') {
+      grantDisplay.style.display = 'block';
+      grantAmount.textContent = calculateGrantTotal();
+    } else {
+      grantDisplay.style.display = 'none';
+    }
+  }
+
   function updateSwitchButton() {
     const switchBtn = document.getElementById('switch-device-btn');
     const switchText = document.getElementById('switch-device-text');
     
     if (viewingDeviceType) {
       switchBtn.style.display = 'inline-block';
-      switchText.textContent = viewingDeviceType === 'laptop' ? 'Tablet' : 'Laptop';
+      
+      if (userInSupportedRegion) {
+        // Supported regions: switch between laptop and tablet
+        switchText.textContent = viewingDeviceType === 'laptop' ? 'Tablet' : 'Laptop';
+      } else {
+        // Unsupported regions: switch between laptop_grant and tablet
+        switchText.textContent = viewingDeviceType === 'laptop_grant' ? 'Tablet' : 'Laptop Grant';
+      }
     } else {
       switchBtn.style.display = 'none';
     }
   }
 
   window.switchViewedDevice = function() {
-    viewingDeviceType = viewingDeviceType === 'laptop' ? 'tablet' : 'laptop';
+    if (userInSupportedRegion) {
+      // Supported regions: switch between laptop and tablet
+      viewingDeviceType = viewingDeviceType === 'laptop' ? 'tablet' : 'laptop';
+    } else {
+      // Unsupported regions: switch between laptop_grant and tablet
+      viewingDeviceType = viewingDeviceType === 'laptop_grant' ? 'tablet' : 'laptop_grant';
+    }
     
     // If switching to the device type that contains our saved device, restore it
     const userDeviceType = userMainDeviceBranchId ? findDeviceTypeForBranch(userMainDeviceBranchId) : null;
@@ -1610,19 +1727,51 @@
     
     text.textContent = message;
     modal.className = 'status-modal visible confirmation';
-    button.style.display = 'inline-block';
-    button.textContent = 'Continue';
+    
+    // Create button container with both Continue and Cancel buttons
+    const buttonContainer = document.createElement('div');
+    buttonContainer.style.display = 'flex';
+    buttonContainer.style.gap = '1rem';
+    buttonContainer.style.justifyContent = 'center';
+    buttonContainer.style.marginTop = '1rem';
+    
+    // Create Continue button
+    const continueButton = document.createElement('button');
+    continueButton.className = 'shop-button';
+    continueButton.textContent = 'Continue';
+    continueButton.style.backgroundColor = '#8b4513';
+    continueButton.style.color = 'white';
+    
+    // Create Cancel button
+    const cancelButton = document.createElement('button');
+    cancelButton.className = 'shop-button';
+    cancelButton.textContent = 'Cancel';
+    cancelButton.style.backgroundColor = '#6c757d';
+    cancelButton.style.color = 'white';
+    
+    // Add buttons to container
+    buttonContainer.appendChild(continueButton);
+    buttonContainer.appendChild(cancelButton);
+    
+    // Replace the existing button with our container
+    button.style.display = 'none';
+    modal.appendChild(buttonContainer);
     
     // Position modal relative to active interface
     positionModalOnActiveInterface(modal);
     
-    // Remove old event listeners by cloning the button
-    const newButton = button.cloneNode(true);
-    button.parentNode.replaceChild(newButton, button);
-    
-    newButton.onclick = () => {
+    // Add event listeners
+    continueButton.onclick = () => {
+      modal.removeChild(buttonContainer);
+      button.style.display = 'inline-block';
       closeStatusModal();
       onConfirm();
+    };
+    
+    cancelButton.onclick = () => {
+      modal.removeChild(buttonContainer);
+      button.style.display = 'inline-block';
+      closeStatusModal();
     };
   }
 
@@ -1676,6 +1825,8 @@
   function renderTechTree() {
     if (!viewingDeviceType || !techTreeData) return;
     
+    updateGrantTotal();
+    
     const deviceData = techTreeData[viewingDeviceType];
     const nodesContainer = document.getElementById('tech-tree-nodes');
     const edgesContainer = document.getElementById('tech-tree-edges');
@@ -1718,7 +1869,44 @@
       
       rootEl.onclick = () => showRootOptions(rootNode.options);
     } else {
-      rootEl.innerHTML = `<div class="tech-node-title">${rootNode.title}</div>`;
+      // Single node without options (like laptop_grant)
+      if (currentBranchId) {
+        // Show the current branch
+        rootEl.innerHTML = `
+          <div class="tech-node-title">${rootNode.title}</div>
+          <div style="font-size: 0.75rem; margin-top: 0.5rem; color: #8b5a3c;">Click to switch device</div>
+        `;
+      } else {
+        // Show as selection node
+        rootEl.innerHTML = `
+          <div class="tech-node-title">${rootNode.title}</div>
+          <div style="font-size: 0.75rem; margin-top: 0.5rem; color: #8b5a3c;">Click to select</div>
+        `;
+      }
+      
+      rootEl.onclick = () => {
+        if (viewingDeviceType === 'laptop_grant') {
+          // For laptop_grant, check if user has upgrades and offer refund
+          const hasUpgrades = hasDeviceSpecificUpgrades();
+          
+          if (hasUpgrades) {
+            // User has upgrades - offer refund confirmation
+            showConfirmationModal(
+              'You have device-specific upgrades. Selecting the laptop grant will refund all your tech tree purchases. Continue?',
+              () => {
+                // User confirmed - proceed with refund and device selection
+                saveMainDevice('laptop_grant_base', true);
+              }
+            );
+          } else {
+            // No upgrades - proceed normally
+            setMainDevice('laptop_grant_base');
+          }
+        } else {
+          // For other single-node devices, show device selection
+          showInitialDeviceSelection();
+        }
+      };
     }
     
     nodesContainer.appendChild(rootEl);
@@ -1896,6 +2084,10 @@
     }
     
     if (node.maxPurchases === null || node.maxPurchases === undefined) {
+      // Check if this is a grant upgrade for unlimited purchases
+      if (node.title && node.title.includes('Grant')) {
+        return Infinity; // Unlimited purchases for grant upgrades
+      }
       return 1; // Default to 1 purchase max
     }
     
@@ -2092,12 +2284,21 @@
       'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
     }
   })
-  .then(r => r.json())
+  .then(r => {
+    if (!r.ok) {
+      throw new Error(`HTTP ${r.status}: ${r.statusText}`);
+    }
+    return r.json();
+  })
   .then(data => {
     techTreeData = data;
     console.log('Tech tree data loaded');
   })
-  .catch(error => console.error('Failed to preload tech tree:', error));
+  .catch(error => {
+    console.error('Failed to preload tech tree:', error);
+    // Set to empty object so the interval doesn't wait forever
+    techTreeData = {};
+  });
   
   fetch('/market/user_purchases', {
     headers: {
@@ -2119,11 +2320,20 @@
       'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
     }
   })
-  .then(r => r.json())
+  .then(r => {
+    if (!r.ok) {
+      throw new Error(`HTTP ${r.status}: ${r.statusText}`);
+    }
+    return r.json();
+  })
   .then(data => {
     userMainDeviceBranchId = data.main_device || null;
     console.log('Main device loaded from server:', userMainDeviceBranchId);
   })
-  .catch(error => console.error('Failed to preload main device:', error));
+  .catch(error => {
+    console.error('Failed to preload main device:', error);
+    // Set to null explicitly so the interval doesn't wait forever
+    userMainDeviceBranchId = null;
+  });
 })();
 </script>

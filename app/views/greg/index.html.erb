@@ -505,6 +505,17 @@
                 placeholder: "Search in reasoning text", 
                 class: "filter-input" %>
           </div>
+          
+          <% if current_user&.super_admin? %>
+            <div class="filter-group">
+              <label class="filter-label" style="display: flex; align-items: center; gap: 0.5rem;">
+                <%= form.check_box :show_hidden, 
+                    { checked: params[:show_hidden] == 'true' }, 
+                    'true', 'false' %>
+                Show Hidden Projects
+              </label>
+            </div>
+          <% end %>
         </div>
         
         <div class="filter-actions">
@@ -604,6 +615,18 @@
               <% if project.user.slack_id.present? %>
                 <%= link_to "Joe Profile", "https://dash.fraud.land/profile/#{project.user.slack_id}", target: "_blank", class: "greg-project-link", onclick: "event.stopPropagation()" %>
               <% end %>
+              
+              <% if current_user&.super_admin? %>
+                <% if project.hidden? %>
+                  <button class="greg-project-link greg-unhide-btn" onclick="event.stopPropagation(); unhideProject(<%= project.id %>)" title="Unhide project">
+                    Unhide
+                  </button>
+                <% else %>
+                  <button class="greg-project-link greg-hide-btn" onclick="event.stopPropagation(); hideProject(<%= project.id %>)" title="Hide project">
+                    Hide
+                  </button>
+                <% end %>
+              <% end %>
             </div>
           </div>
         <% end %>
@@ -676,4 +699,73 @@
     localStorage.removeItem('greg-dark-mode');
   }
 })();
+
+// Hide/Unhide project functionality
+function hideProject(projectId) {
+  if (!confirm('Are you sure you want to hide this project?')) {
+    return;
+  }
+  
+  fetch(`/fraud/projects/${projectId}/hide`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      // Update the button to show "Unhide"
+      const hideBtn = document.querySelector(`button[onclick*="hideProject(${projectId})"]`);
+      if (hideBtn) {
+        hideBtn.textContent = 'Unhide';
+        hideBtn.setAttribute('onclick', `event.stopPropagation(); unhideProject(${projectId})`);
+        hideBtn.className = 'greg-project-link greg-unhide-btn';
+        hideBtn.title = 'Unhide project';
+      }
+      alert(data.message);
+    } else {
+      alert('Error: ' + data.error);
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    alert('An error occurred while hiding the project.');
+  });
+}
+
+function unhideProject(projectId) {
+  if (!confirm('Are you sure you want to unhide this project?')) {
+    return;
+  }
+  
+  fetch(`/fraud/projects/${projectId}/unhide`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      // Update the button to show "Hide"
+      const unhideBtn = document.querySelector(`button[onclick*="unhideProject(${projectId})"]`);
+      if (unhideBtn) {
+        unhideBtn.textContent = 'Hide';
+        unhideBtn.setAttribute('onclick', `event.stopPropagation(); hideProject(${projectId})`);
+        unhideBtn.className = 'greg-project-link greg-hide-btn';
+        unhideBtn.title = 'Hide project';
+      }
+      alert(data.message);
+    } else {
+      alert('Error: ' + data.error);
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    alert('An error occurred while unhiding the project.');
+  });
+}
 </script>

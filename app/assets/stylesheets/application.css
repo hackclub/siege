@@ -179,3 +179,26 @@ h2 {
   z-index: 1;
   text-decoration: none;
 }
+
+/* Greg project hide/unhide button styles */
+.greg-hide-btn {
+  background-color: #dc2626 !important;
+  color: white !important;
+  border-color: #dc2626 !important;
+}
+
+.greg-hide-btn:hover {
+  background-color: #b91c1c !important;
+  border-color: #b91c1c !important;
+}
+
+.greg-unhide-btn {
+  background-color: #059669 !important;
+  color: white !important;
+  border-color: #059669 !important;
+}
+
+.greg-unhide-btn:hover {
+  background-color: #047857 !important;
+  border-color: #047857 !important;
+}

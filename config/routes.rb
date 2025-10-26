@@ -146,6 +146,8 @@ Rails.application.routes.draw do
   get "/fraud", to: "greg#index", as: :fraud
   get "/fraud/projects/:id", to: "greg#show", as: :fraud_project
   post "/fraud/projects/:id/fraud_status", to: "greg#update_fraud_status", as: :fraud_update_fraud_status
+  patch "/fraud/projects/:id/hide", to: "greg#hide_project", as: :fraud_hide_project
+  patch "/fraud/projects/:id/unhide", to: "greg#unhide_project", as: :fraud_unhide_project
   get "/admin/flipper", to: "admin/flipper#index", as: :admin_flipper
   post "/admin/refresh-hackatime-cache", to: "admin#refresh_hackatime_cache", as: :admin_refresh_hackatime_cache
   post "/admin/clear-github-cache", to: "admin#clear_github_cache", as: :admin_clear_github_cache
