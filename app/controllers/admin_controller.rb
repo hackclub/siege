@@ -1233,7 +1233,7 @@ class AdminController < ApplicationController
       end
 
       # Calculate average score (only from cast votes)
-      cast_votes = @votes.where(voted: true)
+      cast_votes = @project ? @votes.where(voted: true) : []
       @average_score = cast_votes.any? ? cast_votes.average(:star_count).to_f.round(2) : nil
 
       # Calculate raw hours for the hour override default
@@ -1876,7 +1876,7 @@ class AdminController < ApplicationController
     end
 
     # Filter by user name if requested
-    if params[:user_name].present?
+    if params[:user_name].present? && @purchases.respond_to?(:joins)
       escaped_user = ActiveRecord::Base.connection.quote_string(params[:user_name])
       @purchases = @purchases.joins(:user).where("users.name ILIKE ?", "%#{escaped_user}%")
     end
