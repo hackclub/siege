@@ -1221,14 +1221,8 @@ class AdminController < ApplicationController
         # Use project's effective time range instead of standard week range
         view_context.user_hackatime_time_for_projects(@user, [ @project ], @project.effective_time_range)
       else
-        # For users without projects, check for hour override first
-        user_week = UserWeek.find_by(user: @user, week: @selected_week)
-        if user_week&.hour_override.present?
-          user_week.hour_override * 3600
-        else
-          # Calculate from hackatime for the week
-          view_context.user_hackatime_time_for_projects(@user, [], week_range)
-        end
+        # Users without projects have 0 time
+        0
       end
       @time_readable = view_context.format_time_from_seconds(@time_seconds)
       @raw_hours = (@time_seconds / 3600.0).round(2)
