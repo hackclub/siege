@@ -224,11 +224,11 @@ class YswsReviewController < ApplicationController
       @votes = @project ? Vote.joins(:ballot).includes(ballot: :user).where(project: @project).order("ballots.created_at DESC") : []
       
       cast_votes = @project ? @votes.where(voted: true) : []
-      @average_score = cast_votes.any? ? cast_votes.average(:star_count).to_f.round(2) : nil
+      @average_score = cast_votes.any? ? cast_votes.average(:star_count).to_f.round(2) : 0
       @raw_hours = (@time_seconds / 3600.0).round(2)
       
-      # Use the same coin calculation as admin
-      @suggested_coins = calculate_project_coins(@user, @project, @raw_hours, @average_score, @selected_week)
+      # Calculate coin calculation using same logic as admin dashboard
+      @suggested_coins = calculate_coins_with_admin_logic(@user, @project, @raw_hours, @average_score, @selected_week)
       
       @address = @user.address
       @submitted_to_airtable = @project&.in_airtable? || false
@@ -246,6 +246,58 @@ class YswsReviewController < ApplicationController
   def require_reviewer
     unless current_user&.can_review?
       redirect_to root_path, alert: "You don't have permission to access this page."
+    end
+  end
+  
+  def calculate_coins_with_admin_logic(user, project, hours, average_score, week)
+    return 0 unless hours && hours > 0
+    
+    # Determine if project followed theme by checking audit logs
+    theme_status = "unknown"
+    if project
+      latest_status_update = user.audit_logs
+        .select { |log| log["action"] == "Project status updated" && log["details"]["project_id"] == project.id }
+        .max_by { |log| Time.parse(log["timestamp"]) rescue Time.at(0) }
+      
+      if latest_status_update
+        new_status = latest_status_update.dig("details", "new_status")
+        if new_status == "pending_voting"
+          theme_status = "yes"
+        elsif new_status == "waiting_for_review"
+          theme_status = "no"
+        end
+      end
+    end
+    
+    # Calculate default vote multiplier (same as admin dashboard)
+    if average_score > 0
+      vote_multiplier = average_score
+    elsif theme_status == "no"
+      vote_multiplier = 1.0
+    elsif theme_status == "yes"
+      vote_multiplier = 3.0
+    else
+      vote_multiplier = [average_score, 1].max
+    end
+    
+    # Check if user is under goal (for weeks 5+, working users)
+    # Allow up to 10 minutes (0.167 hours) under goal
+    user_is_out = user.status == "out"
+    under_goal = false
+    hour_goal = ApplicationController.helpers.effective_hour_goal(user, week)
+    
+    if week >= 5 && user.status == "working"
+      under_goal = hours < (hour_goal - 0.167)
+    end
+    
+    # Calculate coins using "out" formula if user is out OR under goal
+    if user_is_out || under_goal
+      reviewer_bonus = project&.reviewer_multiplier || 2.0
+      voting_bonus = vote_multiplier
+      return (hours * 2 * reviewer_bonus * voting_bonus).round
+    else
+      # Use the complex formula for working users who meet their goal
+      return calculate_project_coins(user, project, hours, vote_multiplier, week)
     end
   end
   
@@ -275,9 +327,9 @@ class YswsReviewController < ApplicationController
       # Calculate base: 5 * reviewer_bonus * voting_bonus
       base = 5 * reviewer_bonus * voting_bonus
       
-      # Calculate bonus for hours past goal
+      # Calculate bonus for hours past goal (2x multiplier on bonus hours)
       hours_past_goal = [hours - hour_goal, 0].max
-      bonus = hours_past_goal * reviewer_bonus * voting_bonus
+      bonus = hours_past_goal * 2 * reviewer_bonus * voting_bonus
       
       return (base + bonus).round
     end
