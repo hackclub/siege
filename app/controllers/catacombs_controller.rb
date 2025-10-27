@@ -416,9 +416,12 @@ class CatacombsController < ApplicationController
     # Save the current runes to the user
     current_user.update(current_runes: rune_text)
     
-    # Future: Add rune processing logic here
+    # Generate random digits based on the runes
+    # Use the rune text as a seed for consistent randomness per input
+    random = Random.new(rune_text.bytes.sum)
+    digits = (1..5).map { random.rand(0..9) }.join
     
-    render json: { success: true }
+    render json: { success: true, digits: digits }
   end
 
   private
