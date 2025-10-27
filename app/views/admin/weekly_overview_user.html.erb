@@ -1579,6 +1579,118 @@
     </div>
   <% end %>
 
+<!-- Essential JavaScript functions for users without projects -->
+<script>
+  // Initialize offset controls with current week data
+  function initializeOffsetControls() {
+    updateOffsetWeek();
+  }
+
+  // Update offset controls when week selection changes
+  function updateOffsetWeek() {
+    // Check which offset controls are present and get the selected week
+    const projectSelect = document.getElementById('offset-week-select');
+    const noProjectSelect = document.getElementById('offset-week-select-no-project');
+    const selectedWeek = projectSelect ? projectSelect.value : noProjectSelect.value;
+    
+    // Fetch data for the selected week from the server
+    fetch(`/admin/weekly-overview/${selectedWeek}/<%= @user.id %>/user_week_data`)
+      .then(response => response.json())
+      .then(data => {
+        if (data.error) {
+          console.error('Error fetching user week data:', data.error);
+          return;
+        }
+        
+        // Update project offset controls if they exist
+        if (projectSelect) {
+          document.getElementById('arbitrary-offset').value = data.arbitrary_offset;
+          document.getElementById('mercenary-offset').textContent = data.mercenary_offset;
+          document.getElementById('current-arbitrary-offset').textContent = data.arbitrary_offset;
+          document.getElementById('total-offset').textContent = data.total_offset;
+          document.getElementById('effective-goal').textContent = data.effective_goal;
+        }
+        
+        // Update no-project offset controls if they exist
+        if (noProjectSelect) {
+          document.getElementById('arbitrary-offset-no-project').value = data.arbitrary_offset;
+          document.getElementById('mercenary-offset-no-project').textContent = data.mercenary_offset;
+          document.getElementById('current-arbitrary-offset-no-project').textContent = data.arbitrary_offset;
+          document.getElementById('total-offset-no-project').textContent = data.total_offset;
+          document.getElementById('effective-goal-no-project').textContent = data.effective_goal;
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+      });
+  }
+
+  // Update arbitrary offset
+  function updateArbitraryOffset() {
+    // Check which offset controls are present
+    const projectSelect = document.getElementById('offset-week-select');
+    const noProjectSelect = document.getElementById('offset-week-select-no-project');
+    const projectInput = document.getElementById('arbitrary-offset');
+    const noProjectInput = document.getElementById('arbitrary-offset-no-project');
+    
+    const selectedWeek = projectSelect ? projectSelect.value : noProjectSelect.value;
+    const newOffset = parseInt(projectInput ? projectInput.value : noProjectInput.value);
+    
+    if (isNaN(newOffset)) {
+      alert('Please enter a valid offset value.');
+      return;
+    }
+
+    if (!confirm(`This will set the arbitrary offset for week ${selectedWeek} to ${newOffset} hours. Continue?`)) {
+      return;
+    }
+
+    const updatePath = `/admin/weekly-overview/${selectedWeek}/<%= @user.id %>/update_arbitrary_offset`;
+    
+    fetch(updatePath, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+      },
+      body: JSON.stringify({ 
+        week: selectedWeek,
+        arbitrary_offset: newOffset
+      })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        alert(data.message);
+        // Update the display with returned data for both sets of controls
+        if (projectInput) {
+          document.getElementById('arbitrary-offset').value = data.new_arbitrary_offset;
+          document.getElementById('current-arbitrary-offset').textContent = data.new_arbitrary_offset;
+          document.getElementById('total-offset').textContent = data.total_offset;
+          document.getElementById('effective-goal').textContent = data.new_effective_goal;
+        }
+        if (noProjectInput) {
+          document.getElementById('arbitrary-offset-no-project').value = data.new_arbitrary_offset;
+          document.getElementById('current-arbitrary-offset-no-project').textContent = data.new_arbitrary_offset;
+          document.getElementById('total-offset-no-project').textContent = data.total_offset;
+          document.getElementById('effective-goal-no-project').textContent = data.new_effective_goal;
+        }
+      } else {
+        alert('Error updating offset: ' + (data.error || 'Unknown error'));
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('Error updating offset. Please try again.');
+    });
+  }
+
+  // Initialize controls when page loads
+  document.addEventListener('DOMContentLoaded', function() {
+    initializeOffsetControls();
+  });
+</script>
+
 <!-- Hour Offset Controls (shown only when no project) -->
 <% unless @project %>
   <div class="card" style="margin-top: 2rem;">
