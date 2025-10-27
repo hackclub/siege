@@ -786,6 +786,7 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
+<% if @available_windows.any? { |w| w.window_type == 'shop' } %>
 async function loadShopItems() {
   try {
     const response = await fetch('/catacombs/shop_items');
@@ -919,6 +920,7 @@ async function purchaseShopItemFromModal(itemId, cost, name) {
   await purchaseShopItem(itemId, cost, name);
   // Don't close modal - purchaseShopItem handles showing success message
 }
+<% end %>
 
 </script>
 <script>
@@ -1033,28 +1035,51 @@ async function showMystereepleDialogue() {
 
 function getWindowButtonText(windowType) {
   switch(windowType) {
+    <% if @available_windows.any? { |w| w.window_type == 'betting' } %>
     case 'betting': return 'Place a bet';
+    <% end %>
+    <% if @available_windows.any? { |w| w.window_type == 'shop' } %>
     case 'shop': return 'See the items';
+    <% end %>
+    <% if @available_windows.any? { |w| w.window_type == 'secret' } %>
+    case 'secret': return 'Yes';
+    <% end %>
     default: return 'View';
   }
 }
 
 function getWindowQuestion(windowType) {
   switch(windowType) {
+    <% if @available_windows.any? { |w| w.window_type == 'betting' } %>
     case 'betting': return 'Would you like to place a bet?';
+    <% end %>
+    <% if @available_windows.any? { |w| w.window_type == 'shop' } %>
     case 'shop': return 'Would you like some items?';
+    <% end %>
+    <% if @available_windows.any? { |w| w.window_type == 'secret' } %>
+    case 'secret': return 'You want to know a secret?';
+    <% end %>
     default: return 'Interested?';
   }
 }
 
 function handleWindowAction(windowType) {
   switch(windowType) {
+    <% if @available_windows.any? { |w| w.window_type == 'betting' } %>
     case 'betting':
       handlePlaceBet();
       break;
+    <% end %>
+    <% if @available_windows.any? { |w| w.window_type == 'shop' } %>
     case 'shop':
       handleSeeItems();
       break;
+    <% end %>
+    <% if @available_windows.any? { |w| w.window_type == 'secret' } %>
+    case 'secret':
+      handleSecret();
+      break;
+    <% end %>
   }
 }
 
@@ -1097,6 +1122,7 @@ async function loadUserCoins() {
   }
 }
 
+<% if @available_windows.any? { |w| w.window_type == 'betting' } %>
 async function handlePlaceBet() {
   closeMystereepleDialogue();
   document.getElementById('betting-interface').classList.add('visible');
@@ -1455,12 +1481,64 @@ async function collectGlobalBet() {
     showModalAlert('Failed to collect bet. Please try again.', 'Error');
   }
 }
+<% end %>
 
+<% if @available_windows.any? { |w| w.window_type == 'shop' } %>
 async function handleSeeItems() {
   closeMystereepleDialogue();
   document.getElementById('shop-interface').classList.add('visible');
   loadShopItems();
 }
+<% end %>
+
+<% if @available_windows.any? { |w| w.window_type == 'secret' } %>
+async function handleSecret() {
+  const textElement = document.getElementById('mystereeple-text');
+  const buttons = document.getElementById('mystereeple-buttons');
+  
+  buttons.innerHTML = '';
+  buttons.classList.remove('visible');
+  
+  try {
+    // First message
+    await typeText(textElement, "I hear that if you include a jumpscare in your next project, it might help you out on a spooky halloween night...");
+    
+    // Build buttons
+    const btn1 = document.createElement('button');
+    btn1.className = 'mystereeple-dialogue-button';
+    btn1.textContent = 'Got it!';
+    btn1.onclick = () => closeMystereepleDialogue();
+    buttons.appendChild(btn1);
+    
+    const btn2 = document.createElement('button');
+    btn2.className = 'mystereeple-dialogue-button';
+    btn2.textContent = 'Wait... what?';
+    btn2.onclick = async () => {
+      buttons.innerHTML = '';
+      buttons.classList.remove('visible');
+      
+      try {
+        await typeText(textElement, "Hmmm... well yeah I don't know much... all I know is that there were talks of a big party this Saturday... might be good to have a jumpscare by then... but you didn't hear it from me...");
+        
+        const btn3 = document.createElement('button');
+        btn3.className = 'mystereeple-dialogue-button';
+        btn3.textContent = 'Okay...';
+        btn3.onclick = () => closeMystereepleDialogue();
+        buttons.appendChild(btn3);
+        
+        buttons.classList.add('visible');
+      } catch (e) {
+        // Typing was cancelled
+      }
+    };
+    buttons.appendChild(btn2);
+    
+    buttons.classList.add('visible');
+  } catch (e) {
+    // Typing was cancelled
+  }
+}
+<% end %>
 
 async function handleAnythingElse() {
   currentWindowIndex++;

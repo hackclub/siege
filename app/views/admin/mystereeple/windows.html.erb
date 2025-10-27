@@ -16,7 +16,7 @@
               <input 
                 type="checkbox" 
                 <%= 'checked' if window.enabled %>
-                onchange="toggleWindow(<%= window.id %>, this.checked)"
+                onchange="toggleWindow(<%= window.id %>, this)"
               >
               <span class="toggle-slider"></span>
             </label>
@@ -81,7 +81,7 @@
     });
   }
 
-  function toggleWindow(windowId, enabled) {
+  function toggleWindow(windowId, checkbox) {
     fetch(`/admin/mystereeple/windows/${windowId}/toggle`, {
       method: 'PATCH',
       headers: {
@@ -92,17 +92,17 @@
     .then(response => response.json())
     .then(data => {
       if (data.success) {
-        const label = event.target.closest('.window-toggle').querySelector('.toggle-label');
+        const label = checkbox.closest('.window-toggle').querySelector('.toggle-label');
         label.textContent = data.enabled ? 'Enabled' : 'Disabled';
       } else {
         alert('Failed to toggle window: ' + data.message);
-        event.target.checked = !enabled;
+        checkbox.checked = !checkbox.checked;
       }
     })
     .catch(error => {
       console.error('Error:', error);
       alert('Failed to toggle window');
-      event.target.checked = !enabled;
+      checkbox.checked = !checkbox.checked;
     });
   }
 </script>
