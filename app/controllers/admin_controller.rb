@@ -1870,6 +1870,16 @@ class AdminController < ApplicationController
         end
         # "all" or empty - no filter applied
       end
+
+      @total_coins_in_economy = User.sum(:coins)
+      
+      device_upgrade_items = PhysicalItem.where(digital: true).pluck(:name)
+      unfulfilled_purchases = ShopPurchase.unfulfilled
+      device_upgrade_purchases = ShopPurchase.where(item_name: device_upgrade_items)
+      @total_unfulfilled_coins = unfulfilled_purchases.or(device_upgrade_purchases).distinct.sum(:coins_spent)
+      
+      total_spent = ShopPurchase.sum(:coins_spent)
+      @total_unfulfilled_and_unspent_coins = @total_unfulfilled_coins + (@total_coins_in_economy - total_spent)
     rescue NameError => e
       Rails.logger.error "Could not load ShopPurchase model: #{e.message}"
       @purchases = []

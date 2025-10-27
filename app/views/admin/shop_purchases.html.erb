@@ -427,6 +427,18 @@
         <h3>Total Coins Spent</h3>
         <p class="stat-number"><%= ShopPurchase.sum(:coins_spent) %></p>
       </div>
+      <div class="stat-card">
+        <h3>Total Coins in Economy</h3>
+        <p class="stat-number"><%= @total_coins_in_economy %></p>
+      </div>
+      <div class="stat-card">
+        <h3>Total Unfulfilled Coins</h3>
+        <p class="stat-number"><%= @total_unfulfilled_coins %></p>
+      </div>
+      <div class="stat-card">
+        <h3>Unfulfilled + Unspent Coins</h3>
+        <p class="stat-number"><%= @total_unfulfilled_and_unspent_coins %></p>
+      </div>
     </div>
   </div>
   
