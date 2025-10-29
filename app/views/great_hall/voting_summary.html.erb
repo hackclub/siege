@@ -2274,6 +2274,11 @@ function drawBackgroundAndThrone() {
 
 // Restored original drawStaticScene with cosmetics added  
 function drawStaticScene() {
+  // Check if canvas is available
+  if (!canvasManager || !canvasManager.canvas) {
+    return;
+  }
+  
   // Check if images are available
   if (!imageManager.images.background || !imageManager.images.throne) {
     return;

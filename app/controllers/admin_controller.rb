@@ -2009,7 +2009,7 @@ class AdminController < ApplicationController
     @week_filter = params[:week]
     @min_coins = params[:min_coins]
     @max_coins = params[:max_coins]
-    @paid_out_filter = params[:paid_out]
+    @paid_out_filter = params[:paid_out].present? ? params[:paid_out] : 'false'
     
     if @bet_type == 'personal'
       @hours_goal_filter = params[:hours_goal]
@@ -2084,7 +2084,10 @@ class AdminController < ApplicationController
     user = bet.user
     
     if bet.paid_out?
-      redirect_to admin_bets_path(bet_type: bet_type), alert: "Bet already paid out"
+      respond_to do |format|
+        format.html { redirect_to admin_bets_path(bet_type: bet_type), alert: "Bet already paid out" }
+        format.turbo_stream { render turbo_stream: turbo_stream.replace("bet_#{bet.id}", partial: "admin/bet_card", locals: { bet_data: { bet: bet, current_hours: bet.current_hours, goal_reached: bet.goal_reached? }, bet_type: bet_type }) }
+      end
       return
     end
     
@@ -2098,7 +2101,10 @@ class AdminController < ApplicationController
       bet.update!(paid_out: true)
     end
     
-    redirect_to admin_bets_path(bet_type: bet_type), notice: "Bet paid out successfully"
+    respond_to do |format|
+      format.html { redirect_to admin_bets_path(bet_type: bet_type), notice: "Bet paid out successfully" }
+      format.turbo_stream { render turbo_stream: turbo_stream.remove("bet_#{bet.id}") }
+    end
   end
 
   def delete_bet
