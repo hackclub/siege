@@ -39,6 +39,7 @@ Rails.application.routes.draw do
   get "/welcome", to: "welcome#index", as: :welcome
   post "/welcome/complete", to: "welcome#complete", as: :welcome_complete
   get "/keep", to: "home#index", as: :keep
+  get "/keep/stats", to: "home#stats", as: :keep_stats
   get "/great-hall", to: "great_hall#index", as: :great_hall
   get "/map", to: "map#index", as: :map
   get "/great-hall/thanks", to: "great_hall#thanks", as: :great_hall_thanks
@@ -78,6 +79,7 @@ Rails.application.routes.draw do
   get "/admin/referrals", to: "admin#referrals", as: :admin_referrals
   get "/admin/weekly-overview", to: "admin#weekly_overview", as: :admin_weekly_overview
   get "/admin/analytics", to: "admin#analytics", as: :admin_analytics
+  get "/admin/postcards", to: "admin#postcard_dashboard", as: :admin_postcards
   
   # Mystereeple management routes
   get "/admin/mystereeple", to: "admin/mystereeple#index", as: :admin_mystereeple

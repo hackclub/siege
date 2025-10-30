@@ -1,0 +1,727 @@
+<% content_for :title, "Admin - Postcard Dashboard" %>
+
+<% content_for :head do %>
+  <style>
+    .postcard-container {
+      max-width: 100%;
+      margin: 0;
+      padding: 2rem;
+    }
+
+    .page-header {
+      margin-bottom: 2rem;
+    }
+
+    .page-title {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      color: #402b20;
+    }
+
+    .top-controls {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+    }
+
+    .control-button {
+      padding: 0.75rem 1.5rem;
+      background: #6366f1;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .control-button:hover {
+      background: #4f46e5;
+    }
+
+    .control-button.secondary {
+      background: #059669;
+    }
+
+    .control-button.secondary:hover {
+      background: #047857;
+    }
+
+    .control-button.danger {
+      background: #dc2626;
+    }
+
+    .control-button.danger:hover {
+      background: #b91c1c;
+    }
+
+    .filters-section {
+      background: rgba(255, 255, 255, 0.95);
+      border: 2px solid rgba(64, 43, 32, 0.15);
+      border-radius: 16px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .filters-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .filter-label {
+      font-weight: 600;
+      color: #402b20;
+      margin-bottom: 0.5rem;
+      font-size: 0.9rem;
+    }
+
+    .filter-input, .filter-select {
+      padding: 0.75rem;
+      border: 2px solid rgba(64, 43, 32, 0.3);
+      border-radius: 6px;
+      font-size: 1rem;
+      background: white;
+    }
+
+    .filter-select[multiple] {
+      min-height: 120px;
+    }
+
+    .user-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .user-card {
+      background: rgba(255, 255, 255, 0.95);
+      border: 2px solid rgba(64, 43, 32, 0.15);
+      border-radius: 12px;
+      padding: 1.5rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+    }
+
+    .user-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .user-card.sent {
+      border-color: #059669;
+      background: rgba(209, 250, 229, 0.5);
+    }
+
+    .user-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      margin-bottom: 1rem;
+    }
+
+    .user-name {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #402b20;
+    }
+
+    .sent-badge {
+      background: #059669;
+      color: white;
+      padding: 0.25rem 0.75rem;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .user-info-item {
+      font-size: 0.9rem;
+      color: #6b5b4a;
+      margin-bottom: 0.5rem;
+    }
+
+    .mark-sent-button {
+      width: 100%;
+      padding: 0.5rem;
+      margin-top: 1rem;
+      background: #d97706;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .mark-sent-button:hover {
+      background: #b45309;
+    }
+
+    .mark-sent-button.sent {
+      background: #059669;
+    }
+
+    .mark-sent-button.sent:hover {
+      background: #047857;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      overflow-y: auto;
+    }
+
+    .modal.active {
+      display: flex;
+      align-items: start;
+      justify-content: center;
+      padding: 2rem;
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 16px;
+      padding: 2rem;
+      max-width: 900px;
+      width: 100%;
+      margin: 2rem auto;
+      position: relative;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 2px solid rgba(64, 43, 32, 0.15);
+    }
+
+    .modal-close {
+      background: #dc2626;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .modal-close:hover {
+      background: #b91c1c;
+    }
+
+    .navigation-buttons {
+      display: flex;
+      gap: 1rem;
+    }
+
+    .nav-button {
+      padding: 0.5rem 1rem;
+      background: #6366f1;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .nav-button:hover {
+      background: #4f46e5;
+    }
+
+    .nav-button:disabled {
+      background: #9ca3af;
+      cursor: not-allowed;
+    }
+
+    .address-block {
+      background: rgba(255, 248, 220, 0.5);
+      border: 2px solid rgba(217, 119, 6, 0.3);
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1.5rem;
+      white-space: pre-line;
+      font-family: monospace;
+    }
+
+    .project-item {
+      background: rgba(255, 255, 255, 0.95);
+      border: 2px solid rgba(64, 43, 32, 0.15);
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .project-header {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #402b20;
+      margin-bottom: 0.5rem;
+    }
+
+    .project-screenshots {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 0.5rem;
+      margin: 1rem 0;
+    }
+
+    .project-screenshot {
+      width: 100%;
+      height: auto;
+      border-radius: 4px;
+      border: 1px solid rgba(64, 43, 32, 0.2);
+    }
+
+    .project-links {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .project-link {
+      padding: 0.25rem 0.75rem;
+      background: #6366f1;
+      color: white;
+      text-decoration: none;
+      border-radius: 4px;
+      font-size: 0.85rem;
+    }
+
+    .project-link:hover {
+      background: #4f46e5;
+      color: white;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      margin-right: 0.5rem;
+    }
+
+    .status-badge.building { background-color: #dbeafe; color: #1e40af; }
+    .status-badge.submitted { background-color: #d1fae5; color: #059669; }
+    .status-badge.pending_voting { background-color: #fef3c7; color: #d97706; }
+    .status-badge.waiting_for_review { background-color: #fef3c7; color: #d97706; }
+    .status-badge.finished { background-color: #e5e7eb; color: #374151; }
+
+    .fraud-badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .fraud-badge.unchecked { background-color: #fbbf24; color: #92400e; }
+    .fraud-badge.sus { background-color: #f59e0b; color: white; }
+    .fraud-badge.fraud { background-color: #dc2626; color: white; }
+    .fraud-badge.good { background-color: #059669; color: white; }
+
+    .fraud-comment {
+      background: rgba(255, 240, 240, 0.5);
+      border-left: 3px solid #dc2626;
+      padding: 0.5rem;
+      margin-top: 0.5rem;
+      font-size: 0.85rem;
+    }
+
+    .no-results {
+      text-align: center;
+      padding: 3rem;
+      color: #6b5b4a;
+      font-size: 1.1rem;
+    }
+  </style>
+<% end %>
+
+<div class="postcard-container">
+  <div class="page-header">
+    <h1 class="page-title">Postcard Dashboard</h1>
+    <p style="color: #6b5b4a;">Send postcards to Siege participants</p>
+  </div>
+
+  <div class="top-controls">
+    <button class="control-button secondary" onclick="markAllSent()">Mark All as Sent</button>
+    <button class="control-button danger" onclick="markAllUnsent()">Mark All as Unsent</button>
+    <span style="margin-left: auto; font-weight: 600; color: #402b20;">
+      <span id="sent-count">0</span> / <span id="total-count"><%= (@users || []).length %></span> sent
+    </span>
+  </div>
+
+  <%= form_with url: admin_postcards_path, method: :get, local: true, html: { id: 'filters-form', onsubmit: 'return cleanFormParams(this)' } do |f| %>
+    <div class="filters-section">
+      <h3 style="margin-bottom: 1rem; color: #402b20;">Filters</h3>
+      
+      <div class="filters-grid">
+        <div class="filter-group">
+          <label class="filter-label">Week Numbers</label>
+          <%= f.select :weeks,
+              options_for_select((1..14).map { |w| ["Week #{w}", w] }, @selected_weeks),
+              { include_blank: false },
+              { class: "filter-select", multiple: true, size: 5 } %>
+        </div>
+
+        <div class="filter-group">
+          <label class="filter-label">User Name / Display Name / Slack ID</label>
+          <%= f.text_field :user_name, value: @user_name_filter, class: 'filter-input', placeholder: 'Search users...' %>
+        </div>
+
+        <div class="filter-group">
+          <label class="filter-label">Project Status</label>
+          <%= f.select :status,
+              options_for_select([
+                ["Building", "building"],
+                ["Submitted", "submitted"],
+                ["Pending Voting", "pending_voting"],
+                ["Waiting for Review", "waiting_for_review"],
+                ["Finished", "finished"]
+              ], @status_filter),
+              { include_blank: false },
+              { class: "filter-select", multiple: true } %>
+        </div>
+
+        <div class="filter-group">
+          <label class="filter-label">Fraud Status</label>
+          <%= f.select :fraud_status,
+              options_for_select([
+                ["Unchecked", "unchecked"],
+                ["Good", "good"],
+                ["Sus", "sus"],
+                ["Fraud", "fraud"]
+              ], @fraud_status_filter),
+              { include_blank: false },
+              { class: "filter-select", multiple: true } %>
+        </div>
+      </div>
+
+      <div class="filter-buttons" style="display: flex; gap: 1rem; margin-top: 1rem;">
+        <%= f.submit "Apply Filters", class: "control-button", name: nil %>
+        <%= link_to "Reset", admin_postcards_path, class: "control-button", style: "background: #6b7280; text-decoration: none; display: inline-block; text-align: center; line-height: 1;" %>
+      </div>
+    </div>
+  <% end %>
+
+  <div class="user-cards-grid" id="user-cards">
+    <% (@users || []).each_with_index do |user, index| %>
+      <div class="user-card" data-user-id="<%= user.id %>" data-index="<%= index %>" onclick="openUserModal(<%= index %>)">
+        <div class="user-card-header">
+          <div class="user-name"><%= user.name %></div>
+          <span class="sent-badge" style="display: none;">✓ Sent</span>
+        </div>
+        
+        <div class="user-info-item"><strong>Display Name:</strong> <%= user.display_name || 'N/A' %></div>
+        <div class="user-info-item"><strong>Slack ID:</strong> <%= user.slack_id %></div>
+        <% if user.address %>
+          <div class="user-info-item"><strong>Address:</strong> <%= user.address.city %>, <%= user.address.country %></div>
+        <% else %>
+          <div class="user-info-item"><strong>Address:</strong> <span style="color: #dc2626;">No address on file</span></div>
+        <% end %>
+        
+        <button class="mark-sent-button" onclick="event.stopPropagation(); toggleSent(<%= user.id %>)">
+          Mark as Sent
+        </button>
+      </div>
+    <% end %>
+  </div>
+
+  <% if (@users || []).empty? %>
+    <div class="no-results">
+      No users found matching the current filters.
+    </div>
+  <% end %>
+</div>
+
+<div class="modal" id="user-modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <div>
+        <h2 id="modal-user-name" style="margin: 0; color: #402b20;"></h2>
+        <p id="modal-user-real-name" style="margin: 0.25rem 0 0 0; color: #6b5b4a;"></p>
+      </div>
+      <div style="display: flex; gap: 1rem; align-items: center;">
+        <div class="navigation-buttons">
+          <button class="nav-button" onclick="navigateUser(-1)" id="prev-button">← Previous</button>
+          <button class="nav-button" onclick="navigateUser(1)" id="next-button">Next →</button>
+        </div>
+        <button class="modal-close" onclick="closeModal()">Close</button>
+      </div>
+    </div>
+
+    <div id="modal-content-body"></div>
+
+    <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 2px solid rgba(64, 43, 32, 0.15);">
+      <button class="mark-sent-button" onclick="toggleSentFromModal()" id="modal-sent-button">
+        Mark as Sent
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const users = <%= raw (@users || []).map { |u| 
+    user_projects = []
+    @selected_weeks.each do |week|
+      week_range = view_context.week_date_range(week)
+      if week_range
+        week_start = Date.parse(week_range[0]).beginning_of_day
+        week_end = Date.parse(week_range[1]).end_of_day
+        projects = Project.visible.includes(screenshots_attachments: :blob)
+                          .where(user: u, created_at: week_start..week_end)
+        user_projects += projects.map { |p| {
+          id: p.id,
+          name: p.name,
+          description: p.description,
+          demo_url: p.demo_url,
+          repo_url: p.repo_url,
+          status: p.status,
+          fraud_status: p.fraud_status,
+          fraud_reasoning: p.fraud_reasoning,
+          screenshots: p.screenshots.attached? ? p.screenshots.map { |s| url_for(s) } : []
+        } }
+      end
+    end
+    {
+      id: u.id,
+      name: u.name,
+      display_name: u.display_name,
+      slack_id: u.slack_id,
+      address: u.address ? {
+        shipping_name: u.address.shipping_name,
+        first_name: u.address.first_name,
+        last_name: u.address.last_name,
+        line_one: u.address.line_one,
+        line_two: u.address.line_two,
+        city: u.address.city,
+        state: u.address.state,
+        postcode: u.address.postcode,
+        country: u.address.human_country
+      } : nil,
+      projects: user_projects
+    }
+  }.to_json %>;
+
+  let sentUsers = new Set();
+  let currentModalIndex = -1;
+
+  function loadSentState() {
+    const saved = localStorage.getItem('postcard-sent-users');
+    if (saved) {
+      sentUsers = new Set(JSON.parse(saved));
+      updateUI();
+    }
+  }
+
+  function saveSentState() {
+    localStorage.setItem('postcard-sent-users', JSON.stringify([...sentUsers]));
+  }
+
+  function toggleSent(userId) {
+    if (sentUsers.has(userId)) {
+      sentUsers.delete(userId);
+    } else {
+      sentUsers.add(userId);
+    }
+    saveSentState();
+    updateUI();
+  }
+
+  function toggleSentFromModal() {
+    const userId = users[currentModalIndex].id;
+    toggleSent(userId);
+  }
+
+  function markAllSent() {
+    users.forEach(user => sentUsers.add(user.id));
+    saveSentState();
+    updateUI();
+  }
+
+  function markAllUnsent() {
+    sentUsers.clear();
+    saveSentState();
+    updateUI();
+  }
+
+  function updateUI() {
+    document.querySelectorAll('.user-card').forEach(card => {
+      const userId = parseInt(card.dataset.userId);
+      const sentBadge = card.querySelector('.sent-badge');
+      const button = card.querySelector('.mark-sent-button');
+      
+      if (sentUsers.has(userId)) {
+        card.classList.add('sent');
+        sentBadge.style.display = 'block';
+        button.textContent = 'Mark as Unsent';
+        button.classList.add('sent');
+      } else {
+        card.classList.remove('sent');
+        sentBadge.style.display = 'none';
+        button.textContent = 'Mark as Sent';
+        button.classList.remove('sent');
+      }
+    });
+
+    document.getElementById('sent-count').textContent = sentUsers.size;
+
+    if (currentModalIndex >= 0) {
+      const userId = users[currentModalIndex].id;
+      const modalButton = document.getElementById('modal-sent-button');
+      if (sentUsers.has(userId)) {
+        modalButton.textContent = 'Mark as Unsent';
+        modalButton.classList.add('sent');
+      } else {
+        modalButton.textContent = 'Mark as Sent';
+        modalButton.classList.remove('sent');
+      }
+    }
+  }
+
+  function openUserModal(index) {
+    currentModalIndex = index;
+    const user = users[index];
+    
+    document.getElementById('modal-user-name').textContent = user.name;
+    document.getElementById('modal-user-real-name').textContent = user.display_name || user.name;
+
+    let html = '';
+
+    if (user.address) {
+      const addr = user.address;
+      const addressText = `${addr.shipping_name || `${addr.first_name} ${addr.last_name}`}
+${addr.line_one}
+${addr.line_two ? addr.line_two + '\n' : ''}${addr.city}, ${addr.state || ''} ${addr.postcode}
+${addr.country}`;
+      
+      html += `<div class="address-block">${addressText}</div>`;
+    } else {
+      html += `<div style="background: rgba(255, 240, 240, 0.5); border: 2px solid #dc2626; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;">
+        <strong>⚠️ No address on file</strong>
+      </div>`;
+    }
+
+    html += '<h3 style="margin-bottom: 1rem; color: #402b20;">Projects</h3>';
+
+    if (user.projects && user.projects.length > 0) {
+      user.projects.forEach(project => {
+        html += `<div class="project-item">`;
+        html += `<div class="project-header">${project.name}</div>`;
+        html += `<div style="margin-bottom: 0.5rem;">
+          <span class="status-badge ${project.status}">${project.status.replace(/_/g, ' ')}</span>
+          <span class="fraud-badge ${project.fraud_status}">${project.fraud_status}</span>
+        </div>`;
+        html += `<p style="color: #6b5b4a; margin: 0.5rem 0;">${project.description || 'No description'}</p>`;
+        
+        if (project.screenshots && project.screenshots.length > 0) {
+          html += '<div class="project-screenshots">';
+          project.screenshots.forEach(url => {
+            html += `<img src="${url}" class="project-screenshot" alt="Screenshot">`;
+          });
+          html += '</div>';
+        }
+
+        html += '<div class="project-links">';
+        if (project.demo_url) {
+          html += `<a href="${project.demo_url}" target="_blank" class="project-link">🔗 Demo</a>`;
+        }
+        if (project.repo_url) {
+          html += `<a href="${project.repo_url}" target="_blank" class="project-link">📦 Repo</a>`;
+        }
+        html += '</div>';
+
+        if (project.fraud_reasoning) {
+          html += `<div class="fraud-comment"><strong>Fraud Comment:</strong> ${project.fraud_reasoning}</div>`;
+        }
+
+        html += '</div>';
+      });
+    } else {
+      html += '<p style="color: #6b5b4a;">No projects found for this user in the selected weeks.</p>';
+    }
+
+    document.getElementById('modal-content-body').innerHTML = html;
+    
+    document.getElementById('prev-button').disabled = index === 0;
+    document.getElementById('next-button').disabled = index === users.length - 1;
+
+    document.getElementById('user-modal').classList.add('active');
+    updateUI();
+  }
+
+  function closeModal() {
+    document.getElementById('user-modal').classList.remove('active');
+    currentModalIndex = -1;
+  }
+
+  function navigateUser(direction) {
+    const newIndex = currentModalIndex + direction;
+    if (newIndex >= 0 && newIndex < users.length) {
+      openUserModal(newIndex);
+    }
+  }
+
+  function cleanFormParams(form) {
+    // Remove empty inputs before form submission
+    const inputs = form.querySelectorAll('input[type="text"], input[type="number"], select');
+    inputs.forEach(input => {
+      if (input.type === 'text' || input.type === 'number') {
+        if (!input.value || input.value.trim() === '') {
+          input.disabled = true;
+        }
+      } else if (input.tagName === 'SELECT' && input.multiple) {
+        // For multi-selects, check if any options are selected
+        const selectedOptions = Array.from(input.selectedOptions);
+        if (selectedOptions.length === 0) {
+          input.disabled = true;
+        }
+      }
+    });
+    
+    // Re-enable inputs after a brief delay (after form serialization)
+    setTimeout(() => {
+      inputs.forEach(input => input.disabled = false);
+    }, 100);
+    
+    return true;
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    loadSentState();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (currentModalIndex >= 0) {
+      if (e.key === 'Escape') {
+        closeModal();
+      } else if (e.key === 'ArrowLeft') {
+        navigateUser(-1);
+      } else if (e.key === 'ArrowRight') {
+        navigateUser(1);
+      }
+    }
+  });
+</script>

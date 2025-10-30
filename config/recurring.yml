@@ -39,6 +39,10 @@ production:
     class: UpdateHackatimeDaysJob
     schedule: every 3 hours
 
+  refresh_hackatime_cache:
+    class: RefreshHackatimeCacheJob
+    schedule: every 15 minutes
+
   # storage_maintenance:
   #   command: "rake storage:maintenance"
   #   schedule: every day at 3am

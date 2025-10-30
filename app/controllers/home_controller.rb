@@ -5,6 +5,28 @@ class HomeController < ApplicationController
     current_user&.ensure_meeple
   end
 
+  def stats
+    @current_user = current_user&.decorate
+    @week = helpers.current_week_number
+    @project_exists = current_user ? current_user.has_project_this_week?(Date.current) : false
+    @week_secs = @current_user&.seconds_for_week(@week).to_f || 0
+    @current_project = helpers.current_week_project
+    @effective_goal_secs = helpers.current_week_effective_hour_goal * 3600
+    @week_secs_for_wave = @current_user&.week_seconds_time.to_f || 0
+    
+    respond_to do |format|
+      format.html
+      format.json do
+        render json: {
+          week_secs: @week_secs_for_wave,
+          effective_goal_secs: @effective_goal_secs,
+          today_message: helpers.today_coding_message,
+          weekly_stats_html: render_to_string(partial: 'home/weekly_stats_content', formats: [:html])
+        }
+      end
+    end
+  end
+
   def verify_admin_key
     unless user_signed_in?
       render json: { success: false, message: "You must be signed in to use this feature." }, status: :unauthorized

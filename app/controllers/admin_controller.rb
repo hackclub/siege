@@ -2881,4 +2881,57 @@ def require_admin_access
     end
   end
 
+  def postcard_dashboard
+    current_week = view_context.current_week_number rescue 1
+    @selected_weeks = params[:weeks].is_a?(Array) ? params[:weeks].reject(&:blank?).map(&:to_i) : []
+    @selected_weeks = [current_week - 1].select { |w| w > 0 } if @selected_weeks.empty?
+    @selected_weeks ||= [1]
+    
+    @user_name_filter = params[:user_name]
+    @status_filter = params[:status].is_a?(Array) ? params[:status].reject(&:blank?) : []
+    @fraud_status_filter = params[:fraud_status].is_a?(Array) ? params[:fraud_status].reject(&:blank?) : []
+    
+    @status_filter = %w[pending_voting waiting_for_review finished] if @status_filter.empty?
+    @fraud_status_filter = %w[unchecked good] if @fraud_status_filter.empty?
+    
+    users_with_projects = {}
+    
+    @selected_weeks.each do |week|
+      week_range = view_context.week_date_range(week)
+      next unless week_range
+      
+      week_start_date = Date.parse(week_range[0])
+      week_end_date = Date.parse(week_range[1])
+      
+      projects = Project.visible.includes(:user, screenshots_attachments: :blob)
+                       .where(created_at: week_start_date.beginning_of_day..week_end_date.end_of_day)
+      
+      if @status_filter.present?
+        projects = projects.where(status: @status_filter)
+      end
+      
+      if @fraud_status_filter.present?
+        projects = projects.where(fraud_status: @fraud_status_filter)
+      end
+      
+      projects.each do |project|
+        user = project.user
+        next if user.status != "working"
+        
+        if @user_name_filter.present?
+          escaped_user = ActiveRecord::Base.connection.quote_string(@user_name_filter)
+          next unless user.name.downcase.include?(@user_name_filter.downcase) ||
+                      user.display_name&.downcase&.include?(@user_name_filter.downcase) ||
+                      user.slack_id&.downcase&.include?(@user_name_filter.downcase)
+        end
+        
+        users_with_projects[user.id] ||= { user: user, projects: [] }
+        users_with_projects[user.id][:projects] << { project: project, week: week }
+      end
+    end
+    
+    @users = users_with_projects.values.map { |data| data[:user] } || []
+    @users_data = users_with_projects
+  end
+
 end

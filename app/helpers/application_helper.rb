@@ -406,8 +406,8 @@ module ApplicationHelper
         uri = URI(url)
         http = Net::HTTP.new(uri.host, uri.port)
         http.use_ssl = true if uri.scheme == "https"
-        http.open_timeout = 10
-        http.read_timeout = 30
+        http.open_timeout = 3
+        http.read_timeout = 5
 
         request = Net::HTTP::Get.new(uri)
         request["RACK_ATTACK_BYPASS"] = Rails.application.credentials.hackatime_key

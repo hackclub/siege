@@ -3,6 +3,7 @@ require "ostruct"
 class GreatHallController < ApplicationController
   before_action :check_access_permissions
   before_action :check_not_banned
+  before_action :preload_current_user_cosmetics
 
   def index
     # If access was denied, render was already handled in before_action
@@ -20,10 +21,25 @@ class GreatHallController < ApplicationController
 
     # Allow voting with any week number (including 0 or negative for testing)
     
-    # If multiple ballots allowed, only find most recent ballot
+    # If multiple ballots allowed, find most recent unvoted ballot or show already voted state
     # Otherwise, find the only ballot (enforced by uniqueness constraint)
     if Flipper.enabled?(:allow_multiple_ballots, current_user)
-      @ballot = current_user.ballots.where(week: previous_week).order(created_at: :desc).first
+      @ballot = current_user.ballots.where(week: previous_week, voted: false).order(created_at: :desc).first
+      
+      # If no unvoted ballot and user is not explicitly creating a new one, show already_voted state
+      if @ballot.nil? && params[:create_new] != 'true'
+        voted_ballot = current_user.ballots.where(week: previous_week, voted: true).order(created_at: :desc).first
+        if voted_ballot
+          @ballot = voted_ballot
+          @voting_state = :already_voted
+          @meeple_message = "What wise logic you have! Your declaration has been submitted. Here are three coins for your trouble!"
+          @votes_json = "[]"
+          @allow_revote = true
+          render :voting_summary
+          return
+        end
+        # Otherwise fall through to create new ballot
+      end
     else
       @ballot = current_user.ballots.find_by(week: previous_week)
     end
@@ -31,7 +47,7 @@ class GreatHallController < ApplicationController
     if @ballot
       if @ballot.voted?
         @voting_state = :already_voted
-        @meeple_message = "What wise logic you have! Your declaration has been submitted. Here are three 🪙 for your trouble!"
+        @meeple_message = "What wise logic you have! Your declaration has been submitted. Here are three coins for your trouble!"
         @votes_json = "[]"
         @allow_revote = Flipper.enabled?(:allow_multiple_ballots, current_user)
         render :voting_summary
@@ -56,7 +72,7 @@ class GreatHallController < ApplicationController
 
         # Show the existing ballot with its votes
         @voting_state = :voting
-        @votes = @ballot.votes.includes(project: { user: { meeple: :cosmetics } })
+        @votes = @ballot.votes.includes(project: { user: :meeple })
 
         # Serialize the votes data for JavaScript with minimal user data exposure
         @votes_json = @votes.map do |vote|
@@ -64,14 +80,11 @@ class GreatHallController < ApplicationController
             id: vote.id,
             week: vote.week,
             voted: vote.voted,
+            star_count: vote.star_count,
             project: vote.project.safe_attributes_for_voting.merge(
               user: vote.project.user.safe_attributes_for_voting
             )
           }
-          # Only expose star_count to admins
-          if can_access_admin?
-            vote_data[:star_count] = vote.star_count
-          end
           vote_data
         end.to_json
         @current_step = params[:step]&.to_i || 1
@@ -117,13 +130,8 @@ class GreatHallController < ApplicationController
       return
     end
     
-    previous_week = helpers.current_week_number - 1
-    
-    # Mark the current ballot as archived/old (optional - just for record keeping)
-    # The uniqueness constraint will need to be relaxed if we want multiple ballots
-    
-    # Redirect back to great hall to create a new ballot
-    redirect_to great_hall_path, notice: "You can now create a new ballot."
+    # Redirect with create_new flag to bypass already_voted check and create new ballot
+    redirect_to great_hall_path(create_new: true)
   end
 
   private
@@ -192,7 +200,7 @@ class GreatHallController < ApplicationController
       end
     end
 
-    @votes = @ballot.votes.includes(project: { user: { meeple: :cosmetics } })
+    @votes = @ballot.votes.includes(project: { user: :meeple })
 
             # Serialize the votes data for JavaScript with explicit includes
             @votes_json = @votes.map do |vote|
@@ -200,14 +208,11 @@ class GreatHallController < ApplicationController
                 id: vote.id,
                 week: vote.week,
                 voted: vote.voted,
+                star_count: vote.star_count,
                 project: vote.project.safe_attributes_for_voting.merge(
                   user: vote.project.user.safe_attributes_for_voting
                 )
               }
-              # Only expose star_count to admins
-              if can_access_admin?
-                vote_data[:star_count] = vote.star_count
-              end
               vote_data
             end.to_json
 
@@ -237,6 +242,16 @@ class GreatHallController < ApplicationController
       @ballot = OpenStruct.new(id: 0)
       render :voting_summary
       nil
+    end
+  end
+
+  def preload_current_user_cosmetics
+    if current_user&.meeple
+      # Eager load meeple_cosmetics with their cosmetics and image attachments
+      ActiveRecord::Associations::Preloader.new(
+        records: [current_user.meeple],
+        associations: { meeple_cosmetics: { cosmetic: { image_attachment: :blob } } }
+      ).call
     end
   end
 end

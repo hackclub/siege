@@ -1,0 +1,35 @@
+<% unless Flipper.enabled?(:preparation_phase, current_user) %>
+  <label class="home-checkrow home-checkrow-help <%= 'home-muted' unless @project_exists %>" title="These are the hours required to stay in Siege">
+    <input type="checkbox" class="home-checkbox" <%= 'checked' if @project_exists && @week_secs >= @effective_goal_secs %> disabled />
+    <span class="home-row-sm">
+      Siege! (
+      <% if @project_exists %>
+        <% if @current_project&.hackatime_projects&.any? %>
+          <% if @week_secs >= @effective_goal_secs %>
+            <%= current_week_effective_hour_goal %>h
+          <% else %>
+            <%= format_time_from_seconds(@week_secs) %>
+          <% end %>
+        <% else %>
+          0h
+        <% end %>
+      <% else %>
+        0h
+      <% end %>
+      / <%= current_week_effective_hour_goal %>h )
+    </span>
+  </label>
+<% end %>
+<label class="home-checkrow home-checkrow-help <%= 'home-muted' if Flipper.enabled?(:preparation_phase, current_user) ? false : (@week_secs < @effective_goal_secs) %>" title="<%= Flipper.enabled?(:preparation_phase, current_user) ? 'All hours count towards coins in preparation phase' : 'These are bonus hours that go towards coins' %>">
+  <% pillage_secs = Flipper.enabled?(:preparation_phase, current_user) ? @week_secs : [@week_secs - @effective_goal_secs, 0].max %>
+  <input type="checkbox" class="home-checkbox" disabled />
+  <span class="home-row-sm">
+    Pillage (
+    <% if Flipper.enabled?(:preparation_phase, current_user) || @week_secs >= @effective_goal_secs %>
+      <%= format_time_from_seconds(pillage_secs) %>
+    <% else %>
+      0h
+    <% end %>
+    )
+  </span>
+</label>

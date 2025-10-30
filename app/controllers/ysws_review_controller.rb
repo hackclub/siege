@@ -6,8 +6,8 @@ class YswsReviewController < ApplicationController
     # This is essentially a delegated call to the admin weekly overview functionality
     
     # Find all weeks that have projects
-    project_weeks = Project.includes(:user).map do |project|
-      view_context.week_number_for_date(project.created_at)
+    project_weeks = Project.pluck(:created_at).map do |created_at|
+      view_context.week_number_for_date(created_at)
     end.uniq.compact.sort.reverse
 
     if project_weeks.empty?
@@ -31,7 +31,7 @@ class YswsReviewController < ApplicationController
       week_start_date = Date.parse(week_range[0])
       week_end_date = Date.parse(week_range[1])
 
-      @users = User.all.includes(:meeple, :address)
+      @users = User.all.includes(:meeple)
 
       # Store filter values (clean empty strings)
       @user_search_filter = params[:user_search].presence
@@ -53,9 +53,9 @@ class YswsReviewController < ApplicationController
       @users = @users.where(status: @user_status_filter) if @user_status_filter != "all"
       
       week_projects = if @show_hidden
-        Project.where(user_id: @users.pluck(:id), created_at: week_start_date.beginning_of_day..week_end_date.end_of_day).includes(:user)
+        Project.where(user_id: @users.pluck(:id), created_at: week_start_date.beginning_of_day..week_end_date.end_of_day).includes(:user, reviewer_video_attachment: :blob)
       else
-        Project.visible.where(user_id: @users.pluck(:id), created_at: week_start_date.beginning_of_day..week_end_date.end_of_day).includes(:user)
+        Project.visible.where(user_id: @users.pluck(:id), created_at: week_start_date.beginning_of_day..week_end_date.end_of_day).includes(:user, reviewer_video_attachment: :blob)
       end
 
       # Apply project search filter if provided
@@ -80,12 +80,15 @@ class YswsReviewController < ApplicationController
 
       @user_data = {}
 
+      # Preload user_weeks to avoid N+1 queries
+      user_weeks_by_user = UserWeek.where(user: @users, week: @selected_week).index_by(&:user_id)
+
       @users.each do |user|
         project = projects_by_user[user.id]&.first
         time_seconds = project ? view_context.user_hackatime_time_for_projects(user, [ project ], week_range) : 0
         average_score = project ? vote_averages[project.id] : nil
         
-        user_week = UserWeek.find_by(user: user, week: @selected_week)
+        user_week = user_weeks_by_user[user.id]
         mercenary_count = user_week&.mercenary_offset || 0
         arbitrary_offset = user_week&.arbitrary_offset || 0
         total_offset = user_week&.total_offset || 0
@@ -193,11 +196,15 @@ class YswsReviewController < ApplicationController
       end
       
       # Sort by submission count (descending) and prepare leaderboard data
+      # Preload all users to avoid N+1 queries
+      reviewer_users = User.where(id: airtable_submissions.keys).index_by(&:id)
+      
       @airtable_leaderboard = airtable_submissions.sort_by { |_, count| -count }.map do |reviewer_id, count|
         {
           reviewer_id: reviewer_id,
           reviewer_name: reviewer_names[reviewer_id],
-          submission_count: count
+          submission_count: count,
+          user: reviewer_users[reviewer_id]
         }
       end
     else

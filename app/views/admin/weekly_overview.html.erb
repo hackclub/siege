@@ -341,9 +341,8 @@
                 <%= index + 1 %>
               </td>
               <td style="padding: 0.75rem;">
-                <% user = User.find_by(id: entry[:reviewer_id]) %>
-                <% if user %>
-                  <%= link_to entry[:reviewer_name], admin_user_details_path(user), style: "color: #2563eb; text-decoration: none; font-weight: 600;" %>
+                <% if entry[:user] %>
+                  <%= link_to entry[:reviewer_name], admin_user_details_path(entry[:user]), style: "color: #2563eb; text-decoration: none; font-weight: 600;" %>
                 <% else %>
                   <span style="font-weight: 600; color: #402b20;"><%= entry[:reviewer_name] %></span>
                 <% end %>

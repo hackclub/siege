@@ -1,0 +1,9 @@
+<%= turbo_frame_tag "home-stats-frame" do %>
+  <div class="home-center home-progress-footer">
+    <span class="home-progress-bottom"><%= today_coding_message %></span>
+  </div>
+<% end %>
+
+<%= turbo_frame_tag "home-weekly-stats-frame" do %>
+  <%= render partial: 'home/weekly_stats_content' %>
+<% end %>

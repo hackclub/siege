@@ -1,0 +1,16 @@
+<%= turbo_frame_tag "home-wave-frame" do %>
+  <section class="home-progress-standalone">
+    <div class="home-full">
+      <%= render partial: 'home/wave_progress' %>
+      <%= turbo_frame_tag "home-stats-frame" do %>
+        <div class="home-center home-progress-footer">
+          <span class="home-progress-bottom"><%= today_coding_message %></span>
+        </div>
+      <% end %>
+    </div>
+  </section>
+<% end %>
+
+<%= turbo_frame_tag "home-weekly-stats-frame" do %>
+  <%= render partial: 'home/weekly_stats_content' %>
+<% end %>
