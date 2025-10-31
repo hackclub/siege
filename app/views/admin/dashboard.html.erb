@@ -1,7 +1,8 @@
 <% content_for :title, "Admin - Project Dashboard" %>
+<% content_for :body_class, "admin-dashboard-page" %>
 
 <% content_for :head do %>
-  <style>
+  <style data-turbo-temporary>
     .admin-container {
       max-width: 100%;
       margin: 0;
@@ -93,7 +94,7 @@
       grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
     }
     
-    .project-card {
+    body.admin-dashboard-page .project-card {
       background: rgba(255, 255, 255, 0.95);
       border: 2px solid rgba(64, 43, 32, 0.15);
       border-radius: 16px;
@@ -101,7 +102,7 @@
       transition: all 0.2s ease;
     }
     
-    .project-card:hover {
+    body.admin-dashboard-page .project-card:hover {
       border-color: rgba(64, 43, 32, 0.3);
       box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     }

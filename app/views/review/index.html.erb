@@ -1,7 +1,8 @@
 <% content_for :title, "Review - All Projects" %>
+<% content_for :body_class, "review-index-page" %>
 
 <% content_for :head do %>
-  <style>
+  <style data-turbo-temporary>
     .review-container {
       max-width: 1200px;
       margin: 0;
@@ -112,7 +113,7 @@
       grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
       gap: 1.5rem;
     }
-    .project-card {
+    body.review-index-page .project-card {
       background: rgba(255, 255, 255, 0.9);
       border: 2px solid rgba(64, 43, 32, 0.1);
       border-radius: 12px;
@@ -120,7 +121,7 @@
       cursor: pointer;
       transition: all 0.2s ease;
     }
-    .project-card:hover {
+    body.review-index-page .project-card:hover {
       border-color: rgba(64, 43, 32, 0.3);
       transform: translateY(-2px);
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);

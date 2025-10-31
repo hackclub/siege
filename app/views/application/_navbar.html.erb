@@ -531,7 +531,7 @@
       <% if current_user&.meeple %>
       // Get user's equipped cosmetics like the keep page
       const equippedCosmetics = [
-        <% current_user.meeple.equipped_cosmetics.includes(cosmetic: { image_attachment: :blob }).each_with_index do |meeple_cosmetic, index| %>
+        <% current_user.meeple.equipped_cosmetics.includes(cosmetic: :image_attachment).each_with_index do |meeple_cosmetic, index| %>
           <% unless index == 0 %>,<% end %>{
             equipped: true,
             cosmetic: {
@@ -575,12 +575,14 @@
       <% end %>
     }
 
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', function() {
-        initMessyMeepleAvatar();
-        initNavbarMeeple();
-      }, { once: true });
-    } else {
+    // Use turbo:load for Turbo compatibility
+    document.addEventListener('turbo:load', function() {
+      initMessyMeepleAvatar();
+      initNavbarMeeple();
+    });
+    
+    // Also initialize on direct page load
+    if (document.readyState !== 'loading') {
       initMessyMeepleAvatar();
       initNavbarMeeple();
     }

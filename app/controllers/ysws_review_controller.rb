@@ -53,9 +53,9 @@ class YswsReviewController < ApplicationController
       @users = @users.where(status: @user_status_filter) if @user_status_filter != "all"
       
       week_projects = if @show_hidden
-        Project.where(user_id: @users.pluck(:id), created_at: week_start_date.beginning_of_day..week_end_date.end_of_day).includes(:user, reviewer_video_attachment: :blob)
+        Project.where(user_id: @users.pluck(:id), created_at: week_start_date.beginning_of_day..week_end_date.end_of_day).includes(:user, :reviewer_video_attachment)
       else
-        Project.visible.where(user_id: @users.pluck(:id), created_at: week_start_date.beginning_of_day..week_end_date.end_of_day).includes(:user, reviewer_video_attachment: :blob)
+        Project.visible.where(user_id: @users.pluck(:id), created_at: week_start_date.beginning_of_day..week_end_date.end_of_day).includes(:user, :reviewer_video_attachment)
       end
 
       # Apply project search filter if provided

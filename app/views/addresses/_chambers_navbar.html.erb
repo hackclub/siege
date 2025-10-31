@@ -249,7 +249,13 @@
     }
 
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', initMessyMeepleAvatar, { once: true });
+      // Use turbo:load for Turbo compatibility
+document.addEventListener('turbo:load', initMessyMeepleAvatar);
+
+// Also initialize on direct page load
+if (document.readyState !== 'loading') {
+  initMessyMeepleAvatar();
+}
     } else {
       initMessyMeepleAvatar();
     }

@@ -1,22 +1,23 @@
 <% content_for :title, "Showing project" %>
+<% content_for :body_class, "project-show-page" %>
 
 <% content_for :head do %>
-  <style>
+  <style data-turbo-temporary>
     .projects-notice { display: inline-block; margin-bottom: 1.25rem; font-weight: 500; color: inherit; padding: 0; background: transparent !important; border: 0; }
     .projects-notice::before, .projects-notice::after { content: "— — —"; opacity: 0.6; margin: 0 0.5rem; }
     .projects-header { display: flex; flex-direction: column; gap: 0.75rem; align-items: stretch; justify-content: space-between; }
     @media (min-width: 640px) { .projects-header { flex-direction: row; align-items: center; } }
     .projects-title { font-weight: 700; font-size: 2.25rem; }
     .projects-body { margin-top: 2rem; display: flex; justify-content: flex-start; }
-    .projects-body .project-card { display: inline-block; width: auto; max-width: 40rem; }
+    body.project-show-page .projects-body .project-card { display: inline-block; width: auto; max-width: 40rem; }
     .projects-index { display: flex; flex-direction: column; height: 100%; }
     .projects-footer { margin-top: auto; display: flex; flex-wrap: wrap; gap: 0.75rem; margin-bottom: .65em; }
     @media (min-width: 640px) { .projects-footer { margin-bottom: 1.05em; } }
     .project-card-actions { margin-top: 1.25rem; display: flex; align-items: center; justify-content: flex-start; }
     .project-card-links { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
-    .project-link { display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none; padding: 0.5rem 0.75rem; border: 3px solid rgba(64, 43, 32, 0.75); background: transparent; color: inherit; }
-    .project-link:hover { filter: brightness(0.95); }
-    .project-link.is-disabled { opacity: 0.5; pointer-events: none; cursor: not-allowed; filter: none; }
+    body.project-show-page .project-link { display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none; padding: 0.5rem 0.75rem; border: 3px solid rgba(64, 43, 32, 0.75); background: transparent; color: inherit; }
+    body.project-show-page .project-link:hover { filter: brightness(0.95); }
+    body.project-show-page .project-link.is-disabled { opacity: 0.5; pointer-events: none; cursor: not-allowed; filter: none; }
     .icon-sm { width: 1rem; height: 1rem; margin-right: 0.5rem; }
     .project-card-tags { margin-top: 1rem; display: flex; flex-wrap: wrap; gap: 0.5rem; }
     .project-tag { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.25rem 0.5rem; border: 2px solid rgba(64, 43, 32, 0.75); }

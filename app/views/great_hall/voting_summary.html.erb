@@ -1316,7 +1316,7 @@ class UIManager {
 }
 
 // Initialize
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('turbo:load', () => {
   const ui = new UIManager();
   
   if (serverVotingState === 'closed' || serverVotingState === 'already_voted' || serverVotingState === 'thanks') {

@@ -699,7 +699,7 @@ function clearVerification(userId) {
 }
 
 // Load hackatime trust data asynchronously
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('turbo:load', function() {
   // Get all user IDs from the page
   const trustElements = document.querySelectorAll('[id^="hackatime-trust-"]');
   

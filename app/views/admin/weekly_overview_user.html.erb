@@ -1,7 +1,8 @@
 <% content_for :title, "Admin - Weekly Overview - #{@user.name}" %>
+<% content_for :body_class, "admin-weekly-overview-user-page" %>
 
 <% content_for :head do %>
-  <style>
+  <style data-turbo-temporary>
     .admin-container {
       max-width: 100%;
       margin: 0;
@@ -62,14 +63,14 @@
       }
     }
     
-    .card {
+    body.admin-weekly-overview-user-page .card {
       background: rgba(255, 255, 255, 0.95);
       border: 2px solid rgba(64, 43, 32, 0.15);
       border-radius: 16px;
       padding: 1.5rem;
     }
     
-    .card-title {
+    body.admin-weekly-overview-user-page .card-title {
       font-size: 1.25rem;
       font-weight: 700;
       margin-bottom: 1rem;
@@ -1339,13 +1340,21 @@
         });
       }
 
-      // Initialize controls when page loads
-      document.addEventListener('DOMContentLoaded', function() {
+      // Initialize controls when page loads - use turbo:load for Turbo compatibility
+      document.addEventListener('turbo:load', function() {
         initializeOffsetControls();
         <% if @project && @project.repo_url.present? %>
         loadGitHubCommits();
         <% end %>
       });
+      
+      // Also initialize on direct page load
+      if (document.readyState !== 'loading') {
+        initializeOffsetControls();
+        <% if @project && @project.repo_url.present? %>
+        loadGitHubCommits();
+        <% end %>
+      }
 
       // GitHub Commit Graph
       async function loadGitHubCommits() {
@@ -1685,10 +1694,15 @@
     });
   }
 
-  // Initialize controls when page loads
-  document.addEventListener('DOMContentLoaded', function() {
+  // Initialize controls when page loads - use turbo:load for Turbo compatibility
+  document.addEventListener('turbo:load', function() {
     initializeOffsetControls();
   });
+  
+  // Also initialize on direct page load
+  if (document.readyState !== 'loading') {
+    initializeOffsetControls();
+  }
 </script>
 
 <!-- Hour Offset Controls (shown only when no project) -->

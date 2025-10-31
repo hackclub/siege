@@ -576,10 +576,11 @@
     registerCastleManager();
   }
 
-  // Wait for DOM and then initialize
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeCastle);
-  } else {
+  // Use turbo:load for Turbo compatibility
+  document.addEventListener('turbo:load', initializeCastle);
+  
+  // Also initialize on direct page load
+  if (document.readyState !== 'loading') {
     initializeCastle();
   }
 </script>

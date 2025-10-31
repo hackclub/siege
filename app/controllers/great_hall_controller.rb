@@ -247,11 +247,7 @@ class GreatHallController < ApplicationController
 
   def preload_current_user_cosmetics
     if current_user&.meeple
-      # Eager load meeple_cosmetics with their cosmetics and image attachments
-      ActiveRecord::Associations::Preloader.new(
-        records: [current_user.meeple],
-        associations: { meeple_cosmetics: { cosmetic: { image_attachment: :blob } } }
-      ).call
+      current_user.meeple.equipped_cosmetics.includes(cosmetic: :image_attachment).load
     end
   end
 end
