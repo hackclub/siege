@@ -1025,7 +1025,7 @@ async function showMystereepleDialogue() {
     // Build buttons dynamically
     if (availableWindows.length > 0) {
       const firstWindow = availableWindows[0];
-      const buttonText = getWindowButtonText(firstWindow.type);
+      const buttonText = getWindowButtonText(firstWindow.type, true); // true = is first window
       
       const btn1 = document.createElement('button');
       btn1.className = 'mystereeple-dialogue-button';
@@ -1046,7 +1046,7 @@ async function showMystereepleDialogue() {
   }
 }
 
-function getWindowButtonText(windowType) {
+function getWindowButtonText(windowType, isFirstWindow = false) {
   switch(windowType) {
     <% if @available_windows.any? { |w| w.window_type == 'betting' } %>
     case 'betting': return 'Place a bet';
@@ -1055,7 +1055,7 @@ function getWindowButtonText(windowType) {
     case 'shop': return 'See the items';
     <% end %>
     <% if @available_windows.any? { |w| w.window_type == 'secret' } %>
-    case 'secret': return 'Yes';
+    case 'secret': return isFirstWindow ? 'Tell me a secret' : 'Yes';
     <% end %>
     default: return 'View';
   }

@@ -290,6 +290,18 @@
       font-weight: 600;
       color: #059669;
     }
+    
+    #commit-graph {
+      min-height: 400px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #6b5b4a;
+      font-style: italic;
+      border: 2px dashed rgba(64, 43, 32, 0.2);
+      border-radius: 8px;
+      margin-top: 1rem;
+    }
   </style>
 <% end %>
 
@@ -388,6 +400,13 @@
           </div>
         </div>
       <% end %>
+    <% end %>
+    
+    <% if @project.repo_url.present? %>
+      <div class="detail-field">
+        <span class="detail-label">GitHub Commit Activity</span>
+        <div id="commit-graph">Loading commit data...</div>
+      </div>
     <% end %>
   </div>
 
@@ -632,5 +651,166 @@ function submitReview() {
   });
 }
 
-// No need to initialize video preview on page load since we show existing videos directly in the form
+// GitHub Commit Graph
+async function loadGitHubCommits() {
+  const projectId = <%= @project.id %>;
+  const weekNumber = <%= @week %>;
+  
+  try {
+    // Call server-side endpoint to fetch commit data
+    const response = await fetch(`/admin/projects/${projectId}/github-commits?week=${weekNumber}`);
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch commit data');
+    }
+    
+    const data = await response.json();
+    
+    // Parse dates
+    const weekStart = new Date(data.week_start);
+    const weekEnd = new Date(data.week_end);
+    
+    // Convert commit data to expected format
+    const weekCommits = data.week_commits.map(c => ({
+      date: new Date(c.date),
+      message: c.message,
+      additions: c.additions,
+      deletions: c.deletions,
+      author: c.author
+    }));
+    
+    renderCommitGraph(weekCommits, weekStart, weekEnd, data.before_week_commits, data.before_week_lines);
+  } catch (error) {
+    console.error('Error fetching commits:', error);
+    document.getElementById('commit-graph').innerHTML = 
+      '<p style="color: #dc2626;">Error loading commit data. Check console for details.</p>';
+  }
+}
+
+function renderCommitGraph(commits, weekStart, weekEnd, beforeCount, beforeLines) {
+  const container = document.getElementById('commit-graph');
+  
+  // Summary section
+  let html = `
+    <div style="margin-bottom: 1.5rem; padding: 1rem; background: rgba(255, 248, 220, 0.5); border-radius: 8px;">
+      <h4 style="margin: 0 0 0.5rem 0; color: #402b20;">Repository History</h4>
+      <p style="margin: 0; color: #6b5b4a;">
+        <strong>${beforeCount}</strong> commits (≈${beforeLines.toLocaleString()} lines) before this week
+      </p>
+    </div>
+  `;
+  
+  if (commits.length === 0) {
+    html += '<p style="color: #6b5b4a; text-align: center;">No commits during this week</p>';
+    container.innerHTML = html;
+    return;
+  }
+  
+  // Find max values for scaling
+  const maxAdditions = Math.max(...commits.map(c => c.additions), 1);
+  const maxDeletions = Math.max(...commits.map(c => c.deletions), 1);
+  const maxChanges = Math.max(maxAdditions, maxDeletions, 1);
+  
+  // Create a unified grid container for both day labels and graph
+  html += '<div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 0; margin-bottom: 1rem;">';
+  
+  // Day labels row - Monday through Sunday
+  const daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  for (let i = 0; i < 7; i++) {
+    const date = new Date(weekStart);
+    date.setDate(date.getDate() + i);
+    html += `<div style="padding: 0.5rem; border-right: 1px solid rgba(64, 43, 32, 0.1); font-size: 0.8rem; color: #6b5b4a; text-align: center;"><strong>${daysOfWeek[i]}</strong><br>${date.getMonth() + 1}/${date.getDate()}</div>`;
+  }
+  
+  // Graph area row - spans all 7 columns
+  html += `<div style="grid-column: 1 / -1; position: relative; height: 300px; border: 1px solid rgba(64, 43, 32, 0.1); border-radius: 8px; padding: 1rem;">`;
+  
+  // Center line
+  html += '<div style="position: absolute; left: 1rem; right: 1rem; top: 50%; height: 2px; background: rgba(64, 43, 32, 0.3); z-index: 1;"></div>';
+  
+  // Calculate total milliseconds in the week
+  const weekDuration = weekEnd - weekStart;
+  
+  // Group commits within 6 hours of each other
+  const SIX_HOURS_MS = 6 * 60 * 60 * 1000;
+  const commitGroups = [];
+  let currentGroup = [];
+  
+  commits.forEach((commit, i) => {
+    if (currentGroup.length === 0) {
+      currentGroup.push(commit);
+    } else {
+      const lastCommit = currentGroup[currentGroup.length - 1];
+      if (Math.abs(commit.date - lastCommit.date) <= SIX_HOURS_MS) {
+        currentGroup.push(commit);
+      } else {
+        commitGroups.push([...currentGroup]);
+        currentGroup = [commit];
+      }
+    }
+  });
+  if (currentGroup.length > 0) {
+    commitGroups.push(currentGroup);
+  }
+  
+  // Plot commits - position based on exact timestamp within the week
+  commitGroups.forEach(group => {
+    // Use the first commit's timestamp for the group position
+    const firstCommit = group[0];
+    const timeIntoWeek = firstCommit.date - weekStart;
+    const positionRatio = Math.max(0, Math.min(1, timeIntoWeek / weekDuration));
+    
+    // Plot each commit in the group with horizontal offset and different shades
+    group.forEach((commit, stackIndex) => {
+      // Calculate pixel position with stack offset
+      const stackOffset = stackIndex * 14; // 12px bar + 2px gap
+      const pixelOffset = `calc(1rem + (100% - 2rem) * ${positionRatio} - 6px + ${stackOffset}px)`;
+      
+      const addHeight = Math.max((commit.additions / maxChanges) * 130, 3);
+      const delHeight = Math.max((commit.deletions / maxChanges) * 130, 3);
+      
+      const escapeAttr = (str) => String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+      const commitTitle = escapeAttr(`${commit.message}\nAdditions: +${commit.additions}\nDeletions: -${commit.deletions}\nAuthor: ${commit.author}`);
+      
+      // Calculate opacity based on stack position (darker = more recent)
+      const opacity = 1 - (stackIndex * 0.15);
+      
+      // Addition bar (extends upward)
+      html += `<div style="position: absolute; left: ${pixelOffset}; bottom: calc(50% + 1px); width: 12px; background: rgba(5, 150, 105, ${opacity}); height: ${addHeight}px; border-radius: 2px 2px 0 0; z-index: ${2 + stackIndex}; cursor: pointer;" title="${commitTitle}"></div>`;
+      
+      // Deletion bar (extends downward)
+      html += `<div style="position: absolute; left: ${pixelOffset}; top: calc(50% + 1px); width: 12px; background: rgba(220, 38, 38, ${opacity}); height: ${delHeight}px; border-radius: 0 0 2px 2px; z-index: ${2 + stackIndex}; cursor: pointer;" title="${commitTitle}"></div>`;
+    });
+  });
+  
+  html += '</div>'; // Close graph area
+  html += '</div>'; // Close grid container
+  
+  // Legend
+  html += `
+    <div style="padding: 1rem; background: rgba(255, 255, 255, 0.5); border-radius: 8px;">
+      <div style="display: flex; flex-direction: column; gap: 0.75rem; font-size: 0.9rem;">
+        <div><span style="display: inline-block; width: 12px; height: 12px; background: #059669; margin-right: 0.5rem; border-radius: 2px;"></span>Lines Added</div>
+        <div><span style="display: inline-block; width: 12px; height: 12px; background: #dc2626; margin-right: 0.5rem; border-radius: 2px;"></span>Lines Deleted</div>
+        <div style="margin-top: 0.5rem; padding-top: 0.75rem; border-top: 1px solid rgba(64, 43, 32, 0.1);"><strong>${commits.length}</strong> commit${commits.length !== 1 ? 's' : ''} this week</div>
+      </div>
+    </div>
+  `;
+  
+  container.innerHTML = html;
+}
+
+// Load commit graph on page load if repo URL exists
+<% if @project.repo_url.present? %>
+  // Use turbo:load for Turbo compatibility
+  document.addEventListener('turbo:load', function() {
+    loadGitHubCommits();
+  });
+  
+  // Also initialize on direct page load
+  if (document.readyState !== 'loading') {
+    loadGitHubCommits();
+  }
+<% end %>
 </script>

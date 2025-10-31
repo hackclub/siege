@@ -1,5 +1,7 @@
 class CatacombsController < ApplicationController
   before_action :check_user_eligibility, except: [:index]
+  before_action :check_betting_window_available, only: [:place_personal_bet, :place_global_bet, :collect_personal_bet, :collect_global_bet]
+  before_action :check_shop_window_available, only: [:shop_items, :purchase_shop_item]
 
   def index
     # Redirect banned users away from catacombs
@@ -429,6 +431,20 @@ class CatacombsController < ApplicationController
   def check_user_eligibility
     if current_user&.out?
       render json: { success: false, message: "You cannot use catacombs actions while out of Siege" }, status: :forbidden
+    end
+  end
+
+  def check_betting_window_available
+    betting_window = MystereepleWindow.find_by(window_type: 'betting')
+    unless betting_window&.available_today? && Flipper.enabled?(:betting, current_user)
+      render json: { success: false, message: "Betting is not available at this time" }, status: :forbidden
+    end
+  end
+
+  def check_shop_window_available
+    shop_window = MystereepleWindow.find_by(window_type: 'shop')
+    unless shop_window&.available_today?
+      render json: { success: false, message: "The shop is not available at this time" }, status: :forbidden
     end
   end
 end
