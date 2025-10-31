@@ -2174,7 +2174,7 @@ class AdminController < ApplicationController
                          .distinct.count
 
     # Pre-fetch all projects with hackatime data to avoid N+1 queries (includes hidden projects)
-    all_projects_with_hackatime = Project.includes(:user)
+    all_projects_with_hackatime = Project.includes(user: :user_weeks)
                                         .where("json_array_length(hackatime_projects) > 0")
 
     # Group projects by week for efficient processing

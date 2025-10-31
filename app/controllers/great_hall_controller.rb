@@ -155,6 +155,19 @@ class GreatHallController < ApplicationController
 
     Rails.logger.info "Found #{eligible_projects.count} eligible projects for user #{current_user.id} in week #{week}"
 
+    # Exclude projects that were in previous ballots for this user in this week
+    previous_ballot_project_ids = Vote.joins(:ballot)
+                                      .where(ballots: { user: current_user, week: week })
+                                      .pluck(:project_id)
+                                      .uniq
+
+    if previous_ballot_project_ids.any?
+      Rails.logger.info "Excluding #{previous_ballot_project_ids.count} projects from previous ballots in week #{week}"
+      eligible_projects = eligible_projects.where.not(id: previous_ballot_project_ids)
+    end
+
+    Rails.logger.info "After deduplication: #{eligible_projects.count} eligible projects remaining"
+
     # Pre-calculate actually cast vote counts for all projects in a single query
     # Only count votes where voted: true (actually cast ballots)
     cast_vote_counts = Vote.joins(:project)
