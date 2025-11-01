@@ -140,7 +140,8 @@
       <% unless (controller_name == "sessions" && action_name == "new") ||
       (controller_name == "addresses" && (action_name == "new" || action_name == "create")) ||
       (controller_name == "welcome") ||
-                 (controller_name == "castle") %>
+      (controller_name == "castle") ||
+      (controller_name == "watch_parties") %>
         <%= render "application/navbar" %>
       <% end %>
       <main class="app-main">
