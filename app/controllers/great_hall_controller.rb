@@ -279,6 +279,11 @@ class GreatHallController < ApplicationController
   end
 
   def check_access_permissions
+    # Allow trick-or-treating even when hall is closed
+    if Flipper.enabled?(:trick_or_treating, current_user)
+      return # Skip all access checks if trick-or-treating is enabled
+    end
+
     # Check if great hall is forced closed
     if Flipper.enabled?(:great_hall_closed, current_user)
       @voting_state = :closed
@@ -309,13 +314,13 @@ class GreatHallController < ApplicationController
   def check_recent_trick_or_treat_interaction
     return false unless current_user.audit_logs.present?
 
-    fifteen_minutes_ago = 15.minutes.ago
+    ten_minutes_ago = 10.minutes.ago
 
     current_user.audit_logs.any? do |log|
       timestamp = Time.parse(log["timestamp"]) rescue nil
       next false unless timestamp
 
-      timestamp > fifteen_minutes_ago &&
+      timestamp > ten_minutes_ago &&
         (log["action"] == "trick_or_treat_dismissed" || log["action"] == "trick_or_treat_gave_candy")
     end
   end
