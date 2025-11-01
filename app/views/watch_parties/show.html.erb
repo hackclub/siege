@@ -12,10 +12,11 @@
     <% if @watch_party.video.attached? %>
       <video 
         data-watch-party-target="video"
-        controls="<%= can_access_admin? %>"
+        <%= 'controls' if can_access_admin? %>
         width="100%"
         style="max-width: 1200px;">
-        <%= video_tag url_for(@watch_party.video), type: @watch_party.video.content_type %>
+        <source src="<%= url_for(@watch_party.video) %>" type="<%= @watch_party.video.content_type %>">
+        Your browser does not support the video tag.
       </video>
 
       <div class="video-info">

@@ -1,5 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
-import consumer from "../channels/consumer"
+import { createConsumer } from "@rails/actioncable"
 
 export default class extends Controller {
   static targets = ["video", "controls", "currentTime", "duration"]
@@ -9,6 +9,7 @@ export default class extends Controller {
   }
 
   connect() {
+    const consumer = createConsumer()
     this.subscription = consumer.subscriptions.create("WatchPartyChannel", {
       connected: this.cableConnected.bind(this),
       disconnected: this.cableDisconnected.bind(this),
