@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_10_30_000000) do
+ActiveRecord::Schema[8.0].define(version: 2025_11_01_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_stat_statements"
@@ -139,6 +139,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_10_30_000000) do
     t.datetime "updated_at", null: false
     t.integer "cost", default: 0
     t.boolean "purchasable", default: false
+    t.boolean "in_trick_or_treat_pool", default: false, null: false
     t.index ["type"], name: "index_cosmetics_on_type"
   end
 
@@ -483,6 +484,15 @@ ActiveRecord::Schema[8.0].define(version: 2025_10_30_000000) do
     t.index ["ballot_id", "project_id"], name: "index_votes_on_ballot_id_and_project_id"
     t.index ["ballot_id"], name: "index_votes_on_ballot_id"
     t.index ["project_id"], name: "index_votes_on_project_id"
+  end
+
+  create_table "watch_parties", force: :cascade do |t|
+    t.string "title"
+    t.float "current_time", default: 0.0
+    t.boolean "is_playing", default: false
+    t.datetime "last_updated_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
   end
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"

@@ -1,0 +1,37 @@
+<div class="admin-section">
+  <div class="admin-header">
+    <h1>Create Watch Party</h1>
+    <%= link_to 'Back', watch_parties_path, class: 'btn btn-outline' %>
+  </div>
+
+  <div class="admin-content">
+    <%= form_with model: @watch_party, url: watch_parties_path, local: true, multipart: true, class: 'admin-form' do |form| %>
+      <% if @watch_party.errors.any? %>
+        <div class="admin-errors">
+          <h3><%= pluralize(@watch_party.errors.count, "error") %> prohibited this watch party from being created:</h3>
+          <ul>
+            <% @watch_party.errors.full_messages.each do |message| %>
+              <li><%= message %></li>
+            <% end %>
+          </ul>
+        </div>
+      <% end %>
+
+      <div class="form-group">
+        <%= form.label :title, 'Watch Party Title', class: 'form-label' %>
+        <%= form.text_field :title, class: 'form-control', required: true, placeholder: 'e.g., Movie Night' %>
+      </div>
+
+      <div class="form-group">
+        <%= form.label :video, 'Video File', class: 'form-label' %>
+        <%= form.file_field :video, class: 'form-control', accept: 'video/*', required: true %>
+        <small class="form-text">Upload a video file (MP4, MOV, AVI, or WebM)</small>
+      </div>
+
+      <div class="form-actions">
+        <%= form.submit 'Create Watch Party', class: 'btn btn-primary' %>
+        <%= link_to 'Cancel', watch_parties_path, class: 'btn btn-outline' %>
+      </div>
+    <% end %>
+  </div>
+</div>

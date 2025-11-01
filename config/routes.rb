@@ -233,6 +233,14 @@ Rails.application.routes.draw do
   post "/catacombs/log_runes", to: "catacombs#log_runes"
   get "/identity_verification_callback", to: "sessions#identity_verification_callback"
 
+  # Watch party routes
+  get "/watch", to: "watch_parties#index", as: :watch_parties
+  get "/watch/new", to: "watch_parties#new", as: :new_watch_party
+  post "/watch", to: "watch_parties#create"
+  get "/watch/:id", to: "watch_parties#show", as: :watch_party
+  post "/watch/:id/update_state", to: "watch_parties#update_state", as: :update_watch_party_state
+  delete "/watch/:id", to: "watch_parties#destroy", as: :destroy_watch_party
+
   # Slack webhook endpoints
   post "/slack/events", to: "slack#events"
 

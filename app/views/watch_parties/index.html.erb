@@ -1,0 +1,61 @@
+<div class="admin-section">
+  <div class="admin-header">
+    <h1>Watch Parties</h1>
+    <% if can_access_admin? %>
+      <%= link_to 'Create New Watch Party', new_watch_party_path, class: 'btn btn-primary' %>
+    <% end %>
+  </div>
+
+  <div class="admin-content">
+    <% if @watch_parties.any? %>
+      <div class="watch-parties-grid">
+        <% @watch_parties.each do |watch_party| %>
+          <div class="watch-party-card">
+            <h3><%= watch_party.title %></h3>
+            <p>Created <%= time_ago_in_words(watch_party.created_at) %> ago</p>
+            <div class="card-actions">
+              <%= link_to 'Watch', watch_party_path(watch_party), class: 'btn btn-primary' %>
+              <% if can_access_admin? %>
+                <%= button_to 'Delete', destroy_watch_party_path(watch_party), 
+                    method: :delete, 
+                    data: { confirm: 'Are you sure?' }, 
+                    class: 'btn btn-danger' %>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    <% else %>
+      <p>No watch parties yet.</p>
+      <% if can_access_admin? %>
+        <%= link_to 'Create the first watch party', new_watch_party_path, class: 'btn btn-primary' %>
+      <% end %>
+    <% end %>
+  </div>
+</div>
+
+<style>
+  .watch-parties-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+  
+  .watch-party-card {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 1.5rem;
+  }
+  
+  .watch-party-card h3 {
+    margin-top: 0;
+  }
+  
+  .card-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+  }
+</style>

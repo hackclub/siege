@@ -1,0 +1,119 @@
+<div class="watch-party-container" 
+     data-controller="watch-party"
+     data-watch-party-is-admin-value="<%= can_access_admin? %>"
+     data-watch-party-watch-party-id-value="<%= @watch_party.id %>">
+  
+  <div class="watch-party-header">
+    <h1><%= @watch_party.title %></h1>
+    <%= link_to '← Back to Watch Parties', watch_parties_path, class: 'btn btn-outline' %>
+  </div>
+
+  <div class="video-container">
+    <% if @watch_party.video.attached? %>
+      <video 
+        data-watch-party-target="video"
+        controls="<%= can_access_admin? %>"
+        width="100%"
+        style="max-width: 1200px;">
+        <%= video_tag url_for(@watch_party.video), type: @watch_party.video.content_type %>
+      </video>
+
+      <div class="video-info">
+        <div class="time-display">
+          <span data-watch-party-target="currentTime">0:00</span> / 
+          <span data-watch-party-target="duration">0:00</span>
+        </div>
+        
+        <% if can_access_admin? %>
+          <p class="admin-notice">
+            <strong>Admin Mode:</strong> You control the playback. All viewers will sync to your position.
+          </p>
+        <% else %>
+          <p class="viewer-notice">
+            <strong>Viewer Mode:</strong> Video is synced with the admin's playback.
+          </p>
+        <% end %>
+      </div>
+    <% else %>
+      <p>No video uploaded yet.</p>
+    <% end %>
+  </div>
+</div>
+
+<style>
+  .watch-party-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+
+  .watch-party-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+  }
+
+  .watch-party-header h1 {
+    margin: 0;
+  }
+
+  .video-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  video {
+    background: #000;
+    border-radius: 8px;
+  }
+
+  .video-info {
+    width: 100%;
+    max-width: 1200px;
+    text-align: center;
+  }
+
+  .time-display {
+    font-size: 1.2rem;
+    font-weight: bold;
+    margin-bottom: 1rem;
+  }
+
+  .admin-notice {
+    background: #d4edda;
+    border: 1px solid #c3e6cb;
+    color: #155724;
+    padding: 0.75rem 1rem;
+    border-radius: 4px;
+    margin: 0;
+  }
+
+  .viewer-notice {
+    background: #d1ecf1;
+    border: 1px solid #bee5eb;
+    color: #0c5460;
+    padding: 0.75rem 1rem;
+    border-radius: 4px;
+    margin: 0;
+  }
+
+  .btn {
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    text-decoration: none;
+    display: inline-block;
+  }
+
+  .btn-outline {
+    border: 1px solid #3b2a1a;
+    background: white;
+    color: #3b2a1a;
+  }
+
+  .btn-outline:hover {
+    background: #f5f5f4;
+  }
+</style>
