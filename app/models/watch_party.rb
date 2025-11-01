@@ -6,6 +6,7 @@ class WatchParty < ApplicationRecord
   validate :video_must_be_video
 
   after_initialize :set_defaults, if: :new_record?
+  after_commit :enqueue_transcoding, on: :create
 
   def broadcast_state
     ActionCable.server.broadcast(
@@ -18,19 +19,45 @@ class WatchParty < ApplicationRecord
     )
   end
 
+  def ready?
+    processing_status == "ready"
+  end
+
+  def processing?
+    processing_status == "pending" || processing_status == "processing"
+  end
+
+  def failed?
+    processing_status == "failed"
+  end
+
   private
 
   def set_defaults
     self.current_time ||= 0.0
     self.is_playing ||= false
     self.last_updated_at ||= Time.current
+    self.processing_status ||= "pending"
   end
 
   def video_must_be_video
     return unless video.attached?
 
-    unless video.content_type.in?(%w[video/mp4 video/quicktime video/x-msvideo video/webm])
-      errors.add(:video, "must be a video file (MP4, MOV, AVI, or WebM)")
+    allowed_types = %w[
+      video/mp4 
+      video/quicktime 
+      video/x-msvideo 
+      video/webm
+      video/x-matroska
+      video/avi
+    ]
+    
+    unless video.content_type.in?(allowed_types)
+      errors.add(:video, "must be a video file (MP4, MOV, AVI, MKV, or WebM)")
     end
+  end
+
+  def enqueue_transcoding
+    TranscodeVideoJob.perform_later(id) if video.attached?
   end
 end

@@ -17,7 +17,7 @@ class WatchPartiesController < ApplicationController
     @watch_party = WatchParty.new(watch_party_params)
     
     if @watch_party.save
-      redirect_to watch_party_path(@watch_party), notice: "Watch party created successfully!"
+      redirect_to watch_party_path(@watch_party), notice: "Watch party created! Video is being processed..."
     else
       render :new, status: :unprocessable_entity
     end
