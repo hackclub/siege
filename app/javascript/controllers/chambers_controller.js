@@ -386,14 +386,16 @@ export default class extends Controller {
 
     this.renderMeepleDisplay();
 
-    fetch(`/meeples/${this.element.dataset.meepleId}`, {
+    const formData = new FormData();
+    formData.append('meeple[color]', color);
+
+    fetch('/chambers', {
       method: "PATCH",
       headers: {
-        "Content-Type": "application/json",
         "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]')
           .content,
       },
-      body: JSON.stringify({ meeple: { color: color } }),
+      body: formData
     })
       .then((response) => {
         if (response.ok) {
