@@ -642,7 +642,12 @@ meeple_message = @meeple_message || ""
   
   <!-- Presenting Meeple (animated) -->
   <div class="presenting-meeple" data-state="idle">
-    <img src="<%= asset_path('meeple/royal-advisor.png') %>" alt="Royal Advisor" id="presenting-meeple-img" />
+    <% if @voting_state == :trick_or_treating %>
+      <img src="<%= asset_path("meeple/meeple-#{@trick_or_treat_meeple_color}.png") %>" alt="Trick or Treater" id="presenting-meeple-img" />
+      <img src="<%= asset_path('meeple/candy-basket.png') %>" alt="Candy Basket" class="candy-basket-overlay" />
+    <% else %>
+      <img src="<%= asset_path('meeple/royal-advisor.png') %>" alt="Royal Advisor" id="presenting-meeple-img" />
+    <% end %>
   </div>
   
   <!-- Dialogue Box -->
@@ -690,14 +695,6 @@ meeple_message = @meeple_message || ""
       <button class="btn" id="reasoningBtnSubmit" disabled>Submit</button>
     </div>
   </div>
-
-  <!-- Trick or Treat Meeple with Candy Basket Overlay -->
-  <% if @voting_state == :trick_or_treating %>
-  <div class="presenting-meeple" data-state="idle" id="trickOrTreatMeeple">
-    <img src="<%= asset_path("meeple/meeple-#{@trick_or_treat_meeple_color}.png") %>" alt="Trick or Treater" id="trick-or-treat-meeple-img" />
-    <img src="<%= asset_path('meeple/candy-basket.png') %>" alt="Candy Basket" class="candy-basket-overlay" />
-  </div>
-  <% end %>
   
   <% if can_access_admin? %>
   <div class="admin-skip">
@@ -1345,13 +1342,14 @@ class UIManager {
 
 // Trick or Treat Handler
 class TrickOrTreatHandler {
-  constructor(ui) {
+  constructor(ui, meepleColor) {
     this.ui = ui;
-    this.userCoins = <%= current_user.siege_coins %>;
+    this.meepleColor = meepleColor;
+    this.userCoins = <%= current_user.coins %>;
   }
 
   async showTrickOrTreat() {
-    await this.ui.animateMeeple('<%= @trick_or_treat_meeple_color %>');
+    await this.ui.animateMeeple(this.meepleColor);
     
     const canAfford = this.userCoins >= 5;
     const buttons = [
@@ -1448,7 +1446,8 @@ document.addEventListener('turbo:load', () => {
   const ui = new UIManager();
   
   if (serverVotingState === 'trick_or_treating') {
-    const trickOrTreat = new TrickOrTreatHandler(ui);
+    const trickOrTreatMeepleColor = '<%= @trick_or_treat_meeple_color || "blue" %>';
+    const trickOrTreat = new TrickOrTreatHandler(ui, trickOrTreatMeepleColor);
     trickOrTreat.showTrickOrTreat();
   } else if (serverVotingState === 'closed' || serverVotingState === 'already_voted' || serverVotingState === 'thanks') {
     state.clearStorage();

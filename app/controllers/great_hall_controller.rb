@@ -158,12 +158,12 @@ class GreatHallController < ApplicationController
   end
 
   def give_candy
-    if current_user.siege_coins < 5
+    if current_user.coins < 5
       render json: { success: false, error: "Insufficient coins" }, status: :unprocessable_entity
       return
     end
 
-    current_user.update!(siege_coins: current_user.siege_coins - 5)
+    current_user.update!(coins: current_user.coins - 5)
 
     outcome = determine_trick_or_treat_outcome
 
@@ -326,10 +326,10 @@ class GreatHallController < ApplicationController
     if rand_value < 40
       { type: "nothing", message: "Thank you!", coins_change: 0 }
     elsif rand_value < 65
-      current_user.update!(siege_coins: current_user.siege_coins + 10)
+      current_user.update!(coins: current_user.coins + 10)
       { type: "coins", message: "Here's your treat :D (+10 <img src=\"#{view_context.asset_path('coin.png')}\" style=\"width: 24px; height: 24px; vertical-align: middle; display: inline-block;\" alt=\"coin\" />)", coins_change: 10 }
     elsif rand_value < 85
-      current_user.update!(siege_coins: current_user.siege_coins - 5)
+      current_user.update!(coins: current_user.coins - 5)
       { type: "trick", message: "Haha tricked you! I just stole 5 <img src=\"#{view_context.asset_path('coin.png')}\" style=\"width: 24px; height: 24px; vertical-align: middle; display: inline-block;\" alt=\"coin\" /> :P", coins_change: -5 }
     elsif rand_value < 95
       cosmetic = select_random_cosmetic_from_pool
