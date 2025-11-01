@@ -1,0 +1,120 @@
+<div class="admin-section">
+  <div class="admin-header">
+    <h1>Trick or Treat Cosmetic Pool</h1>
+    <p>Select which cosmetics can be randomly given when users give candy to trick-or-treaters</p>
+  </div>
+
+  <div class="admin-content">
+    <%= form_with url: admin_trick_or_treat_cosmetics_update_pool_path, method: :post do |f| %>
+      <% if @cosmetics.any? %>
+        <div class="cosmetic-grid">
+          <% @cosmetics.each do |cosmetic| %>
+            <div class="cosmetic-card">
+              <label class="cosmetic-checkbox-label">
+                <%= check_box_tag 'cosmetic_ids[]', cosmetic.id, cosmetic.in_trick_or_treat_pool, id: "cosmetic_#{cosmetic.id}" %>
+                <div class="cosmetic-info">
+                  <% if cosmetic.image.attached? %>
+                    <%= image_tag cosmetic.image, class: 'cosmetic-image', alt: cosmetic.name %>
+                  <% else %>
+                    <div class="no-image-box">No image</div>
+                  <% end %>
+                  <div class="cosmetic-details">
+                    <strong><%= cosmetic.name %></strong>
+                    <span class="cosmetic-type"><%= cosmetic.type %></span>
+                  </div>
+                </div>
+              </label>
+            </div>
+          <% end %>
+        </div>
+        
+        <div class="admin-actions" style="margin-top: 2rem;">
+          <%= f.submit 'Update Pool', class: 'btn btn-primary' %>
+          <%= link_to 'Back to Admin', admin_path, class: 'btn btn-secondary' %>
+        </div>
+      <% else %>
+        <div class="admin-empty-state">
+          <p>No cosmetics found. <%= link_to 'Create cosmetics first', admin_cosmetics_path %>.</p>
+        </div>
+      <% end %>
+    <% end %>
+  </div>
+</div>
+
+<style>
+  .cosmetic-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+  }
+
+  .cosmetic-card {
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 1rem;
+    transition: all 0.2s;
+  }
+
+  .cosmetic-card:has(input:checked) {
+    border-color: #10b981;
+    background-color: #f0fdf4;
+  }
+
+  .cosmetic-checkbox-label {
+    display: flex;
+    align-items: start;
+    gap: 0.5rem;
+    cursor: pointer;
+  }
+
+  .cosmetic-checkbox-label input[type="checkbox"] {
+    margin-top: 0.25rem;
+    cursor: pointer;
+    width: 20px;
+    height: 20px;
+  }
+
+  .cosmetic-info {
+    flex: 1;
+  }
+
+  .cosmetic-image {
+    width: 100%;
+    height: 150px;
+    object-fit: contain;
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+    background: #f9fafb;
+  }
+
+  .no-image-box {
+    width: 100%;
+    height: 150px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f3f4f6;
+    border-radius: 4px;
+    color: #6b7280;
+    font-style: italic;
+    margin-bottom: 0.5rem;
+  }
+
+  .cosmetic-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .cosmetic-type {
+    font-size: 0.875rem;
+    color: #6b7280;
+  }
+
+  .admin-empty-state {
+    text-align: center;
+    padding: 3rem;
+    background: #f9fafb;
+    border-radius: 8px;
+  }
+</style>

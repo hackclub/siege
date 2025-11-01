@@ -13,6 +13,7 @@ class Cosmetic < ApplicationRecord
 
   scope :by_type, ->(type) { where(type: type) }
   scope :purchasable, -> { where(purchasable: true) }
+  scope :in_trick_or_treat_pool, -> { where(in_trick_or_treat_pool: true) }
 
   private
 

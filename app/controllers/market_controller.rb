@@ -16,10 +16,10 @@ class MarketController < ApplicationController
                                           .pluck(:item_name)
     @purchasable_cosmetics = Cosmetic.purchasable
                                     .where.not(name: purchased_cosmetic_names)
-                                    .includes(:image_attachment)
+                                    .includes(image_attachment: :blob)
     
     # Get all purchasable physical items (can be bought multiple times)
-    @purchasable_physical_items = PhysicalItem.purchasable.includes(:image_attachment)
+    @purchasable_physical_items = PhysicalItem.purchasable.includes(image_attachment: :blob)
     
     # Check if user is in supported region for regular tech tree
     @user_in_supported_region = user_in_supported_region?

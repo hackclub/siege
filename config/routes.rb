@@ -44,6 +44,8 @@ Rails.application.routes.draw do
   get "/map", to: "map#index", as: :map
   get "/great-hall/thanks", to: "great_hall#thanks", as: :great_hall_thanks
   get "/great-hall/reset-ballot", to: "great_hall#reset_ballot", as: :great_hall_reset_ballot
+  post "/great-hall/dismiss-trick-or-treater", to: "great_hall#dismiss_trick_or_treater", as: :great_hall_dismiss_trick_or_treater
+  post "/great-hall/give-candy", to: "great_hall#give_candy", as: :great_hall_give_candy
   get "/market", to: "market#index", as: :market
   post "/market/purchase", to: "market#purchase", as: :market_purchase
   get "/market/mercenary_price", to: "market#mercenary_price", as: :market_mercenary_price
@@ -159,6 +161,9 @@ Rails.application.routes.draw do
     resources :cosmetics, only: [:index, :show, :new, :create, :edit, :update, :destroy]
     resources :physical_items, only: [:index, :show, :new, :create, :edit, :update, :destroy]
     resources :mystereeple_shop_items, only: [:index, :show, :new, :create, :edit, :update, :destroy]
+    
+    get "/trick-or-treat-cosmetics", to: "trick_or_treat_cosmetics#index", as: :trick_or_treat_cosmetics
+    post "/trick-or-treat-cosmetics/update-pool", to: "trick_or_treat_cosmetics#update_pool", as: :trick_or_treat_cosmetics_update_pool
   end
 
   # Super admin constraint for monitoring tools

@@ -16,6 +16,19 @@ class GreatHallController < ApplicationController
       return
     end
 
+    # Check for trick or treating feature
+    if Flipper.enabled?(:trick_or_treating, current_user)
+      last_interaction = check_recent_trick_or_treat_interaction
+      unless last_interaction
+        @voting_state = :trick_or_treating
+        @trick_or_treat_meeple_color = %w[blue red pink green orange purple cyan yellow].sample
+        @votes_json = "[]"
+        @ballot = OpenStruct.new(id: 0)
+        render :voting_summary
+        return
+      end
+    end
+
     # Check if user has a ballot for the previous week
     previous_week = helpers.current_week_number - 1
 
@@ -132,6 +145,35 @@ class GreatHallController < ApplicationController
     
     # Redirect with create_new flag to bypass already_voted check and create new ballot
     redirect_to great_hall_path(create_new: true)
+  end
+
+  def dismiss_trick_or_treater
+    current_user.add_audit_log(
+      action: "trick_or_treat_dismissed",
+      actor: current_user,
+      details: {}
+    )
+
+    render json: { success: true }
+  end
+
+  def give_candy
+    if current_user.siege_coins < 5
+      render json: { success: false, error: "Insufficient coins" }, status: :unprocessable_entity
+      return
+    end
+
+    current_user.update!(siege_coins: current_user.siege_coins - 5)
+
+    outcome = determine_trick_or_treat_outcome
+
+    current_user.add_audit_log(
+      action: "trick_or_treat_gave_candy",
+      actor: current_user,
+      details: { outcome: outcome[:type] }
+    )
+
+    render json: { success: true, outcome: outcome }
   end
 
   private
@@ -262,5 +304,60 @@ class GreatHallController < ApplicationController
     if current_user&.meeple
       current_user.meeple.equipped_cosmetics.includes(cosmetic: :image_attachment).load
     end
+  end
+
+  def check_recent_trick_or_treat_interaction
+    return false unless current_user.audit_logs.present?
+
+    fifteen_minutes_ago = 15.minutes.ago
+
+    current_user.audit_logs.any? do |log|
+      timestamp = Time.parse(log["timestamp"]) rescue nil
+      next false unless timestamp
+
+      timestamp > fifteen_minutes_ago &&
+        (log["action"] == "trick_or_treat_dismissed" || log["action"] == "trick_or_treat_gave_candy")
+    end
+  end
+
+  def determine_trick_or_treat_outcome
+    rand_value = rand(100)
+
+    if rand_value < 40
+      { type: "nothing", message: "Thank you!", coins_change: 0 }
+    elsif rand_value < 65
+      current_user.update!(siege_coins: current_user.siege_coins + 10)
+      { type: "coins", message: "Here's your treat :D (+10 <img src=\"#{view_context.asset_path('coin.png')}\" style=\"width: 24px; height: 24px; vertical-align: middle; display: inline-block;\" alt=\"coin\" />)", coins_change: 10 }
+    elsif rand_value < 85
+      current_user.update!(siege_coins: current_user.siege_coins - 5)
+      { type: "trick", message: "Haha tricked you! I just stole 5 <img src=\"#{view_context.asset_path('coin.png')}\" style=\"width: 24px; height: 24px; vertical-align: middle; display: inline-block;\" alt=\"coin\" /> :P", coins_change: -5 }
+    elsif rand_value < 95
+      cosmetic = select_random_cosmetic_from_pool
+      if cosmetic
+        current_user.meeple.unlock_cosmetic(cosmetic)
+        { type: "cosmetic", message: "Thanks! Here's a cosmetic I had lying around!", cosmetic_name: cosmetic.name }
+      else
+        determine_trick_or_treat_outcome
+      end
+    else
+      if current_user.meeple.color_unlocked?("yellow")
+        determine_trick_or_treat_outcome
+      else
+        current_user.meeple.unlock_color("yellow")
+        { type: "yellow_meeple", message: "Thanks! Here's a random yellow meeple I had lying around :D" }
+      end
+    end
+  end
+
+  def select_random_cosmetic_from_pool
+    pool_cosmetics = Cosmetic.where(in_trick_or_treat_pool: true)
+    return nil if pool_cosmetics.empty?
+
+    unlocked_cosmetic_ids = current_user.meeple.unlocked_cosmetics.pluck(:cosmetic_id)
+    available_cosmetics = pool_cosmetics.where.not(id: unlocked_cosmetic_ids)
+
+    return nil if available_cosmetics.empty?
+
+    available_cosmetics.sample
   end
 end

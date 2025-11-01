@@ -10,8 +10,8 @@ class AddressesController < ApplicationController
     @meeple = current_user.meeple || current_user.create_meeple(color: "blue", cosmetics: [])
 
     # Get unlocked cosmetics grouped by type (with proper eager loading)
-    @unlocked_cosmetics = @meeple.unlocked_cosmetics.includes(cosmetic: { image_attachment: :blob }).group_by { |mc| mc.cosmetic.type }
-    @equipped_cosmetics = @meeple.equipped_cosmetics.includes(cosmetic: { image_attachment: :blob }).index_by { |mc| mc.cosmetic.type }
+    @unlocked_cosmetics = @meeple.unlocked_cosmetics.includes(cosmetic: :image_attachment).group_by { |mc| mc.cosmetic.type }
+    @equipped_cosmetics = @meeple.equipped_cosmetics.includes(cosmetic: :image_attachment).index_by { |mc| mc.cosmetic.type }
 
     # Get user's referral count
     @user_referral_count = current_user.referrals.count
