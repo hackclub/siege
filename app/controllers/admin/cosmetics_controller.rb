@@ -45,6 +45,6 @@ class Admin::CosmeticsController < AdminController
   end
 
   def cosmetic_params
-    params.require(:cosmetic).permit(:name, :description, :type, :cost, :purchasable, :image)
+    params.require(:cosmetic).permit(:name, :description, :type, :cost, :purchasable, :in_trick_or_treat_pool, :image)
   end
 end

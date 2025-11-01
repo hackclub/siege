@@ -15,6 +15,7 @@
               <th>Type</th>
               <th>Cost</th>
               <th>Purchasable</th>
+              <th>Trick/Treat</th>
               <th>Description</th>
               <th>Actions</th>
             </tr>
@@ -35,6 +36,13 @@
                 <td>
                   <% if cosmetic.purchasable? %>
                     <span class="badge badge-success">Yes</span>
+                  <% else %>
+                    <span class="badge badge-secondary">No</span>
+                  <% end %>
+                </td>
+                <td>
+                  <% if cosmetic.in_trick_or_treat_pool? %>
+                    <span class="badge badge-success">🎃</span>
                   <% else %>
                     <span class="badge badge-secondary">No</span>
                   <% end %>

@@ -323,15 +323,15 @@ class GreatHallController < ApplicationController
   def determine_trick_or_treat_outcome
     rand_value = rand(100)
 
-    if rand_value < 40
+    if rand_value < 10
       { type: "nothing", message: "Thank you!", coins_change: 0 }
-    elsif rand_value < 65
+    elsif rand_value < 45
       current_user.update!(coins: current_user.coins + 10)
       { type: "coins", message: "Here's your treat :D (+10 <img src=\"#{view_context.asset_path('coin.png')}\" style=\"width: 24px; height: 24px; vertical-align: middle; display: inline-block;\" alt=\"coin\" />)", coins_change: 10 }
-    elsif rand_value < 85
+    elsif rand_value < 75
       current_user.update!(coins: current_user.coins - 5)
       { type: "trick", message: "Haha tricked you! I just stole 5 <img src=\"#{view_context.asset_path('coin.png')}\" style=\"width: 24px; height: 24px; vertical-align: middle; display: inline-block;\" alt=\"coin\" /> :P", coins_change: -5 }
-    elsif rand_value < 95
+    elsif rand_value < 90
       cosmetic = select_random_cosmetic_from_pool
       if cosmetic
         current_user.meeple.unlock_cosmetic(cosmetic)
