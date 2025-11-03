@@ -180,6 +180,8 @@ class GreatHallController < ApplicationController
       return
     end
 
+    return
+    
     current_user.update!(coins: current_user.coins - 5)
 
     outcome = determine_trick_or_treat_outcome
