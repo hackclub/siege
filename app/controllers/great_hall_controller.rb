@@ -47,7 +47,11 @@ class GreatHallController < ApplicationController
           @voting_state = :already_voted
           @meeple_message = "What wise logic you have! Your declaration has been submitted. Here are three coins for your trouble!"
           @votes_json = "[]"
-          @allow_revote = true
+          
+          # Check if user has reached weekly ballot limit (5 ballots per week)
+          weekly_ballot_count = current_user.ballots.where(week: previous_week).count
+          @allow_revote = weekly_ballot_count < 5
+          
           render :voting_summary
           return
         end
@@ -62,7 +66,11 @@ class GreatHallController < ApplicationController
         @voting_state = :already_voted
         @meeple_message = "What wise logic you have! Your declaration has been submitted. Here are three coins for your trouble!"
         @votes_json = "[]"
-        @allow_revote = Flipper.enabled?(:allow_multiple_ballots, current_user)
+        
+        # Check if user has reached weekly ballot limit (5 ballots per week)
+        weekly_ballot_count = current_user.ballots.where(week: previous_week).count
+        @allow_revote = Flipper.enabled?(:allow_multiple_ballots, current_user) && weekly_ballot_count < 5
+        
         render :voting_summary
       else
         # Check if this is a dummy ballot (no votes) and re-evaluate
@@ -140,6 +148,15 @@ class GreatHallController < ApplicationController
     # Only allow if multiple ballots feature is enabled
     unless Flipper.enabled?(:allow_multiple_ballots, current_user)
       redirect_to great_hall_path, alert: "Multiple ballots are not currently allowed."
+      return
+    end
+    
+    # Check if user has reached weekly ballot limit (5 ballots per week)
+    previous_week = helpers.current_week_number - 1
+    weekly_ballot_count = current_user.ballots.where(week: previous_week).count
+    
+    if weekly_ballot_count >= 5
+      redirect_to great_hall_path, alert: "You have reached the weekly limit of 5 ballots."
       return
     end
     
