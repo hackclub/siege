@@ -1,3 +1,5 @@
+return unless defined?(Blazer) && Blazer.respond_to?(:configure)
+
 Blazer.configure do |config|
   config.user_class = "User"
   config.user_method = :current_user
