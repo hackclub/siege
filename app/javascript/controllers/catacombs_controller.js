@@ -124,6 +124,17 @@ export default class extends Controller {
   setupGlyphSystem() {
     if (!this.hasGlyphDisplayTarget) return;
 
+    // Ensure glyph state is safely initialized before use
+    if (typeof this.glyphBuffer !== "string") {
+      this.glyphBuffer =
+        typeof this.currentRunesValue === "string"
+          ? this.currentRunesValue
+          : "";
+    }
+    if (!Array.isArray(this.glyphOffsets)) {
+      this.glyphOffsets = [];
+    }
+
     for (let i = 0; i < this.glyphBuffer.length; i++) {
       const position = (i - 2) / 5;
       const curveOffset = -5 * (1 - 4 * position * position);
