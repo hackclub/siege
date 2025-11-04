@@ -70,7 +70,7 @@ export default class extends Controller {
     this.keypressHandler = this.handleKeypress.bind(this);
     this.keydownHandler = this.handleKeydown.bind(this);
 
-    this.initialize();
+    this.setupAll();
   }
 
   disconnect() {
@@ -78,7 +78,7 @@ export default class extends Controller {
     this.cleanup();
   }
 
-  initialize() {
+  setupAll() {
     console.log("Catacombs: Initializing...");
 
     try {
@@ -246,6 +246,7 @@ export default class extends Controller {
 
   updateGlyphPosition() {
     if (!this.hasGlyphDisplayTarget) return;
+    if (!this.glyphConfig) return;
 
     const scaleX = window.innerWidth / this.originalWidth;
     const scaleY = window.innerHeight / this.originalHeight;
