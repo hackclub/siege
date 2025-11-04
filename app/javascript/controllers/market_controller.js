@@ -1033,10 +1033,7 @@ export default class extends Controller {
     }
     
     if (node.maxPurchases === null || node.maxPurchases === undefined) {
-      if (node.title && node.title.includes('Grant')) {
-        return Infinity
-      }
-      return 1
+      return Infinity
     }
     
     return node.maxPurchases

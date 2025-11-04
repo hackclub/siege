@@ -44,7 +44,7 @@ export default class extends Controller {
       fontSize: 50,
     };
 
-    this.glyphBuffer = this.currentRunesValue || "";
+    this.glyphBuffer = this.currentRunesValue ?? "";
     this.glyphOffsets = [];
     this.allowedChars = /^[a-zA-Z0-9!@%&()"';:,.+\-=?]$/;
 

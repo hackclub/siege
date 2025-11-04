@@ -628,12 +628,12 @@
         <%= image_tag "coin.png", class: "betting-coin-icon" %>
         <span data-catacombs-target="userCoinsDisplay">0</span>
       </div>
-      <h2 class="betting-title" data-catacombs-target="bettingTitle"><%= @personal_bet ? "Your personal bet" : "Place a personal bet" %></h2>
-      <button class="betting-mode-switch" data-catacombs-target="bettingModeToggle" onclick="toggleBettingMode()">Global</button>
+      <h2 class="betting-title" id="betting-title" data-catacombs-target="bettingTitle"><%= @personal_bet ? "Your personal bet" : "Place a personal bet" %></h2>
+      <button class="betting-mode-switch" id="betting-mode-toggle" data-catacombs-target="bettingModeToggle" onclick="toggleBettingMode()">Global</button>
     </div>
   
   <% if @personal_bet %>
-    <div class="personal-betting-content" data-catacombs-target="personalBettingContent">
+    <div class="personal-betting-content" id="personal-betting-content" data-catacombs-target="personalBettingContent">
       <div class="bet-info">
         <div class="global-stat">Goal: <span class="global-stat-value"><%= @personal_bet.hours_goal %>h</span></div>
         <div class="global-stat">Coins bet: <span class="global-stat-value"><%= @personal_bet.coin_amount.to_i %></span></div>
@@ -658,7 +658,7 @@
       </div>
     </div>
   <% else %>
-    <div class="personal-betting-content" data-catacombs-target="personalBettingContent">
+    <div class="personal-betting-content" id="personal-betting-content" data-catacombs-target="personalBettingContent">
     <% unless @is_betting_day %>
       <div style="text-align: center; padding: 2rem;">
         <p style="font-size: 1.2rem; color: #402b20; margin-bottom: 1rem;">Betting is only available Monday through Thursday.</p>
@@ -701,7 +701,7 @@
   <% end %>
 
   <% if @global_bet %>
-    <div class="global-betting-content" data-catacombs-target="globalBettingContent">
+    <div class="global-betting-content" id="global-betting-content" data-catacombs-target="globalBettingContent">
       <div class="bet-info">
         <div class="global-stat">Your prediction: <span class="global-stat-value"><%= @global_bet.predicted_hours.to_i %></span>h</div>
         <div class="global-stat">Coins bet: <span class="global-stat-value"><%= @global_bet.coin_amount.to_i %></span></div>
@@ -726,7 +726,7 @@
       </div>
     </div>
   <% else %>
-    <div class="global-betting-content" data-catacombs-target="globalBettingContent">
+    <div class="global-betting-content" id="global-betting-content" data-catacombs-target="globalBettingContent">
     <% unless @is_betting_day %>
       <div style="text-align: center; padding: 2rem;">
         <p style="font-size: 1.2rem; color: #402b20; margin-bottom: 1rem;">Betting is only available Monday through Thursday.</p>
