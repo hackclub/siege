@@ -370,24 +370,10 @@ module ApplicationHelper
     adjusted_end_date = (Date.parse(end_date_str) + 1.day).strftime("%Y-%m-%d")
 
     # Calculate proper Eastern Time offset (handles DST automatically)
-    # Use Time.zone or fallback to Eastern Time detection
-    begin
-      eastern_time = Time.zone.parse("#{start_date_str} 00:00:00")
-      timezone_offset = eastern_time.strftime("%z")
-    rescue
-      # Fallback: Determine if we're in DST or EST
-      start_date_time = Date.parse(start_date_str).to_time
-      # Simple DST detection for US Eastern Time (second Sunday in March to first Sunday in November)
-      year = start_date_time.year
-      dst_start = Date.new(year, 3, 8 + (7 - Date.new(year, 3, 8).wday) % 7) # Second Sunday in March
-      dst_end = Date.new(year, 11, 1 + (7 - Date.new(year, 11, 1).wday) % 7) # First Sunday in November
-
-      if start_date_time.to_date.between?(dst_start, dst_end)
-        timezone_offset = "-0400" # EDT (Daylight Saving Time)
-      else
-        timezone_offset = "-0500" # EST (Standard Time)
-      end
+    eastern_time = Time.use_zone("Eastern Time (US & Canada)") do
+      Time.zone.parse("#{start_date_str} 00:00:00")
     end
+    timezone_offset = eastern_time.strftime("%z")
 
     Rails.logger.info "[Hackatime] Cache key: #{cache_key}"
 

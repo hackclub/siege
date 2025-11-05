@@ -1128,6 +1128,16 @@ async function loadUserCoins() {
     const data = await response.json();
     userCoins = data.coins || 0;
     document.getElementById('user-coins-display').textContent = userCoins;
+    
+    // Also update Stimulus controller if available
+    const element = document.querySelector('[data-controller*="catacombs"]');
+    if (element && window.Stimulus) {
+      const controller = window.Stimulus.getControllerForElementAndIdentifier(element, 'catacombs');
+      if (controller && controller.userCoins !== undefined) {
+        controller.userCoins = userCoins;
+      }
+    }
+    
     updateBetButtonState();
   } catch (error) {
     console.error('Failed to load user coins:', error);
@@ -1184,8 +1194,15 @@ function selectBetPanel(panel) {
   selectedBetHours = parseInt(panel.dataset.hours);
   selectedBetMultiplier = parseFloat(panel.dataset.multiplier);
   
-  // Enable submit button
-  document.getElementById('submit-bet-button').disabled = false;
+  // Also update Stimulus controller if available
+  const element = document.querySelector('[data-controller*="catacombs"]');
+  if (element && window.Stimulus) {
+    const controller = window.Stimulus.getControllerForElementAndIdentifier(element, 'catacombs');
+    if (controller) {
+      controller.selectedBetHours = selectedBetHours;
+      controller.selectedBetMultiplier = selectedBetMultiplier;
+    }
+  }
   
   // Update payout
   updatePersonalPayout();
@@ -1194,6 +1211,16 @@ function selectBetPanel(panel) {
 function updateBetAmount(value) {
   betAmount = parseInt(value);
   document.getElementById('bet-amount-display').textContent = betAmount;
+  
+  // Also update Stimulus controller if available
+  const element = document.querySelector('[data-controller*="catacombs"]');
+  if (element && window.Stimulus) {
+    const controller = window.Stimulus.getControllerForElementAndIdentifier(element, 'catacombs');
+    if (controller && controller.betAmount !== undefined) {
+      controller.betAmount = betAmount;
+    }
+  }
+  
   updatePersonalPayout();
 }
 
@@ -1209,10 +1236,35 @@ function updateBetButtonState() {
   const personalButton = document.getElementById('submit-bet-button');
   const globalButton = document.getElementById('submit-global-bet-button');
   
-  if (bettingMode === 'personal') {
-    personalButton.disabled = !selectedBetHours || betAmount > userCoins;
+  // Use Stimulus controller values if available, otherwise fall back to global variables
+  const element = document.querySelector('[data-controller*="catacombs"]');
+  let controller = null;
+  if (element && window.Stimulus) {
+    controller = window.Stimulus.getControllerForElementAndIdentifier(element, 'catacombs');
+  }
+  
+  const effectiveBetAmount = controller?.betAmount ?? betAmount;
+  const effectiveGlobalBetAmount = controller?.globalBetAmount ?? globalBetAmount;
+  const effectiveUserCoins = controller?.userCoins ?? userCoins;
+  const effectiveBettingMode = controller?.bettingMode ?? bettingMode;
+  const effectiveSelectedBetHours = controller?.selectedBetHours ?? selectedBetHours;
+  
+  if (effectiveBettingMode === 'personal') {
+    if (personalButton) {
+      personalButton.disabled = !effectiveSelectedBetHours || effectiveBetAmount > effectiveUserCoins;
+    }
+    // Also update Stimulus controller if available
+    if (controller && typeof controller.updateBetButtonState === 'function') {
+      controller.updateBetButtonState();
+    }
   } else {
-    globalButton.disabled = globalBetAmount > userCoins;
+    if (globalButton) {
+      globalButton.disabled = effectiveGlobalBetAmount > effectiveUserCoins;
+    }
+    // Also update Stimulus controller if available
+    if (controller && typeof controller.updateBetButtonState === 'function') {
+      controller.updateBetButtonState();
+    }
   }
 }
 
@@ -1359,6 +1411,16 @@ function updateGlobalMultiplier() {
 function updateGlobalBetAmount(value) {
   globalBetAmount = parseInt(value);
   document.getElementById('global-bet-amount-display').textContent = globalBetAmount;
+  
+  // Also update Stimulus controller if available
+  const element = document.querySelector('[data-controller*="catacombs"]');
+  if (element && window.Stimulus) {
+    const controller = window.Stimulus.getControllerForElementAndIdentifier(element, 'catacombs');
+    if (controller && controller.globalBetAmount !== undefined) {
+      controller.globalBetAmount = globalBetAmount;
+    }
+  }
+  
   updateGlobalPayout();
   updateBetButtonState();
 }
