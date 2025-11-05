@@ -857,10 +857,10 @@ export default class extends Controller {
     } else {
       const percentage = this.hoursPrediction / this.lastWeekHours;
 
-      if (percentage < 0.8) {
+      if (percentage < 0.85) {
         this.globalMultiplier = 1.0;
       } else if (percentage < 1.0) {
-        const t = (percentage - 0.8) / 0.2;
+        const t = (percentage - 0.85) / 0.15;
         this.globalMultiplier = 1.0 + 1.0 * (t * t);
       } else if (percentage < 1.05) {
         const t = (percentage - 1.0) / 0.05;
