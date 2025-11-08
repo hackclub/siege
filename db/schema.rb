@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_11_01_120000) do
+ActiveRecord::Schema[8.0].define(version: 2025_11_06_000002) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_stat_statements"
@@ -280,6 +280,43 @@ ActiveRecord::Schema[8.0].define(version: 2025_11_01_120000) do
     t.index ["user_id"], name: "index_projects_on_user_id"
   end
 
+  create_table "raffle_drawings", force: :cascade do |t|
+    t.string "raffle_item_name", null: false
+    t.bigint "winner_id", null: false
+    t.bigint "winning_ticket_id", null: false
+    t.datetime "drawn_at", null: false
+    t.integer "total_tickets", null: false
+    t.integer "total_participants", null: false
+    t.bigint "drawn_by_id"
+    t.text "notes"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["drawn_at"], name: "index_raffle_drawings_on_drawn_at"
+    t.index ["drawn_by_id"], name: "index_raffle_drawings_on_drawn_by_id"
+    t.index ["raffle_item_name"], name: "index_raffle_drawings_on_raffle_item_name"
+    t.index ["winner_id"], name: "index_raffle_drawings_on_winner_id"
+    t.index ["winning_ticket_id"], name: "index_raffle_drawings_on_winning_ticket_id"
+  end
+
+  create_table "raffle_tickets", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "raffle_item_name", null: false
+    t.datetime "purchased_at", null: false
+    t.boolean "used", default: false, null: false
+    t.integer "coins_spent", default: 1, null: false
+    t.boolean "granted_by_admin", default: false, null: false
+    t.boolean "winner", default: false, null: false
+    t.bigint "raffle_drawing_id"
+    t.text "notes"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["purchased_at"], name: "index_raffle_tickets_on_purchased_at"
+    t.index ["raffle_drawing_id"], name: "index_raffle_tickets_on_raffle_drawing_id"
+    t.index ["raffle_item_name", "used"], name: "index_raffle_tickets_on_raffle_item_name_and_used"
+    t.index ["raffle_item_name", "winner"], name: "index_raffle_tickets_on_raffle_item_name_and_winner"
+    t.index ["user_id"], name: "index_raffle_tickets_on_user_id"
+  end
+
   create_table "shop_purchases", force: :cascade do |t|
     t.bigint "user_id", null: false
     t.string "item_name", null: false
@@ -493,6 +530,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_11_01_120000) do
     t.datetime "last_updated_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "processing_status", default: "pending"
   end
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
@@ -505,6 +543,10 @@ ActiveRecord::Schema[8.0].define(version: 2025_11_01_120000) do
   add_foreign_key "meeples", "users"
   add_foreign_key "personal_bets", "users"
   add_foreign_key "projects", "users"
+  add_foreign_key "raffle_drawings", "raffle_tickets", column: "winning_ticket_id"
+  add_foreign_key "raffle_drawings", "users", column: "drawn_by_id"
+  add_foreign_key "raffle_drawings", "users", column: "winner_id"
+  add_foreign_key "raffle_tickets", "users"
   add_foreign_key "shop_purchases", "user_weeks", validate: false
   add_foreign_key "shop_purchases", "users"
   add_foreign_key "solid_queue_blocked_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade

@@ -369,13 +369,26 @@ module ApplicationHelper
     # Add one day to the end date for the API request
     adjusted_end_date = (Date.parse(end_date_str) + 1.day).strftime("%Y-%m-%d")
 
-    # Calculate proper Eastern Time offset (handles DST automatically)
-    eastern_time = Time.use_zone("Eastern Time (US & Canada)") do
-      Time.zone.parse("#{start_date_str} 00:00:00")
+    # Calculate proper Eastern Time offsets (handles DST automatically)
+    # Use separate offsets for start and end to handle weeks spanning DST changes
+    begin
+      start_offset = Time.zone.parse("#{start_date_str} 00:00:00").strftime("%z")
+      end_offset = Time.zone.parse("#{adjusted_end_date} 00:00:00").strftime("%z")
+    rescue
+      # Fallback: Determine if we're in DST or EST for each date
+      start_date_time = Date.parse(start_date_str).to_time
+      year = start_date_time.year
+      dst_start = Date.new(year, 3, 8 + (7 - Date.new(year, 3, 8).wday) % 7) # Second Sunday in March
+      dst_end = Date.new(year, 11, 1 + (7 - Date.new(year, 11, 1).wday) % 7) # First Sunday in November
+
+      start_offset = start_date_time.to_date.between?(dst_start, dst_end) ? "-0400" : "-0500"
+      
+      end_date_time = Date.parse(adjusted_end_date).to_time
+      end_offset = end_date_time.to_date.between?(dst_start, dst_end) ? "-0400" : "-0500"
     end
-    timezone_offset = eastern_time.strftime("%z")
 
     Rails.logger.info "[Hackatime] Cache key: #{cache_key}"
+    Rails.logger.info "[Hackatime] Offsets: start=#{start_offset} end=#{end_offset}"
 
     # For debugging, check if we have cached data
     cached_data = Rails.cache.read(cache_key)
@@ -386,7 +399,7 @@ module ApplicationHelper
     end
 
     data = Rails.cache.fetch(cache_key, expires_in: hackatime_cache_ttl(start_date_str, end_date_str)) do
-      url = "https://hackatime.hackclub.com/api/v1/users/#{clean_id}/stats?start_date=#{start_date_str}T00:00:00#{timezone_offset}&end_date=#{adjusted_end_date}T00:00:00#{timezone_offset}&features=projects"
+      url = "https://hackatime.hackclub.com/api/v1/users/#{clean_id}/stats?start_date=#{start_date_str}T00:00:00#{start_offset}&end_date=#{adjusted_end_date}T00:00:00#{end_offset}&features=projects"
 
       begin
         uri = URI(url)

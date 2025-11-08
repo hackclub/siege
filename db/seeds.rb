@@ -4,8 +4,9 @@
 
 # Mystereeple Windows
 [
-  { name: 'Betting Window', window_type: 'betting', days_available: [1, 2, 3, 4], enabled: true },
-  { name: 'Shop Window', window_type: 'shop', days_available: [5, 6], enabled: true },
+  { name: 'Betting Window', window_type: 'betting', days_available: [1, 2, 3, 4], enabled: false },
+  { name: 'Shop Window', window_type: 'shop', days_available: [5, 6], enabled: false },
+  { name: 'Merch Raffle', window_type: 'raffle', days_available: [1, 2, 3, 4], enabled: false },
   { name: 'Secret Window', window_type: 'secret', days_available: [], enabled: false }
 ].each do |window_attrs|
   MystereepleWindow.find_or_create_by!(window_type: window_attrs[:window_type]) do |window|

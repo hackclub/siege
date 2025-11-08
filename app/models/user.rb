@@ -29,6 +29,7 @@ class User < ApplicationRecord
   has_many :shop_purchases, class_name: "::ShopPurchase"
   has_many :user_weeks, dependent: :destroy
   has_many :personal_bets, dependent: :destroy
+  has_many :raffle_tickets, dependent: :destroy
   has_many :global_bets, dependent: :destroy
 
   after_create :ensure_flipper_registration

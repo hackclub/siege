@@ -105,13 +105,11 @@
 
   <div id="projects" class="projects-list">
     <% if @projects.any? %>
-      <% cache @projects do %>
-        <div class="projects-grid">
-          <% @projects.each do |project| %>
-            <%= render project, hide_hackatime: true %>
-          <% end %>
-        </div>
-      <% end %>
+      <div class="projects-grid">
+        <% @projects.each do |project| %>
+          <%= render project, hide_hackatime: true %>
+        <% end %>
+      </div>
     <% else %>
       <p class="projects-empty">No projects available to explore yet.</p>
     <% end %>

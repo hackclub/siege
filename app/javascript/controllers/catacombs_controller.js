@@ -17,6 +17,9 @@ export default class extends Controller {
     "shopUserCoinsDisplay",
     "shopItemsGrid",
     "shopItemModal",
+    "raffleInterface",
+    "raffleUserCoinsDisplay",
+    "raffleTicketCount",
   ];
 
   static values = {
@@ -25,6 +28,7 @@ export default class extends Controller {
     hasBetting: Boolean,
     hasShop: Boolean,
     hasSecret: Boolean,
+    hasRaffle: Boolean,
     currentRunes: String,
     personalBet: Boolean,
     globalBet: Boolean,
@@ -459,6 +463,8 @@ export default class extends Controller {
         return "Place a bet";
       case "shop":
         return "See the items";
+      case "raffle":
+        return "Place a bid";
       case "secret":
         return "Yes";
       default:
@@ -472,6 +478,8 @@ export default class extends Controller {
         return "Would you like to place a bet?";
       case "shop":
         return "Would you like some items?";
+      case "raffle":
+        return "Do you want an exclusive item?";
       case "secret":
         return "You want to know a secret?";
       default:
@@ -486,6 +494,9 @@ export default class extends Controller {
         break;
       case "shop":
         this.handleSeeItems();
+        break;
+      case "raffle":
+        this.handleRaffle();
         break;
       case "secret":
         this.handleSecret();
@@ -816,6 +827,79 @@ export default class extends Controller {
   closeShopInterface() {
     if (this.hasShopInterfaceTarget) {
       this.shopInterfaceTarget.classList.remove("visible");
+    }
+  }
+
+  // Raffle methods
+  async handleRaffle() {
+    console.log("Handling raffle window");
+    this.closeMystereepleDialogue();
+    await this.loadRaffleInfo();
+    if (this.hasRaffleInterfaceTarget) {
+      this.raffleInterfaceTarget.classList.add("visible");
+    }
+  }
+
+  async loadRaffleInfo() {
+    try {
+      const response = await fetch("/catacombs/raffle_info");
+      const data = await response.json();
+
+      this.userCoins = data.user_coins || 0;
+      if (this.hasRaffleUserCoinsDisplayTarget) {
+        this.raffleUserCoinsDisplayTarget.textContent = this.userCoins;
+      }
+
+      if (this.hasRaffleTicketCountTarget) {
+        this.raffleTicketCountTarget.textContent = data.user_tickets || 0;
+      }
+    } catch (error) {
+      console.error("Error loading raffle info:", error);
+    }
+  }
+
+  async purchaseRaffleTicket() {
+    const ticketCost = 1;
+    if (this.userCoins < ticketCost) {
+      this.showModalAlert("Not enough coins!", "Error");
+      return;
+    }
+
+    try {
+      const response = await fetch("/catacombs/purchase_raffle_ticket", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]')
+            .content,
+        },
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        this.userCoins = data.new_balance;
+        if (this.hasRaffleUserCoinsDisplayTarget) {
+          this.raffleUserCoinsDisplayTarget.textContent = this.userCoins;
+        }
+        if (this.hasUserCoinsDisplayTarget) {
+          this.userCoinsDisplayTarget.textContent = this.userCoins;
+        }
+        if (this.hasRaffleTicketCountTarget) {
+          this.raffleTicketCountTarget.textContent = data.ticket_count;
+        }
+      } else {
+        this.showModalAlert(data.message, "Error");
+      }
+    } catch (error) {
+      console.error("Error purchasing raffle ticket:", error);
+      this.showModalAlert("Failed to purchase ticket", "Error");
+    }
+  }
+
+  closeRaffleInterface() {
+    if (this.hasRaffleInterfaceTarget) {
+      this.raffleInterfaceTarget.classList.remove("visible");
     }
   }
 

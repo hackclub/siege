@@ -123,13 +123,11 @@
 
   <div id="projects" class="projects-list">
     <% if @projects.any? %>
-      <% cache @projects do %>
-        <div class="projects-grid">
-          <% @projects.each do |project| %>
-            <%= render project %>
-          <% end %>
-        </div>
-      <% end %>
+      <div class="projects-grid">
+        <% @projects.each do |project| %>
+          <%= render project %>
+        <% end %>
+      </div>
     <% else %>
       <p class="projects-empty">No projects found.</p>
     <% end %>

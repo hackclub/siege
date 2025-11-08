@@ -1,0 +1,504 @@
+<div class="admin-section">
+  <div class="admin-header">
+    <h1>Raffle Management: <%= @raffle_item_name %></h1>
+    <%= link_to '← Back to Mystereeple', admin_mystereeple_path, class: 'btn btn-outline' %>
+  </div>
+
+  <% if notice %>
+    <div class="alert alert-success"><%= notice %></div>
+  <% end %>
+  
+  <% if alert %>
+    <div class="alert alert-danger"><%= alert %></div>
+  <% end %>
+
+  <div class="admin-content">
+    <!-- Enhanced Statistics Grid -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <h3>Unused Tickets</h3>
+        <p class="stat-value"><%= @stats[:unused] %></p>
+        <p class="stat-subtitle">Available for drawing</p>
+      </div>
+      
+      <div class="stat-card">
+        <h3>Total Tickets</h3>
+        <p class="stat-value"><%= @stats[:total] %></p>
+        <p class="stat-subtitle">All time</p>
+      </div>
+      
+      <div class="stat-card">
+        <h3>Participants</h3>
+        <p class="stat-value"><%= @stats[:participants] %></p>
+        <p class="stat-subtitle">Unique users</p>
+      </div>
+      
+      <div class="stat-card">
+        <h3>Coins Collected</h3>
+        <p class="stat-value"><%= @stats[:total_coins_spent] %></p>
+        <p class="stat-subtitle">Total revenue</p>
+      </div>
+
+      <div class="stat-card">
+        <h3>Purchased</h3>
+        <p class="stat-value"><%= @stats[:purchased] %></p>
+        <p class="stat-subtitle"><%= (@stats[:total] > 0 ? (@stats[:purchased].to_f / @stats[:total] * 100).round(1) : 0) %>% of total</p>
+      </div>
+      
+      <div class="stat-card">
+        <h3>Admin Granted</h3>
+        <p class="stat-value"><%= @stats[:granted] %></p>
+        <p class="stat-subtitle"><%= (@stats[:total] > 0 ? (@stats[:granted].to_f / @stats[:total] * 100).round(1) : 0) %>% of total</p>
+      </div>
+    </div>
+
+    <!-- Drawing History -->
+    <% if @past_drawings.any? %>
+      <div class="history-section">
+        <h2>Drawing History</h2>
+        <div class="drawings-list">
+          <% @past_drawings.each do |drawing| %>
+            <div class="drawing-card">
+              <div class="drawing-header">
+                <span class="drawing-date"><%= drawing.drawn_at.strftime("%B %d, %Y at %I:%M %p") %></span>
+                <span class="drawing-id">#<%= drawing.id %></span>
+              </div>
+              <div class="drawing-winner">
+                🎉 <strong><%= link_to drawing.winner.name, admin_user_details_path(drawing.winner) %></strong> won!
+              </div>
+              <div class="drawing-stats">
+                <span><%= drawing.total_tickets %> tickets</span>
+                <span><%= drawing.total_participants %> participants</span>
+                <% if drawing.drawn_by %>
+                  <span>Drawn by <%= drawing.drawn_by.name %></span>
+                <% end %>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+
+    <!-- Control Panel -->
+    <div class="control-panel">
+      <h2>Raffle Controls</h2>
+      
+      <div class="control-buttons">
+        <%= button_to 'Pick Random Winner', admin_pick_raffle_winner_path(raffle_item_name: @raffle_item_name), 
+          method: :post, 
+          class: 'btn btn-primary btn-large',
+          data: { confirm: "This will pick a winner from #{@stats[:unused]} tickets and mark ALL tickets as used. Continue?" } %>
+        
+        <%= button_to 'Mark All Tickets as Used', admin_mark_all_raffle_tickets_used_path(raffle_item_name: @raffle_item_name), 
+          method: :post, 
+          class: 'btn btn-warning',
+          data: { confirm: "This will mark #{@stats[:unused]} tickets as used without picking a winner. Continue?" } %>
+      </div>
+    </div>
+
+    <!-- Participants Table -->
+    <div class="participants-section">
+      <h2>Participants (<%= @users_with_tickets.count %>)</h2>
+      
+      <% if @users_with_tickets.any? %>
+        <div class="participants-table-wrapper">
+          <table class="participants-table">
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Total Tickets</th>
+                <th>Unused</th>
+                <th>Purchased</th>
+                <th>Granted</th>
+                <th>Coins Spent</th>
+                <th>Win Chance</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @users_with_tickets.each do |entry| %>
+                <tr>
+                  <td>
+                    <%= link_to entry[:user].name, admin_user_details_path(entry[:user]), class: 'user-link' %>
+                  </td>
+                  <td><strong><%= entry[:total_tickets] %></strong></td>
+                  <td><%= entry[:unused_tickets] %></td>
+                  <td><%= entry[:purchased_tickets] %></td>
+                  <td><%= entry[:granted_tickets] %></td>
+                  <td><%= entry[:coins_spent] %> coins</td>
+                  <td>
+                    <% if entry[:win_chance] > 0 %>
+                      <span class="win-chance"><%= entry[:win_chance] %>%</span>
+                    <% else %>
+                      <span class="win-chance-zero">0%</span>
+                    <% end %>
+                  </td>
+                  <td class="actions-cell">
+                    <%= button_to 'Grant', admin_grant_raffle_ticket_path(user_id: entry[:user].id, raffle_item_name: @raffle_item_name), 
+                      method: :post, 
+                      class: 'btn btn-xs btn-outline' %>
+                    
+                    <% if entry[:unused_tickets] > 0 %>
+                      <%= button_to 'Refund', admin_refund_raffle_ticket_path(user_id: entry[:user].id, raffle_item_name: @raffle_item_name), 
+                        method: :post, 
+                        class: 'btn btn-xs btn-outline',
+                        data: { confirm: "Refund one ticket for #{entry[:user].name}?" } %>
+                    <% end %>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% else %>
+        <p class="no-data">No raffle tickets purchased yet.</p>
+      <% end %>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="activity-section">
+      <h2>Recent Activity</h2>
+      <% if @recent_tickets.any? %>
+        <div class="activity-list">
+          <% @recent_tickets.each do |ticket| %>
+            <div class="activity-item">
+              <div class="activity-user">
+                <%= link_to ticket.user.name, admin_user_details_path(ticket.user) %>
+              </div>
+              <div class="activity-details">
+                <% if ticket.granted_by_admin %>
+                  <span class="badge badge-info">Granted</span>
+                <% else %>
+                  <span class="badge badge-success">Purchased</span>
+                  <span class="coins"><%= ticket.coins_spent %> coins</span>
+                <% end %>
+                <% if ticket.used %>
+                  <span class="badge badge-secondary">Used</span>
+                <% end %>
+                <% if ticket.winner %>
+                  <span class="badge badge-gold">Winner!</span>
+                <% end %>
+              </div>
+              <div class="activity-time">
+                <%= time_ago_in_words(ticket.purchased_at) %> ago
+              </div>
+            </div>
+          <% end %>
+        </div>
+      <% else %>
+        <p class="no-data">No activity yet.</p>
+      <% end %>
+    </div>
+  </div>
+</div>
+
+<style>
+  .alert {
+    padding: 1rem 1.5rem;
+    margin-bottom: 1.5rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+  }
+
+  .alert-success {
+    background-color: #d1fae5;
+    color: #065f46;
+    border: 1px solid #6ee7b7;
+  }
+
+  .alert-danger {
+    background-color: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fca5a5;
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .stat-card {
+    padding: 1.5rem;
+    background: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  .stat-card h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 0.75rem;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+  }
+
+  .stat-value {
+    margin: 0;
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: #1f2937;
+    line-height: 1;
+  }
+
+  .stat-subtitle {
+    margin: 0.5rem 0 0 0;
+    font-size: 0.875rem;
+    color: #6b7280;
+  }
+
+  .history-section {
+    background: white;
+    border-radius: 0.5rem;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  .history-section h2 {
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+  }
+
+  .drawings-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .drawing-card {
+    padding: 1.5rem;
+    background: #f9fafb;
+    border-radius: 0.5rem;
+    border: 1px solid #e5e7eb;
+  }
+
+  .drawing-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+    color: #6b7280;
+  }
+
+  .drawing-id {
+    font-family: monospace;
+    background: #e5e7eb;
+    padding: 0.125rem 0.5rem;
+    border-radius: 0.25rem;
+  }
+
+  .drawing-winner {
+    font-size: 1.125rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .drawing-stats {
+    display: flex;
+    gap: 1.5rem;
+    font-size: 0.875rem;
+    color: #6b7280;
+  }
+
+  .control-panel {
+    padding: 2rem;
+    background: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+  }
+
+  .control-panel h2 {
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+  }
+
+  .control-buttons {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .btn-large {
+    font-size: 1.125rem;
+    padding: 0.75rem 2rem;
+  }
+
+  .participants-section {
+    background: white;
+    border-radius: 0.5rem;
+    padding: 2rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+  }
+
+  .participants-section h2 {
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+  }
+
+  .participants-table-wrapper {
+    overflow-x: auto;
+  }
+
+  .participants-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+  }
+
+  .participants-table th {
+    background: #f9fafb;
+    padding: 0.75rem 1rem;
+    text-align: left;
+    font-weight: 600;
+    color: #374151;
+    border-bottom: 2px solid #e5e7eb;
+  }
+
+  .participants-table td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .participants-table tbody tr:hover {
+    background: #f9fafb;
+  }
+
+  .user-link {
+    color: #2563eb;
+    text-decoration: none;
+    font-weight: 500;
+  }
+
+  .user-link:hover {
+    text-decoration: underline;
+  }
+
+  .win-chance {
+    color: #059669;
+    font-weight: 600;
+  }
+
+  .win-chance-zero {
+    color: #9ca3af;
+  }
+
+  .actions-cell {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .btn-xs {
+    padding: 0.25rem 0.75rem;
+    font-size: 0.75rem;
+  }
+
+  .activity-section {
+    background: white;
+    border-radius: 0.5rem;
+    padding: 2rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  .activity-section h2 {
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+  }
+
+  .activity-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .activity-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem;
+    background: #f9fafb;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+  }
+
+  .activity-user {
+    flex: 0 0 150px;
+    font-weight: 500;
+  }
+
+  .activity-user a {
+    color: #2563eb;
+    text-decoration: none;
+  }
+
+  .activity-user a:hover {
+    text-decoration: underline;
+  }
+
+  .activity-details {
+    flex: 1;
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .activity-time {
+    color: #6b7280;
+    font-size: 0.75rem;
+  }
+
+  .badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+
+  .badge-success {
+    background-color: #dcfce7;
+    color: #166534;
+  }
+
+  .badge-info {
+    background-color: #dbeafe;
+    color: #1e40af;
+  }
+
+  .badge-secondary {
+    background-color: #e5e7eb;
+    color: #6b7280;
+  }
+
+  .badge-gold {
+    background-color: #fef3c7;
+    color: #92400e;
+  }
+
+  .coins {
+    color: #6b7280;
+  }
+
+  .no-data {
+    text-align: center;
+    color: #6b7280;
+    padding: 2rem;
+  }
+
+  .btn-warning {
+    background-color: #f59e0b;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    cursor: pointer;
+    font-weight: 500;
+  }
+
+  .btn-warning:hover {
+    background-color: #d97706;
+  }
+</style>

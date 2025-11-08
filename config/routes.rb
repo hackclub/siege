@@ -88,7 +88,13 @@ Rails.application.routes.draw do
   get "/admin/mystereeple/windows", to: "admin/mystereeple#windows", as: :admin_mystereeple_windows
   patch "/admin/mystereeple/windows/:id/update_days", to: "admin/mystereeple#update_window_days", as: :admin_mystereeple_update_window_days
   patch "/admin/mystereeple/windows/:id/toggle", to: "admin/mystereeple#toggle_window", as: :admin_mystereeple_toggle_window
-  
+
+  get "/admin/mystereeple/raffle", to: "admin/mystereeple#raffle", as: :admin_mystereeple_raffle
+  post "/admin/mystereeple/raffle/grant_ticket", to: "admin/mystereeple#grant_raffle_ticket", as: :admin_grant_raffle_ticket
+  post "/admin/mystereeple/raffle/refund_ticket", to: "admin/mystereeple#refund_raffle_ticket", as: :admin_refund_raffle_ticket
+  post "/admin/mystereeple/raffle/pick_winner", to: "admin/mystereeple#pick_raffle_winner", as: :admin_pick_raffle_winner
+  post "/admin/mystereeple/raffle/mark_all_used", to: "admin/mystereeple#mark_all_raffle_tickets_used", as: :admin_mark_all_raffle_tickets_used
+
   get "/admin/mystereeple/bets", to: "admin#bets", as: :admin_bets
   post "/admin/mystereeple/bets/:id/refund", to: "admin#refund_bet", as: :admin_refund_bet
   post "/admin/mystereeple/bets/:id/payout", to: "admin#payout_bet", as: :admin_payout_bet
@@ -230,6 +236,8 @@ Rails.application.routes.draw do
   get "/catacombs/current_progress", to: "catacombs#current_progress"
   get "/catacombs/shop_items", to: "catacombs#shop_items"
   post "/catacombs/purchase_shop_item", to: "catacombs#purchase_shop_item"
+  get "/catacombs/raffle_info", to: "catacombs#raffle_info"
+  post "/catacombs/purchase_raffle_ticket", to: "catacombs#purchase_raffle_ticket"
   post "/catacombs/log_runes", to: "catacombs#log_runes"
   get "/identity_verification_callback", to: "sessions#identity_verification_callback"
 

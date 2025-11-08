@@ -2,6 +2,7 @@ class CatacombsController < ApplicationController
   before_action :check_user_eligibility, except: [:index]
   before_action :check_betting_window_available, only: [:place_personal_bet, :place_global_bet, :collect_personal_bet, :collect_global_bet]
   before_action :check_shop_window_available, only: [:shop_items, :purchase_shop_item]
+  before_action :check_raffle_window_available, only: [:raffle_info, :purchase_raffle_ticket]
 
   def index
     # Redirect banned users away from catacombs
@@ -410,6 +411,53 @@ class CatacombsController < ApplicationController
     end
   end
 
+  # Raffle endpoints
+  def raffle_info
+    raffle_item_name = "Felt Gingereeple"
+    user_tickets = RaffleTicket.for_item(raffle_item_name).unused.where(user: current_user).count
+    
+    render json: { 
+      raffle_item_name: raffle_item_name,
+      user_tickets: user_tickets,
+      user_coins: current_user.coins
+    }
+  end
+
+  def purchase_raffle_ticket
+    raffle_item_name = "Felt Gingereeple"
+    ticket_cost = 1
+    
+    if current_user.coins < ticket_cost
+      render json: { success: false, message: "Not enough coins" }, status: :unprocessable_entity
+      return
+    end
+    
+    begin
+      ActiveRecord::Base.transaction do
+        ticket = RaffleTicket.create!(
+          user: current_user,
+          raffle_item_name: raffle_item_name,
+          coins_spent: ticket_cost,
+          purchased_at: Time.current,
+          granted_by_admin: false
+        )
+        
+        current_user.update!(coins: current_user.coins - ticket_cost)
+        current_user.add_audit_log(
+          action: "purchased_raffle_ticket",
+          actor: current_user,
+          details: { raffle_item: raffle_item_name, cost: ticket_cost, ticket_id: ticket.id }
+        )
+      end
+      
+      new_ticket_count = RaffleTicket.for_item(raffle_item_name).unused.where(user: current_user).count
+      render json: { success: true, new_balance: current_user.coins, ticket_count: new_ticket_count }
+    rescue => e
+      Rails.logger.error "Failed to purchase raffle ticket: #{e.message}"
+      render json: { success: false, message: "Failed to purchase: #{e.message}" }, status: :unprocessable_entity
+    end
+  end
+
   def log_runes
     rune_text = params[:runes]
     
@@ -445,6 +493,13 @@ class CatacombsController < ApplicationController
     shop_window = MystereepleWindow.find_by(window_type: 'shop')
     unless shop_window&.available_today?
       render json: { success: false, message: "The shop is not available at this time" }, status: :forbidden
+    end
+  end
+
+  def check_raffle_window_available
+    raffle_window = MystereepleWindow.find_by(window_type: 'raffle')
+    unless raffle_window&.available_today?
+      render json: { success: false, message: "The raffle is not available at this time" }, status: :forbidden
     end
   end
 end

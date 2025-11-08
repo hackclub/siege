@@ -445,6 +445,103 @@
       justify-content: center;
     }
 
+    /* Raffle interface styles */
+    .raffle-interface {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 600px;
+      max-height: 80vh;
+      padding: 40px;
+      background: rgba(171, 171, 171, 0.95);
+      border: 3px solid #402b20;
+      z-index: 1000;
+      display: none;
+      overflow-y: auto;
+    }
+
+    .raffle-interface.visible {
+      display: block;
+    }
+
+    .raffle-content {
+      margin-top: 20px;
+    }
+
+    .raffle-item-showcase {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 30px;
+      padding: 20px;
+      background: #f5e7b7;
+      border: 3px solid #402b20;
+    }
+
+    .raffle-item-image {
+      flex-shrink: 0;
+      width: 120px;
+      height: 120px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: white;
+      border: 2px solid #402b20;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .raffle-item-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .raffle-item-details {
+      flex: 1;
+    }
+
+    .raffle-item-details h3 {
+      font-family: "Jaini", "IM Fell English", serif;
+      font-size: 22px;
+      color: #402b20;
+      margin: 0 0 10px 0;
+    }
+
+    .raffle-item-details p {
+      font-family: "IM Fell English", serif;
+      font-size: 16px;
+      line-height: 1.4;
+      color: #402b20;
+      margin: 0;
+    }
+
+    .raffle-tickets {
+      margin-bottom: 30px;
+    }
+
+    .raffle-stat {
+      font-family: "IM Fell English", serif;
+      font-size: 20px;
+      color: #402b20;
+      text-align: center;
+      padding: 20px;
+      background: #f5e7b7;
+      border: 3px solid #402b20;
+    }
+
+    .raffle-stat-value {
+      font-weight: 700;
+      font-size: 28px;
+      color: #8b5a3c;
+    }
+
+    .raffle-actions {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+    }
+
     .global-betting-content {
       display: none;
     }
@@ -586,6 +683,7 @@
   data-catacombs-user-is-out-value="<%= @user_is_out %>"
   data-catacombs-has-betting-value="<%= @available_windows.any? { |w| w.window_type == 'betting' } %>"
   data-catacombs-has-shop-value="<%= @available_windows.any? { |w| w.window_type == 'shop' } %>"
+  data-catacombs-has-raffle-value="<%= @available_windows.any? { |w| w.window_type == 'raffle' } %>"
   data-catacombs-has-secret-value="<%= @available_windows.any? { |w| w.window_type == 'secret' } %>"
   data-catacombs-current-runes-value="<%= j @current_runes || '' %>"
   data-catacombs-personal-bet-value="<%= @personal_bet ? 'true' : 'false' %>"
@@ -787,6 +885,47 @@
 
   <div class="shop-item-modal" data-catacombs-target="shopItemModal">
     <div id="shop-modal-content"></div>
+  </div>
+  <% end %>
+
+  <% if @available_windows.any? { |w| w.window_type == 'raffle' } %>
+  <div class="raffle-interface" data-catacombs-target="raffleInterface">
+    <div class="betting-header">
+      <div class="betting-coins-display">
+        <%= image_tag "coin.png", class: "betting-coin-icon" %>
+        <span data-catacombs-target="raffleUserCoinsDisplay">0</span>
+      </div>
+      <h2 class="betting-title">Merch Raffle</h2>
+      <button class="betting-mode-switch" data-action="click->catacombs#closeRaffleInterface">×</button>
+    </div>
+    
+    <div class="raffle-content">
+      <!-- Raffle Item Display -->
+      <div class="raffle-item-showcase">
+        <div class="raffle-item-image">
+          <%= image_tag "meeple/meeple-orange.png", alt: "Felt Gingereeple" %>
+        </div>
+        <div class="raffle-item-details">
+          <h3>Felt Gingereeple</h3>
+          <p>Get this one-of-a-kind hand stabbed felt gingerman meeple by the one and only @kl! (This will be added to your next round of shipments)</p>
+        </div>
+      </div>
+      
+      <!-- User Ticket Count -->
+      <div class="raffle-tickets">
+        <div class="raffle-stat">
+          Your tickets: <span class="raffle-stat-value" id="raffle-ticket-count" data-catacombs-target="raffleTicketCount">0</span>
+        </div>
+      </div>
+      
+      <!-- Purchase Button -->
+      <div class="raffle-actions">
+        <button class="betting-button" id="purchase-raffle-ticket-btn" data-action="click->catacombs#purchaseRaffleTicket">
+          Buy Ticket (1 coin)
+        </button>
+        <button class="betting-button" data-action="click->catacombs#closeRaffleInterface">Close</button>
+      </div>
+    </div>
   </div>
   <% end %>
 </div>
