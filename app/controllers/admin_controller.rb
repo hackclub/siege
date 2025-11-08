@@ -2304,8 +2304,9 @@ class AdminController < ApplicationController
           total_coins += (project.coin_value || 0) / 10.0
         end
         
-        # Add to Airtable synced hours if project has been synced to Airtable AND is finished
-        if project.in_airtable? && project.status == "finished"
+        # Add to Airtable synced hours if project is submitted and fraud status is not fraud
+        if project.status.in?([ "submitted", "pending_voting", "waiting_for_review", "finished" ]) && 
+           project.fraud_status.in?([ "unchecked", "sus", "good" ])
           airtable_synced_seconds += project_seconds
         end
       end
