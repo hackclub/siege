@@ -453,7 +453,7 @@
     <% if @project.description.present? %>
       <div class="project-description">
         <div class="meta-label">Description</div>
-        <div class="project-description-text"><%= @project.description %></div>
+        <div class="project-description-text"><%= markdown(@project.description) %></div>
       </div>
     <% end %>
   </div>

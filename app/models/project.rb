@@ -10,6 +10,7 @@ class Project < ApplicationRecord
   after_create :associate_with_user_week
 
   validates :name, presence: true
+  validates :description, presence: true, length: { maximum: 1000 }
   validates :status, presence: true, inclusion: { in: %w[building submitted pending_voting waiting_for_review finished] }
   validates :fraud_status, presence: true, inclusion: { in: %w[unchecked sus fraud good] }
   validates :repo_url, url: { allow_blank: true, no_local: true, schemes: [ "https" ] }

@@ -127,3 +127,6 @@ gem "norairrecord"
 
 # Job monitoring dashboard
 gem "mission_control-jobs"
+
+# Markdown rendering
+gem "redcarpet"

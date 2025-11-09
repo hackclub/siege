@@ -495,7 +495,7 @@
         user_projects += projects.map { |p| {
           id: p.id,
           name: p.name,
-          description: p.description,
+          description: p.description.present? ? markdown(p.description) : '',
           demo_url: p.demo_url,
           repo_url: p.repo_url,
           status: p.status,

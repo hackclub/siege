@@ -511,7 +511,7 @@
       <% if @project.description.present? %>
         <div style="margin-bottom: 1.5rem;">
           <span class="info-label">Description</span>
-          <p style="margin-top: 0.5rem; color: #402b20;"><%= @project.description %></p>
+          <p style="margin-top: 0.5rem; color: #402b20;"><%= markdown(@project.description) %></p>
         </div>
       <% end %>
       

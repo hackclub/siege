@@ -517,4 +517,27 @@ module ApplicationHelper
       content_tag(:span, "Invalid #{text}", class: options[:class] ? "#{options[:class]} disabled" : "disabled")
     end
   end
+
+  def markdown(text)
+    return "" if text.blank?
+    
+    renderer = Redcarpet::Render::HTML.new(
+      filter_html: true,
+      no_images: true,
+      no_styles: true,
+      safe_links_only: true,
+      hard_wrap: true
+    )
+    
+    markdown = Redcarpet::Markdown.new(renderer,
+      autolink: true,
+      no_intra_emphasis: true,
+      strikethrough: true,
+      superscript: false,
+      tables: false,
+      fenced_code_blocks: true
+    )
+    
+    markdown.render(text).html_safe
+  end
 end

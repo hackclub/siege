@@ -328,7 +328,7 @@
     
     <div class="detail-field">
       <span class="detail-label">Description</span>
-      <div class="detail-value"><%= @project.description.presence || "No description provided" %></div>
+      <div class="detail-value"><%= @project.description.present? ? markdown(@project.description) : "No description provided" %></div>
     </div>
     
     <div class="detail-field">

@@ -464,7 +464,7 @@
               <div class="project-name"><%= vote.project.name %></div>
               <div class="project-user">by <%= vote.project.user.name %></div>
               <% if vote.project.description.present? %>
-                <div class="project-description"><%= vote.project.description %></div>
+                <div class="project-description"><%= markdown(vote.project.description) %></div>
               <% end %>
             </div>
             

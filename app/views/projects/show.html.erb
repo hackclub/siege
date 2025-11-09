@@ -98,7 +98,7 @@
 
   <div class="projects-body">
     <div class="project-details">
-      <p class="project-card-description"><%= @project.description %></p>
+      <p class="project-card-description"><%= markdown(@project.description) %></p>
 
       <div class="project-card-actions">
         <div class="project-card-links">

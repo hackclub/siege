@@ -797,7 +797,7 @@
             </span>
             
             <div class="project-description">
-              <%= truncate(project.description, length: 150) %>
+              <%= truncate(strip_tags(markdown(project.description)), length: 150) %>
             </div>
             
             <div class="project-links">

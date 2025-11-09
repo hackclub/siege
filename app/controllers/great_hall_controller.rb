@@ -97,14 +97,17 @@ class GreatHallController < ApplicationController
 
         # Serialize the votes data for JavaScript with minimal user data exposure
         @votes_json = @votes.map do |vote|
+          project_attrs = vote.project.safe_attributes_for_voting.merge(
+            user: vote.project.user.safe_attributes_for_voting
+          )
+          project_attrs[:description] = helpers.markdown(project_attrs[:description]) if project_attrs[:description].present?
+          
           vote_data = {
             id: vote.id,
             week: vote.week,
             voted: vote.voted,
             star_count: vote.star_count,
-            project: vote.project.safe_attributes_for_voting.merge(
-              user: vote.project.user.safe_attributes_for_voting
-            )
+            project: project_attrs
           }
           vote_data
         end.to_json

@@ -11,7 +11,7 @@
       <span class="project-badge"><%= project.week_badge_text %></span>
     </div>
 
-    <p class="project-description"><%= project.description %></p>
+    <p class="project-description"><%= markdown(project.description) %></p>
 
     <div class="project-links">
       <% repo_url = project.repo_url.presence %>
