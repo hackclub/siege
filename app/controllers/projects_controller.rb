@@ -13,7 +13,7 @@ class ProjectsController < ApplicationController
   # GET /projects or /projects.json
   def index
     if current_user
-      @projects = current_user.projects.visible_to_user(current_user).decorate
+      @projects = current_user.projects.visible_to_user(current_user).order(created_at: :desc).decorate
     else
       @projects = []
     end
