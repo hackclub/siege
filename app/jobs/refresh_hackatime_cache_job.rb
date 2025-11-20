@@ -4,7 +4,7 @@ class RefreshHackatimeCacheJob < ApplicationJob
   def perform
     Rails.logger.info "[RefreshHackatimeCache] Starting cache refresh for active users"
     
-    active_users = User.where("last_sign_in_at > ?", 24.hours.ago)
+    active_users = User.where("updated_at > ?", 24.hours.ago)
     Rails.logger.info "[RefreshHackatimeCache] Found #{active_users.count} active users"
     
     active_users.find_each do |user|

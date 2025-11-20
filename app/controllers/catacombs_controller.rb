@@ -169,15 +169,17 @@ class CatacombsController < ApplicationController
       return
     end
     
-    # Check if user has enough coins
-    if current_user.coins < coin_amount
-      render json: { success: false, message: "Not enough coins" }, status: :unprocessable_entity
-      return
-    end
-    
     # Create bet and deduct coins
     begin
       ActiveRecord::Base.transaction do
+        current_user.reload
+        
+        # Check if user has enough coins inside transaction
+        if current_user.coins < coin_amount
+          render json: { success: false, message: "Not enough coins" }, status: :unprocessable_entity
+          return
+        end
+        
         bet = current_user.personal_bets.create!(
           week: current_week,
           coin_amount: coin_amount,
@@ -232,15 +234,17 @@ class CatacombsController < ApplicationController
       return
     end
     
-    # Check if user has enough coins
-    if current_user.coins < coin_amount
-      render json: { success: false, message: "Not enough coins" }, status: :unprocessable_entity
-      return
-    end
-    
     # Create bet and deduct coins
     begin
       ActiveRecord::Base.transaction do
+        current_user.reload
+        
+        # Check if user has enough coins inside transaction
+        if current_user.coins < coin_amount
+          render json: { success: false, message: "Not enough coins" }, status: :unprocessable_entity
+          return
+        end
+        
         bet = current_user.global_bets.create!(
           week: current_week,
           coin_amount: coin_amount,
@@ -379,14 +383,15 @@ class CatacombsController < ApplicationController
       return
     end
     
-    # Check coins
-    if current_user.coins < item.cost
-      render json: { success: false, message: "Not enough coins" }, status: :unprocessable_entity
-      return
-    end
-    
     begin
       ActiveRecord::Base.transaction do
+        current_user.reload
+        
+        # Check coins inside transaction with fresh data
+        if current_user.coins < item.cost
+          render json: { success: false, message: "Not enough coins" }, status: :unprocessable_entity
+          return
+        end
         purchase = ShopPurchase.create!(
           user: current_user,
           mystereeple_shop_item_id: item.id,
@@ -427,13 +432,14 @@ class CatacombsController < ApplicationController
     raffle_item_name = "Felt Gingereeple"
     ticket_cost = 1
     
-    if current_user.coins < ticket_cost
-      render json: { success: false, message: "Not enough coins" }, status: :unprocessable_entity
-      return
-    end
-    
     begin
       ActiveRecord::Base.transaction do
+        current_user.reload
+        
+        if current_user.coins < ticket_cost
+          render json: { success: false, message: "Not enough coins" }, status: :unprocessable_entity
+          return
+        end
         ticket = RaffleTicket.create!(
           user: current_user,
           raffle_item_name: raffle_item_name,
