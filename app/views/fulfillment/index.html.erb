@@ -1,0 +1,253 @@
+<style>
+  .fulfillment-dashboard {
+    max-width: 1400px;
+    margin: 0 auto;
+    margin-left: 20rem;
+    padding: 2rem;
+  }
+  
+  @media (max-width: 768px) {
+    .fulfillment-dashboard {
+      margin-left: auto;
+      margin-top: 12rem;
+    }
+  }
+
+  .fulfillment-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 2rem;
+    color: #402b20;
+  }
+
+  .week-selector {
+    background: rgba(255, 255, 255, 0.95);
+    border: 2px solid rgba(64, 43, 32, 0.2);
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+  }
+
+  .week-selector h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #402b20;
+    margin-bottom: 1rem;
+  }
+
+  .week-checkboxes {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .week-checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .week-checkbox-label input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+  }
+
+  .action-buttons {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+    display: inline-block;
+  }
+
+  .btn-primary {
+    background: #402b20;
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background: #2d1e16;
+  }
+
+  .btn-success {
+    background: #28a745;
+    color: white;
+  }
+
+  .btn-success:hover {
+    background: #218838;
+  }
+
+  .fulfillment-table {
+    background: rgba(255, 255, 255, 0.95);
+    border: 2px solid rgba(64, 43, 32, 0.2);
+    border-radius: 12px;
+    overflow-x: auto;
+    overflow-y: visible;
+  }
+
+  .fulfillment-table table {
+    width: max-content;
+    min-width: 100%;
+    border-collapse: collapse;
+  }
+
+  .fulfillment-table th,
+  .fulfillment-table td {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid rgba(64, 43, 32, 0.1);
+  }
+
+  .fulfillment-table th {
+    background: rgba(64, 43, 32, 0.05);
+    font-weight: 600;
+    color: #402b20;
+  }
+
+  .fulfillment-table tr:last-child td {
+    border-bottom: none;
+  }
+
+  .fulfillment-table tr:hover {
+    background: rgba(64, 43, 32, 0.02);
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: #666;
+  }
+
+  .result-count {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #402b20;
+    margin-bottom: 1rem;
+  }
+</style>
+
+<div class="fulfillment-dashboard">
+  <h1 class="fulfillment-title">Fulfillment Dashboard</h1>
+
+  <%= form_with url: admin_fulfillment_path, method: :get, local: true, id: "week-form" do |f| %>
+    <div class="week-selector">
+      <h2>Select Weeks</h2>
+      
+      <%= hidden_field_tag :weeks, @selected_weeks.join(','), id: 'weeks_field' %>
+      
+      <div class="week-checkboxes">
+        <% @weeks.each do |week| %>
+          <label class="week-checkbox-label">
+            <input type="checkbox" 
+                   value="<%= week %>" 
+                   <%= 'checked' if @selected_weeks.include?(week) %> 
+                   onchange="updateWeeksField()"
+                   class="week-checkbox">
+            <span>Week <%= week %></span>
+          </label>
+        <% end %>
+      </div>
+
+      <div class="action-buttons">
+        <%= f.submit "Load Data", class: "btn btn-primary" %>
+        
+        <% if @fulfillment_data.any? %>
+          <%= link_to "Download CSV", admin_fulfillment_path(weeks: @selected_weeks.join(','), format: :csv), class: "btn btn-success" %>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+
+  <script>
+    function updateWeeksField() {
+      const checkboxes = document.querySelectorAll('.week-checkbox:checked');
+      const weeks = Array.from(checkboxes).map(cb => cb.value);
+      document.getElementById('weeks_field').value = weeks.join(',');
+    }
+  </script>
+
+  <% if @selected_weeks.any? %>
+    <div style="background: rgba(255, 255, 255, 0.95); border: 2px solid rgba(64, 43, 32, 0.2); border-radius: 12px; padding: 1rem; margin-bottom: 1rem;">
+      <strong>Debug Info:</strong><br>
+      Total user-weeks in selected weeks: <%= @total_user_weeks %><br>
+      User-weeks with address: <%= @user_weeks_with_address %><br>
+      Users who reached their hour goals: <%= @fulfillment_data.count %>
+    </div>
+    
+    <% if @fulfillment_data.any? %>
+      <div class="result-count">
+        <%= @fulfillment_data.count %> users reached their goals in the selected weeks
+      </div>
+
+      <div class="fulfillment-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Shipping Name</th>
+              <th>Email</th>
+              <th>City</th>
+              <th>State</th>
+              <th>Country</th>
+              <% @selected_weeks.sort.each do |week| %>
+                <th colspan="2">Week <%= week %></th>
+              <% end %>
+            </tr>
+            <tr>
+              <th colspan="6"></th>
+              <% @selected_weeks.sort.each do |week| %>
+                <th style="font-size: 0.85rem; font-weight: 500;">Goal</th>
+                <th style="font-size: 0.85rem; font-weight: 500;">Hours</th>
+              <% end %>
+            </tr>
+          </thead>
+          <tbody>
+            <% @fulfillment_data.each do |user_data| %>
+              <tr>
+                <td><%= user_data[:name] || user_data[:slack_id] %></td>
+                <td><%= user_data[:shipping_name] %></td>
+                <td><%= user_data[:email] %></td>
+                <td><%= user_data[:city] %></td>
+                <td><%= user_data[:state] %></td>
+                <td><%= user_data[:country] %></td>
+                <% @selected_weeks.sort.each do |week| %>
+                  <% week_data = user_data[:weeks][week] %>
+                  <% if week_data %>
+                    <td style="<%= week_data[:met_goal] ? 'background: rgba(40, 167, 69, 0.1);' : '' %>">
+                      <%= week_data[:goal] %>
+                    </td>
+                    <td style="<%= week_data[:met_goal] ? 'background: rgba(40, 167, 69, 0.1); font-weight: 600;' : '' %>">
+                      <%= week_data[:hours] %>
+                    </td>
+                  <% else %>
+                    <td>-</td>
+                    <td>-</td>
+                  <% end %>
+                <% end %>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <div class="empty-state">
+        <p>No users reached their goals in the selected weeks.</p>
+      </div>
+    <% end %>
+  <% end %>
+</div>

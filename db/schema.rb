@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_11_06_000002) do
+ActiveRecord::Schema[8.0].define(version: 2025_11_08_000003) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_stat_statements"
@@ -260,7 +260,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_11_06_000002) do
     t.integer "elo"
     t.string "repo_url"
     t.string "demo_url"
-    t.string "description", null: false
+    t.text "description", null: false
     t.json "hackatime_projects", default: []
     t.string "status", default: "building", null: false
     t.boolean "in_airtable", default: false, null: false

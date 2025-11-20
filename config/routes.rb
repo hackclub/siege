@@ -82,6 +82,7 @@ Rails.application.routes.draw do
   get "/admin/weekly-overview", to: "admin#weekly_overview", as: :admin_weekly_overview
   get "/admin/analytics", to: "admin#analytics", as: :admin_analytics
   get "/admin/postcards", to: "admin#postcard_dashboard", as: :admin_postcards
+  get "/admin/fulfillment", to: "fulfillment#index", as: :admin_fulfillment
   
   # Mystereeple management routes
   get "/admin/mystereeple", to: "admin/mystereeple#index", as: :admin_mystereeple
