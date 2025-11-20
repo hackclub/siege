@@ -65,7 +65,7 @@ class FulfillmentController < ApplicationController
     
     projects_by_user_and_week = {}
     if overall_start && overall_end
-      Project.where(user_id: user_ids, created_at: overall_start..overall_end)
+      Project.where(user_id: user_ids, created_at: overall_start..overall_end, status: 'finished', in_airtable: true, hidden: false)
              .each do |project|
         weeks.each do |week|
           week_data = weeks_data[week]
